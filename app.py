@@ -9,6 +9,7 @@ import hashlib
 import json
 import random
 import time
+import traceback
 from datetime import datetime, timedelta
 from supabase import create_client
 
@@ -74,12 +75,15 @@ def load_all_data():
                     "role": u["role"],
                     "name": u["name"],
                     "phone": u.get("phone", ""),
-                    "game_played": u.get("game_played", 0)  # Default to 0 if column doesn't exist
+                    "game_played": u.get("game_played", 0)
                 }
         st.session_state.user_db = user_db
+        st.session_state.user_db_loaded = True
+        print(f"✅ Loaded {len(user_db)} users from database")
     except Exception as e:
         st.error(f"Error loading users: {e}")
         st.session_state.user_db = {}
+        st.session_state.user_db_loaded = False
     
     # Games
     try:
@@ -140,6 +144,10 @@ def init_game_db():
         st.session_state.selected_temp_cards = []
     if "cards_data" not in st.session_state:
         st.session_state.cards_data = {}
+    if "login_attempts" not in st.session_state:
+        st.session_state.login_attempts = 0
+    if "debug_info" not in st.session_state:
+        st.session_state.debug_info = ""
     
     # Ensure admin exists
     if "admin" not in st.session_state.user_db:
@@ -154,9 +162,11 @@ def init_game_db():
                 "name": "Bingo Administrator"
             }).execute()
             load_all_data()
+            print("✅ Admin user created successfully")
         except Exception as e:
             if "duplicate key" in str(e) or "23505" in str(e):
                 load_all_data()
+                print("ℹ️ Admin user already exists")
             else:
                 st.error(f"Could not create admin: {e}")
 
@@ -172,16 +182,36 @@ def verify_password(password, hashed):
 
 def login_user(username, password):
     init_game_db()
+    
+    # Debug info
+    debug_msg = f"Login attempt for: {username}\n"
+    debug_msg += f"Users in DB: {list(st.session_state.user_db.keys())}\n"
+    
     if username not in st.session_state.user_db:
-        return False, "❌ Username not found."
+        debug_msg += f"❌ Username '{username}' not found in database\n"
+        st.session_state.debug_info = debug_msg
+        return False, f"❌ Username not found. Available users: {', '.join(list(st.session_state.user_db.keys())[:5])}"
+    
     user = st.session_state.user_db[username]
+    debug_msg += f"✅ User found: {username}\n"
+    debug_msg += f"Stored password hash: {user['password'][:20]}...\n"
+    
+    # Check password
+    input_hash = hash_password(password)
+    debug_msg += f"Input password hash: {input_hash[:20]}...\n"
+    
     if verify_password(password, user["password"]):
+        debug_msg += "✅ Password verified successfully!\n"
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = user["role"]
         st.session_state.balance = user["balance"]
+        st.session_state.debug_info = debug_msg
         return True, "✅ Login successful!"
-    return False, "❌ Incorrect password."
+    else:
+        debug_msg += "❌ Password verification failed\n"
+        st.session_state.debug_info = debug_msg
+        return False, "❌ Incorrect password. Please check your password and try again."
 
 def logout_user():
     st.session_state.logged_in = False
@@ -209,9 +239,12 @@ def register_user(username, password, name, phone=""):
             "phone": phone
         }).execute()
         load_all_data()
+        st.session_state.debug_info = f"✅ User {username} registered successfully"
         return True, "✅ Registration successful!"
     except Exception as e:
-        return False, f"❌ Registration failed: {e}"
+        error_msg = f"❌ Registration failed: {e}"
+        st.session_state.debug_info = error_msg
+        return False, error_msg
 
 # ===================================================================
 # GAME FUNCTIONS
@@ -288,7 +321,6 @@ def generate_bingo_card_data(card_id):
 
 def get_card_data(card_id):
     """Get card data - generate on the fly since no cards table exists"""
-    # Generate card data
     if card_id not in st.session_state.cards_data:
         st.session_state.cards_data[card_id] = generate_bingo_card_data(card_id)
     return st.session_state.cards_data[card_id]
@@ -445,12 +477,9 @@ def declare_winner(game_id, winner_id, card_id, pattern):
             "winning_pattern": json.dumps(pattern)
         }).execute()
         
-        # Update winner's balance - handle missing game_played column
+        # Update winner's balance
         new_balance = user.get("balance", 0) + prize
-        update_data = {
-            "balance": new_balance
-        }
-        # Only add game_played if it exists in the user record
+        update_data = {"balance": new_balance}
         if "game_played" in user:
             update_data["game_played"] = user.get("game_played", 0) + 1
         
@@ -565,17 +594,35 @@ def show_login_page():
     
     with tab1:
         with st.form("login_form"):
-            username = st.text_input("👤 Username", placeholder="Enter username")
+            username = st.text_input("👤 Username", placeholder="Enter username", value=st.session_state.get('last_login_username', ''))
             password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
             submitted = st.form_submit_button("🎰 Login to Play", use_container_width=True)
+            
             if submitted:
                 if username and password:
+                    st.session_state.last_login_username = username
                     success, message = login_user(username, password)
                     if success:
                         st.success(message)
                         st.rerun()
                     else:
                         st.error(message)
+                        # Show debug info if login fails
+                        if st.session_state.debug_info:
+                            with st.expander("🔍 Debug Info - Click to expand"):
+                                st.code(st.session_state.debug_info, language="text")
+        
+        # Show available users for debugging
+        with st.expander("ℹ️ Available Users (Debug)"):
+            if st.session_state.user_db:
+                users_list = list(st.session_state.user_db.keys())
+                st.write(f"Total users: {len(users_list)}")
+                for u in users_list[:10]:  # Show first 10 users
+                    st.write(f"- {u}")
+                if len(users_list) > 10:
+                    st.write(f"... and {len(users_list) - 10} more")
+            else:
+                st.write("No users found in database")
     
     with tab2:
         with st.form("register_form"):
@@ -585,6 +632,7 @@ def show_login_page():
             password = st.text_input("🔑 Password", type="password", placeholder="Create a password")
             confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
             submitted = st.form_submit_button("📝 Register & Play", use_container_width=True)
+            
             if submitted:
                 if not full_name or not username or not password:
                     st.error("Please fill in all required fields")
@@ -596,7 +644,8 @@ def show_login_page():
                     success, message = register_user(username, password, full_name, phone)
                     if success:
                         st.success(message)
-                        st.info("Please login with your new credentials")
+                        st.info("✅ Please login with your new credentials")
+                        st.session_state.last_login_username = username
                     else:
                         st.error(message)
 
