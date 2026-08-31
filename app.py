@@ -1,7 +1,6 @@
 # ===================================================================
-# ደራሽ ቢንጎ (Derash Bingo) - Complete Bingo Game
-# Integrated with School Registration Portal Supabase Backend
-# Berhanu Mekonen, PhD, Arba Minch University
+# ደራሽ ቢንጎ (Derash Bingo) - Complete Automatic Bingo Game
+# Uses pre-existing cards from database
 # ===================================================================
 
 import streamlit as st
@@ -9,11 +8,9 @@ import pandas as pd
 import hashlib
 import json
 import random
-import string
 import time
-import uuid
 from datetime import datetime, timedelta
-from supabase import create_client, Client
+from supabase import create_client
 
 # ===================================================================
 # GAME CONFIGURATION
@@ -23,9 +20,8 @@ CARD_PRICE = 10
 PRIZE_PER_CARD = 8
 COMMISSION = 2
 MAX_CARDS_PER_PLAYER = 2
-SELECTION_TIME = 60  # 60 seconds = 1 minute
+SELECTION_TIME = 60  # 60 seconds countdown
 TOTAL_CARDS = 201
-MIN_BALANCE_TO_PLAY = CARD_PRICE
 
 # ===================================================================
 # SUPABASE CONNECTION
@@ -76,7 +72,8 @@ def load_all_data():
                 "balance": u["balance"],
                 "role": u["role"],
                 "name": u["name"],
-                "phone": u.get("phone", "")
+                "phone": u.get("phone", ""),
+                "game_played": u.get("game_played", 0)
             }
     st.session_state.user_db = user_db
     
@@ -91,14 +88,42 @@ def load_all_data():
     # Winners
     res = supabase.table("bingo_winners").select("*").execute()
     st.session_state.winners = res.data if res.data else []
-    
-    # Payments
-    res = supabase.table("bingo_payments").select("*").execute()
-    st.session_state.payments = res.data if res.data else []
 
 def init_game_db():
     if "user_db" not in st.session_state:
         load_all_data()
+    
+    # Initialize session variables
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    if "current_user" not in st.session_state:
+        st.session_state.current_user = None
+    if "current_role" not in st.session_state:
+        st.session_state.current_role = None
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "🏠 Game Lobby"
+    if "selected_cards" not in st.session_state:
+        st.session_state.selected_cards = []
+    if "notifications" not in st.session_state:
+        st.session_state.notifications = []
+    if "balance" not in st.session_state:
+        st.session_state.balance = 0
+    if "called_numbers" not in st.session_state:
+        st.session_state.called_numbers = []
+    if "game_started" not in st.session_state:
+        st.session_state.game_started = False
+    if "winner_declared" not in st.session_state:
+        st.session_state.winner_declared = False
+    if "countdown_active" not in st.session_state:
+        st.session_state.countdown_active = False
+    if "countdown_time" not in st.session_state:
+        st.session_state.countdown_time = SELECTION_TIME
+    if "auto_play" not in st.session_state:
+        st.session_state.auto_play = False
+    if "selected_temp_cards" not in st.session_state:
+        st.session_state.selected_temp_cards = []
+    if "cards_loaded" not in st.session_state:
+        st.session_state.cards_loaded = False
     
     # Ensure admin exists
     if "admin" not in st.session_state.user_db:
@@ -110,18 +135,15 @@ def init_game_db():
                 "password": admin_pw,
                 "balance": 1000,
                 "role": "admin",
-                "name": "Bingo Administrator"
+                "name": "Bingo Administrator",
+                "game_played": 0
             }).execute()
             load_all_data()
         except Exception as e:
-            st.error(f"Could not create admin: {e}")
-    
-    if "current_page" not in st.session_state:
-        st.session_state.current_page = "🏠 Home"
-    if "selected_cards" not in st.session_state:
-        st.session_state.selected_cards = []
-    if "notifications" not in st.session_state:
-        st.session_state.notifications = []
+            if "duplicate key" in str(e) or "23505" in str(e):
+                load_all_data()
+            else:
+                st.error(f"Could not create admin: {e}")
 
 # ===================================================================
 # AUTHENTICATION
@@ -150,6 +172,10 @@ def logout_user():
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
+    st.session_state.game_started = False
+    st.session_state.called_numbers = []
+    st.session_state.countdown_active = False
+    st.session_state.auto_play = False
 
 def register_user(username, password, name, phone=""):
     init_game_db()
@@ -165,7 +191,8 @@ def register_user(username, password, name, phone=""):
             "balance": 0,
             "role": "player",
             "name": name,
-            "phone": phone
+            "phone": phone,
+            "game_played": 0
         }).execute()
         load_all_data()
         return True, "✅ Registration successful!"
@@ -216,8 +243,45 @@ def get_players(game_id):
             players[username] += 1
     return players
 
-def generate_card_numbers(card_id):
-    """Generate BINGO card numbers based on card ID"""
+def load_cards_from_db():
+    """Load all card data from the database"""
+    supabase = get_supabase()
+    try:
+        res = supabase.table("bingo_cards").select("*").execute()
+        if res.data:
+            st.session_state.bingo_cards = res.data
+            st.session_state.cards_loaded = True
+            return res.data
+        else:
+            # Create default cards if none exist
+            create_default_cards()
+            return st.session_state.bingo_cards
+    except Exception as e:
+        st.error(f"Error loading cards: {e}")
+        return []
+
+def create_default_cards():
+    """Create default bingo cards in the database"""
+    supabase_admin = get_supabase_admin()
+    cards = []
+    
+    for card_id in range(1, TOTAL_CARDS + 1):
+        card_data = generate_bingo_card_data(card_id)
+        cards.append({
+            "card_id": card_id,
+            "card_data": json.dumps(card_data)
+        })
+    
+    try:
+        supabase_admin.table("bingo_cards").insert(cards).execute()
+        load_all_data()
+        st.session_state.bingo_cards = cards
+        st.session_state.cards_loaded = True
+    except Exception as e:
+        st.error(f"Error creating cards: {e}")
+
+def generate_bingo_card_data(card_id):
+    """Generate BINGO card data for a specific card ID"""
     columns = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -229,38 +293,54 @@ def generate_card_numbers(card_id):
     card = []
     column_keys = ['B', 'I', 'N', 'G', 'O']
     
+    random.seed(card_id * 1000)
+    
     for col in range(5):
         col_key = column_keys[col]
         available = columns[col_key][:]
-        
-        # Seed random for reproducibility
-        random.seed(card_id * 1000 + col)
         random.shuffle(available)
-        
         col_numbers = available[:5]
         
         for row in range(5):
             if col == 2 and row == 2:
-                card.append({'value': 'F', 'row': row, 'col': col})
+                card.append({'value': 'FREE', 'row': row, 'col': col, 'letter': col_key})
             else:
-                card.append({'value': col_numbers[row], 'row': row, 'col': col})
+                card.append({'value': col_numbers[row], 'row': row, 'col': col, 'letter': col_key})
     
     return card
 
-def check_card_for_win(card_numbers, called_numbers):
+def get_card_data(card_id):
+    """Get card data from session state or database"""
+    if not st.session_state.get('cards_loaded', False):
+        load_cards_from_db()
+    
+    if 'bingo_cards' in st.session_state:
+        for card in st.session_state.bingo_cards:
+            if card.get('card_id') == card_id:
+                if isinstance(card.get('card_data'), str):
+                    return json.loads(card['card_data'])
+                return card.get('card_data')
+    
+    # Fallback: generate on the fly
+    return generate_bingo_card_data(card_id)
+
+def display_card_grid(card_data):
+    """Display BINGO card as a grid from card data"""
+    grid = [[None for _ in range(5)] for _ in range(5)]
+    for cell in card_data:
+        grid[cell['row']][cell['col']] = cell['value']
+    return grid
+
+def check_winning_pattern(card_data, called_numbers):
     """Check if a card has a winning pattern"""
     if not called_numbers:
         return None
     
     called_set = set(called_numbers)
-    
-    # Create grid
-    grid = [[None for _ in range(5)] for _ in range(5)]
-    for cell in card_numbers:
-        grid[cell['row']][cell['col']] = cell['value']
+    grid = display_card_grid(card_data)
     
     def is_marked(value):
-        if value == 'F':
+        if value == 'FREE':
             return True
         return value in called_set
     
@@ -309,7 +389,7 @@ def get_pattern_name(pattern):
     return "Unknown"
 
 def create_new_game():
-    """Create a new BINGO game"""
+    """Create a new BINGO game with countdown timer"""
     supabase_admin = get_supabase_admin()
     selection_end = (datetime.now() + timedelta(seconds=SELECTION_TIME)).isoformat()
     
@@ -324,12 +404,17 @@ def create_new_game():
         }).execute()
         if res.data:
             load_all_data()
+            st.session_state.called_numbers = []
+            st.session_state.winner_declared = False
+            st.session_state.game_started = False
+            st.session_state.countdown_active = True
+            st.session_state.countdown_time = SELECTION_TIME
             return res.data[0]
     except Exception as e:
         st.error(f"Failed to create game: {e}")
     return None
 
-def call_number(game_id):
+def call_next_number(game_id):
     """Call the next random number"""
     supabase_admin = get_supabase_admin()
     game = get_game_by_id(game_id)
@@ -345,6 +430,7 @@ def call_number(game_id):
     
     new_number = random.choice(available)
     called.append(new_number)
+    st.session_state.called_numbers = called
     
     try:
         supabase_admin.table("bingo_games").update({
@@ -363,13 +449,7 @@ def declare_winner(game_id, winner_id, card_id, pattern):
     if not game:
         return False
     
-    # Get user info
-    user = None
-    for username, data in st.session_state.user_db.items():
-        if data.get("username") == winner_id:
-            user = data
-            break
-    
+    user = st.session_state.user_db.get(winner_id)
     if not user:
         return False
     
@@ -398,10 +478,14 @@ def declare_winner(game_id, winner_id, card_id, pattern):
         # Update winner's balance
         new_balance = user.get("balance", 0) + prize
         supabase_admin.table("bingo_users").update({
-            "balance": new_balance
+            "balance": new_balance,
+            "game_played": user.get("game_played", 0) + 1
         }).eq("username", winner_id).execute()
         
         load_all_data()
+        st.session_state.winner_declared = True
+        st.session_state.game_started = False
+        st.session_state.auto_play = False
         return True
     except Exception as e:
         st.error(f"Failed to declare winner: {e}")
@@ -418,6 +502,7 @@ def add_balance(username, amount):
                 "balance": new_balance
             }).eq("username", username).execute()
             load_all_data()
+            st.session_state.balance = new_balance
             return True
     except Exception as e:
         st.error(f"Failed to add balance: {e}")
@@ -471,9 +556,22 @@ def join_game(game_id, user_id, card_ids):
             }).eq("game_id", game_id).execute()
         
         load_all_data()
+        st.session_state.balance = new_balance
+        st.session_state.selected_temp_cards = []
         return True, f"Successfully joined with {len(card_ids)} card(s)"
     except Exception as e:
         return False, f"Failed to join game: {e}"
+
+def get_balance_status(balance):
+    """Get balance status class and text"""
+    if balance >= 2000:
+        return "🟢", "Excellent Balance!"
+    elif balance > 1000:
+        return "🟡", "Good Balance"
+    elif balance > 500:
+        return "🟠", "Balance Running Low"
+    else:
+        return "🔴", "Please Add Funds"
 
 # ===================================================================
 # UI COMPONENTS
@@ -492,51 +590,89 @@ def show_login_page():
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     
     with tab1:
-        with st.container():
-            st.markdown('<div class="login-container">', unsafe_allow_html=True)
-            with st.form("login_form"):
-                username = st.text_input("👤 Username", placeholder="Enter username")
-                password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
-                submitted = st.form_submit_button("🎰 Login to Play", width='stretch')
-                if submitted:
-                    if username and password:
-                        success, message = login_user(username, password)
-                        if success:
-                            st.success(message)
-                            st.rerun()
-                        else:
-                            st.error(message)
-            st.markdown('</div>', unsafe_allow_html=True)
+        with st.form("login_form"):
+            username = st.text_input("👤 Username", placeholder="Enter username")
+            password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
+            submitted = st.form_submit_button("🎰 Login to Play", use_container_width=True)
+            if submitted:
+                if username and password:
+                    success, message = login_user(username, password)
+                    if success:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
     
     with tab2:
-        with st.container():
-            st.markdown('<div class="login-container">', unsafe_allow_html=True)
-            with st.form("register_form"):
-                full_name = st.text_input("👤 Full Name", placeholder="Your full name")
-                username = st.text_input("👤 Username", placeholder="Choose a username")
-                phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
-                password = st.text_input("🔑 Password", type="password", placeholder="Create a password")
-                confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
-                submitted = st.form_submit_button("📝 Register & Play", width='stretch')
-                if submitted:
-                    if not full_name or not username or not password:
-                        st.error("Please fill in all required fields")
-                    elif password != confirm:
-                        st.error("Passwords do not match")
-                    elif len(password) < 6:
-                        st.error("Password must be at least 6 characters")
+        with st.form("register_form"):
+            full_name = st.text_input("👤 Full Name", placeholder="Your full name")
+            username = st.text_input("👤 Username", placeholder="Choose a username")
+            phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
+            password = st.text_input("🔑 Password", type="password", placeholder="Create a password")
+            confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
+            submitted = st.form_submit_button("📝 Register & Play", use_container_width=True)
+            if submitted:
+                if not full_name or not username or not password:
+                    st.error("Please fill in all required fields")
+                elif password != confirm:
+                    st.error("Passwords do not match")
+                elif len(password) < 6:
+                    st.error("Password must be at least 6 characters")
+                else:
+                    success, message = register_user(username, password, full_name, phone)
+                    if success:
+                        st.success(message)
+                        st.info("Please login with your new credentials")
                     else:
-                        success, message = register_user(username, password, full_name, phone)
-                        if success:
-                            st.success(message)
-                            st.info("Please login with your new credentials")
-                        else:
-                            st.error(message)
-            st.markdown('</div>', unsafe_allow_html=True)
+                        st.error(message)
 
-def show_card_selection(game_id, user_id):
-    """Display card selection interface"""
+def show_bingo_card(card_id, called_numbers):
+    """Display a BINGO card with marked numbers"""
+    card_data = get_card_data(card_id)
+    grid = display_card_grid(card_data)
+    called_set = set(called_numbers) if called_numbers else set()
+    
+    html = f"""
+    <div style="border: 3px solid #8B0000; border-radius: 10px; padding: 10px; margin: 10px 0; background: white;">
+        <div style="text-align: center; font-weight: bold; font-size: 18px; color: #8B0000; margin-bottom: 10px;">
+            Card #{card_id}
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #8B0000; color: white;">
+                <th style="padding: 8px; border: 1px solid #ddd;">B</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">I</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">N</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">G</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">O</th>
+            </tr>
+    """
+    
+    for row in range(5):
+        html += "<tr>"
+        for col in range(5):
+            value = grid[row][col]
+            is_called = value in called_set or value == 'FREE'
+            bg_color = "#4CAF50" if is_called and value != 'FREE' else "#FFC107" if value == 'FREE' else "white"
+            color = "white" if is_called else "black"
+            html += f"""
+            <td style="padding: 12px; border: 1px solid #ddd; text-align: center; 
+                       background: {bg_color}; color: {color}; font-weight: bold; font-size: 16px;">
+                {value}
+            </td>
+            """
+        html += "</tr>"
+    
+    html += "</table></div>"
+    return html
+
+def show_card_selection(game_id, user_id, is_countdown_active):
+    """Display card selection interface with countdown"""
     st.markdown("### 🎯 Select Your Cards")
+    
+    if not is_countdown_active:
+        st.warning("⏰ Card selection is closed. Wait for the next game!")
+        return
+    
     st.markdown(f"💰 Card Price: {CARD_PRICE} ETB each | Max: {MAX_CARDS_PER_PLAYER} cards")
     
     user_cards = get_user_cards(game_id, user_id)
@@ -544,173 +680,283 @@ def show_card_selection(game_id, user_id):
     
     if user_cards:
         st.success(f"✅ You have {len(user_cards)} card(s) in this game")
-        return user_cards
+        return
     
     # Show available cards
-    st.markdown("#### Available Cards")
-    cols = st.columns(5)
-    selected = []
-    
     available_cards = [i for i in range(1, TOTAL_CARDS + 1) if i not in taken]
     random.shuffle(available_cards)
-    display_cards = available_cards[:50]  # Show 50 random available cards
+    display_cards = available_cards[:50]
     
+    st.markdown("#### Available Cards")
+    
+    cols = st.columns(5)
     for i, card_id in enumerate(display_cards):
         col = cols[i % 5]
         with col:
-            is_selected = card_id in st.session_state.get('temp_selected', [])
+            is_selected = card_id in st.session_state.selected_temp_cards
             if st.button(
                 f"Card {card_id}\n💵 {CARD_PRICE} ETB",
-                key=f"card_{card_id}",
+                key=f"card_{card_id}_{game_id}",
                 type="primary" if is_selected else "secondary",
-                use_container_width=True
+                use_container_width=True,
+                disabled=not is_countdown_active
             ):
-                temp_selected = st.session_state.get('temp_selected', [])
-                if card_id in temp_selected:
-                    temp_selected.remove(card_id)
-                elif len(temp_selected) < MAX_CARDS_PER_PLAYER:
-                    temp_selected.append(card_id)
+                if card_id in st.session_state.selected_temp_cards:
+                    st.session_state.selected_temp_cards.remove(card_id)
+                elif len(st.session_state.selected_temp_cards) < MAX_CARDS_PER_PLAYER:
+                    st.session_state.selected_temp_cards.append(card_id)
                 else:
                     st.warning(f"Maximum {MAX_CARDS_PER_PLAYER} cards allowed")
-                st.session_state.temp_selected = temp_selected
                 st.rerun()
     
     # Show selection summary
-    temp_selected = st.session_state.get('temp_selected', [])
-    if temp_selected:
+    if st.session_state.selected_temp_cards:
         st.markdown("---")
-        st.markdown(f"### 📋 Selected Cards: {len(temp_selected)}")
-        st.write(f"Total Cost: {len(temp_selected) * CARD_PRICE} ETB")
+        st.markdown(f"### 📋 Selected Cards: {len(st.session_state.selected_temp_cards)}")
+        st.write(f"Total Cost: {len(st.session_state.selected_temp_cards) * CARD_PRICE} ETB")
         
-        if st.button("✅ Join Game", type="primary", width='stretch'):
-            success, message = join_game(game_id, user_id, temp_selected)
+        if st.button("✅ Join Game", type="primary", use_container_width=True, disabled=not is_countdown_active):
+            success, message = join_game(game_id, user_id, st.session_state.selected_temp_cards)
             if success:
                 st.success(message)
-                st.session_state.temp_selected = []
                 st.rerun()
             else:
                 st.error(message)
-    
-    return user_cards
 
 def show_game_board(game):
-    """Display the BINGO game board"""
+    """Display the BINGO game board with automatic features"""
     game_id = game["game_id"]
     status = game["status"]
     called = json.loads(game.get("called_numbers", "[]"))
     pot = game.get("pot", 0)
     
-    # Game status
-    status_colors = {
-        "waiting": "🟡",
-        "running": "🟢",
-        "finished": "🔴"
-    }
-    status_labels = {
-        "waiting": "Waiting for Players",
-        "running": "Game in Progress",
-        "finished": "Game Ended"
-    }
+    # Update session state
+    st.session_state.called_numbers = called
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("🎮 Status", f"{status_colors.get(status, '⚪')} {status_labels.get(status, status)}")
+    # Game status
+    col1, col2, col3, col4 = st.columns(4)
+    
+    status_icon = "🟡" if status == "waiting" else "🟢" if status == "running" else "🔴"
+    status_label = "Waiting for Players" if status == "waiting" else "Game in Progress" if status == "running" else "Game Ended"
+    
+    col1.metric("🎮 Status", f"{status_icon} {status_label}")
     col2.metric("💰 Prize Pool", f"{pot} ETB")
     col3.metric("🎯 Numbers Called", f"{len(called)}/75")
+    col4.metric("👥 Players", len(get_players(game_id)))
     
-    # Show timer if waiting
-    if status == "waiting":
+    # Countdown timer
+    if status == "waiting" and not st.session_state.winner_declared:
         selection_end = datetime.fromisoformat(game["selection_end_time"])
         remaining = max(0, int((selection_end - datetime.now()).total_seconds()))
-        st.info(f"⏰ Selection ends in: {remaining // 60}:{remaining % 60:02d}")
+        st.session_state.countdown_time = remaining
         
-        # Auto-start when timer expires
-        if remaining <= 0:
+        # Display countdown
+        minutes = remaining // 60
+        seconds = remaining % 60
+        time_color = "#4CAF50" if remaining > 10 else "#FF5722" if remaining > 5 else "#F44336"
+        
+        st.markdown(f"""
+        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #1a1a2e, #16213e);
+                    border-radius: 15px; margin: 10px 0;">
+            <div style="font-size: 3rem; font-weight: bold; color: {time_color};">
+                ⏰ {minutes:02d}:{seconds:02d}
+            </div>
+            <div style="color: white; font-size: 1.2rem;">Time to select cards</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Auto-start game when countdown reaches 0
+        if remaining <= 0 and not st.session_state.game_started:
             supabase_admin = get_supabase_admin()
             try:
                 supabase_admin.table("bingo_games").update({
                     "status": "running"
                 }).eq("game_id", game_id).execute()
                 load_all_data()
+                st.session_state.game_started = True
+                st.session_state.countdown_active = False
                 st.rerun()
             except:
                 pass
+        
+        # Show card selection during countdown
+        if remaining > 0:
+            show_card_selection(game_id, st.session_state.current_user, True)
+        else:
+            st.warning("⏰ Time's up! Game is starting...")
+            st.session_state.countdown_active = False
     
-    # Show BINGO board if game is running
-    if status == "running":
+    # Running game
+    elif status == "running" and not st.session_state.winner_declared:
+        st.session_state.countdown_active = False
+        
+        # Show called numbers board
         st.markdown("### 🎯 BINGO Board")
         
-        # Display called numbers
         if called:
-            cols = st.columns(10)
-            for i, num in enumerate(called[-20:]):  # Show last 20 called numbers
-                col = cols[i % 10]
+            cols = st.columns(15)
+            for i, num in enumerate(called):
+                col = cols[i % 15]
+                if num <= 15:
+                    letter = "B"
+                    bg = "#FF6B6B"
+                elif num <= 30:
+                    letter = "I"
+                    bg = "#4ECDC4"
+                elif num <= 45:
+                    letter = "N"
+                    bg = "#45B7D1"
+                elif num <= 60:
+                    letter = "G"
+                    bg = "#96CEB4"
+                else:
+                    letter = "O"
+                    bg = "#FFEAA7"
+                
                 col.markdown(f"""
-                <div style="background: #8B0000; color: white; 
-                            padding: 0.5rem; border-radius: 8px; 
-                            text-align: center; font-weight: bold; 
-                            margin: 2px;">
-                    {num}
+                <div style="background: {bg}; color: white; padding: 8px; border-radius: 8px; 
+                            text-align: center; font-weight: bold; margin: 2px; font-size: 14px;">
+                    {letter}{num}
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("No numbers called yet")
         
-        # Auto-call numbers every 5 seconds
-        if not st.session_state.get('auto_call_running', False):
-            st.session_state.auto_call_running = True
-            # Call a number every 5 seconds
-            if len(called) < 75:
-                time.sleep(5)  # Wait 5 seconds
-                new_num = call_number(game_id)
-                if new_num:
+        # Show last called number prominently
+        if called:
+            last_num = called[-1]
+            if last_num <= 15:
+                letter = "B"
+                bg = "#FF6B6B"
+            elif last_num <= 30:
+                letter = "I"
+                bg = "#4ECDC4"
+            elif last_num <= 45:
+                letter = "N"
+                bg = "#45B7D1"
+            elif last_num <= 60:
+                letter = "G"
+                bg = "#96CEB4"
+            else:
+                letter = "O"
+                bg = "#FFEAA7"
+            
+            st.markdown(f"""
+            <div style="background: {bg}; color: white; padding: 20px; border-radius: 15px; 
+                        text-align: center; font-size: 3rem; font-weight: bold; margin: 10px 0;
+                        border: 4px solid #8B0000;">
+                {letter}{last_num}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Game controls
+        st.markdown("---")
+        st.markdown("#### 🎮 Game Controls")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🎯 Draw Number", type="primary", use_container_width=True):
+                num = call_next_number(game_id)
+                if num:
+                    st.success(f"Number {num} called!")
                     st.rerun()
         
-        # Check for winners
+        with col2:
+            if st.button("⏯️ Auto-Play" if not st.session_state.auto_play else "⏸️ Pause", use_container_width=True):
+                st.session_state.auto_play = not st.session_state.auto_play
+                st.rerun()
+        
+        with col3:
+            if st.button("🔄 Reset", use_container_width=True):
+                st.session_state.called_numbers = []
+                st.session_state.winner_declared = False
+                st.rerun()
+        
+        # Auto-play logic - calls numbers every 4.5 seconds
+        if st.session_state.auto_play and len(called) < 75 and not st.session_state.winner_declared:
+            time.sleep(4.5)
+            num = call_next_number(game_id)
+            if num:
+                st.rerun()
+        
+        # Check for winners automatically
         players = get_players(game_id)
         for username in players.keys():
             user_cards = get_user_cards(game_id, username)
             for card_id in user_cards:
-                card_nums = generate_card_numbers(card_id)
-                pattern = check_card_for_win(card_nums, called)
+                card_data = get_card_data(card_id)
+                pattern = check_winning_pattern(card_data, called)
                 if pattern:
                     if declare_winner(game_id, username, card_id, pattern):
                         st.balloons()
                         st.success(f"🎉 {username} WINS with {get_pattern_name(pattern)}!")
+                        st.session_state.winner_declared = True
+                        st.session_state.auto_play = False
                         load_all_data()
                         st.rerun()
+    
+    # Game Finished
+    elif status == "finished" or st.session_state.winner_declared:
+        st.session_state.countdown_active = False
+        st.session_state.auto_play = False
+        
+        winner = None
+        for w in st.session_state.winners:
+            if w["game_id"] == game_id:
+                winner = w
+                break
+        
+        if winner:
+            st.balloons()
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #FFD700, #FFA500);
+                        padding: 2rem; border-radius: 20px; text-align: center;
+                        border: 4px solid #8B0000;">
+                <div style="font-size: 4rem;">🎉🏆🎉</div>
+                <h1 style="color: #8B0000;">Winner!</h1>
+                <h2 style="color: #1a365d;">{winner.get('username', 'Unknown')}</h2>
+                <p style="font-size: 2rem; color: #8B0000;">💰 {winner.get('prize', 0)} ETB</p>
+                <p style="font-size: 1.2rem;">Pattern: {get_pattern_name(json.loads(winner.get('winning_pattern', '{}')))}</p>
+                <p style="font-size: 1.2rem;">Card: #{winner.get('card_id', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("No winner declared. Game ended.")
+        
+        if st.button("🆕 Next Game", type="primary", use_container_width=True):
+            create_new_game()
+            st.rerun()
 
 def show_players_list(game_id):
     """Display list of players in the game"""
     players = get_players(game_id)
     if players:
         st.markdown("### 👥 Players")
-        for username, count in players.items():
-            st.markdown(f"🎯 {username}: {count} card(s)")
+        for username, count in sorted(players.items(), key=lambda x: x[1], reverse=True):
+            st.markdown(f"🎯 **{username}**: {count} card(s)")
     else:
-        st.info("No players yet. Join the game!")
+        st.info("No players yet. Select cards during countdown!")
 
-def show_balance():
-    if st.session_state.logged_in:
-        user = st.session_state.user_db.get(st.session_state.current_user, {})
-        balance = user.get("balance", 0)
-        st.sidebar.markdown(f"""
-        <div style="background:#E8F0FE;padding:1rem;border-radius:12px;margin-bottom:1rem;">
-            <p style="margin:0;font-weight:600;color:#1A73E8;">💰 Balance: {balance} ETB</p>
-        </div>
-        """, unsafe_allow_html=True)
-        return balance
-    return 0
+def show_user_cards(game_id, user_id):
+    """Display user's cards with marking"""
+    user_cards = get_user_cards(game_id, user_id)
+    if user_cards:
+        st.markdown("### 📋 Your Cards")
+        for card_id in user_cards:
+            st.markdown(show_bingo_card(card_id, st.session_state.called_numbers), unsafe_allow_html=True)
 
 def show_add_funds():
     """Display add funds interface"""
     st.markdown("### 💰 Add Funds")
+    st.markdown("Add funds to your account to play more games.")
     
     with st.form("add_funds"):
         amount = st.number_input("Amount (ETB)", min_value=10, max_value=10000, step=10, value=50)
         phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
         confirm_code = st.text_input("🔑 Confirmation Code", placeholder="Enter code 2121 for demo")
         
-        if st.form_submit_button("💰 Confirm Payment", width='stretch'):
+        if st.form_submit_button("💰 Confirm Payment", use_container_width=True):
             if confirm_code == "2121":
                 if add_balance(st.session_state.current_user, amount):
                     st.success(f"✅ Added {amount} ETB to your account!")
@@ -719,6 +965,27 @@ def show_add_funds():
                     st.error("❌ Failed to add funds")
             else:
                 st.error("❌ Invalid confirmation code. Use 2121 for demo.")
+
+def show_balance_status():
+    """Display user balance with status indicator"""
+    if st.session_state.logged_in:
+        user = st.session_state.user_db.get(st.session_state.current_user, {})
+        balance = user.get("balance", 0)
+        game_played = user.get("game_played", 0)
+        
+        status_icon, status_text = get_balance_status(balance)
+        
+        st.sidebar.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); 
+                    padding: 1rem; border-radius: 12px; margin-bottom: 1rem; color: white;">
+            <p style="margin: 0; font-weight: 600; font-size: 1.1rem;">👤 {user.get('name', st.session_state.current_user)}</p>
+            <p style="margin: 5px 0; font-size: 0.9rem;">@ {st.session_state.current_user}</p>
+            <p style="margin: 5px 0; font-size: 1.2rem; font-weight: bold;">💰 {balance} ETB</p>
+            <p style="margin: 5px 0; font-size: 0.85rem;">{status_icon} {status_text}</p>
+            <p style="margin: 5px 0; font-size: 0.85rem;">🎮 Games Played: {game_played}</p>
+            <p style="margin: 5px 0; font-size: 0.85rem;">⭐ Role: {st.session_state.current_role.title()}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ===================================================================
 # MAIN APPLICATION
@@ -732,40 +999,33 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # CSS
+    # Custom CSS
     st.markdown("""
     <style>
-        .login-container {
-            max-width: 500px;
-            margin: 2rem auto;
-            padding: 2.5rem;
-            background: #FFFFFF !important;
-            border: 1px solid #E8EAED;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        }
         .stButton > button {
-            background: linear-gradient(135deg, #8B0000, #CC0000) !important;
-            color: white !important;
-            border-radius: 30px !important;
-            padding: 0.9rem 2.2rem !important;
+            border-radius: 20px !important;
             font-weight: 600 !important;
             border: none !important;
         }
         .stButton > button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 16px rgba(139,0,0,0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         .stButton > button[type="primary"] {
             background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
+            color: white !important;
         }
-        .stButton > button[type="secondary"] {
-            background: linear-gradient(135deg, #1A73E8, #4285F4) !important;
+        .stSelectbox > div > div {
+            background-color: white !important;
+        }
+        div[data-testid="stMetricValue"] {
+            font-size: 1.5rem !important;
         }
     </style>
     """, unsafe_allow_html=True)
     
     init_game_db()
+    load_cards_from_db()
     
     # Sidebar
     with st.sidebar:
@@ -773,20 +1033,10 @@ def main():
         st.markdown("---")
         
         if st.session_state.logged_in:
-            user = st.session_state.user_db.get(st.session_state.current_user, {})
-            name = user.get("name", st.session_state.current_user)
-            role = user.get("role", "player")
-            balance = user.get("balance", 0)
+            show_balance_status()
             
-            st.markdown(f"""
-            <div style="background:#E8F0FE;padding:1rem;border-radius:12px;margin-bottom:1rem;">
-                <p style="margin:0;font-weight:600;color:#1A73E8;">👤 {name}</p>
-                <p style="margin:0;font-size:0.85rem;color:#5F6368;">@{st.session_state.current_user}</p>
-                <p style="margin:0;font-size:0.85rem;color:#5F6368;">💰 Balance: {balance} ETB</p>
-                <p style="margin:0;font-size:0.85rem;color:#5F6368;">🎯 Role: {role.title()}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            # Navigation based on role
+            role = st.session_state.current_role
             if role == "admin":
                 nav_options = ["👑 Admin Dashboard", "🏠 Game Lobby", "💰 Add Funds", "📊 History"]
             else:
@@ -795,19 +1045,19 @@ def main():
             selected = st.radio("Navigation", nav_options, index=0)
             st.session_state.current_page = selected
             
-            if st.button("🚪 Logout", width='stretch'):
+            if st.button("🚪 Logout", use_container_width=True):
                 logout_user()
                 st.rerun()
             
             st.markdown("---")
             st.markdown("📌 **Card Price:** 10 ETB")
             st.markdown("🏆 **Prize:** 8 ETB per card")
-            st.markdown("⏰ **Selection:** 1 minute")
+            st.markdown("⏰ **Selection:** 60 seconds")
             st.markdown("🎯 **Max Cards:** 2 per player")
         else:
             st.markdown("👋 Welcome to Derash Bingo!")
             st.markdown("Please login or register to play.")
-            if st.button("🔐 Login / Register", width='stretch'):
+            if st.button("🔐 Login / Register", use_container_width=True):
                 st.rerun()
     
     # Main content
@@ -817,14 +1067,16 @@ def main():
     
     current_page = st.session_state.get('current_page', '🏠 Game Lobby')
     
+    # Admin Dashboard
     if current_page == "👑 Admin Dashboard" and st.session_state.current_role == "admin":
         st.markdown("### 👑 Admin Dashboard")
         
+        # Statistics
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("🎮 Games", len(st.session_state.games))
-        col2.metric("👥 Players", len([u for u in st.session_state.user_db if u != "admin"]))
+        col1.metric("🎮 Total Games", len(st.session_state.games))
+        col2.metric("👥 Total Players", len([u for u in st.session_state.user_db if u != "admin"]))
         col3.metric("💰 Total Pot", sum(g.get("pot", 0) for g in st.session_state.games))
-        col4.metric("🏆 Winners", len(st.session_state.winners))
+        col4.metric("🏆 Total Winners", len(st.session_state.winners))
         
         # Game Management
         st.markdown("---")
@@ -832,36 +1084,42 @@ def main():
         
         current_game = get_current_game()
         if current_game:
-            st.info(f"Current Game: #{current_game['game_id']} - {current_game['status']}")
+            st.info(f"**Current Game:** #{current_game['game_id']} - Status: {current_game['status']}")
+            
             if current_game['status'] == "waiting":
-                if st.button("⏰ Force Start Game", width='stretch'):
+                if st.button("⏰ Force Start Game", use_container_width=True):
                     supabase_admin = get_supabase_admin()
                     try:
                         supabase_admin.table("bingo_games").update({
                             "status": "running"
                         }).eq("game_id", current_game['game_id']).execute()
                         load_all_data()
+                        st.session_state.game_started = True
+                        st.session_state.countdown_active = False
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to start game: {e}")
             elif current_game['status'] == "running":
-                if st.button("🎯 Call Number", width='stretch'):
-                    num = call_number(current_game['game_id'])
-                    if num:
-                        st.success(f"Number {num} called!")
-                        st.rerun()
-                if st.button("🏁 End Game", width='stretch'):
-                    supabase_admin = get_supabase_admin()
-                    try:
-                        supabase_admin.table("bingo_games").update({
-                            "status": "finished"
-                        }).eq("game_id", current_game['game_id']).execute()
-                        load_all_data()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to end game: {e}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🎯 Call Number", use_container_width=True):
+                        num = call_next_number(current_game['game_id'])
+                        if num:
+                            st.success(f"Number {num} called!")
+                            st.rerun()
+                with col2:
+                    if st.button("🏁 End Game", use_container_width=True):
+                        supabase_admin = get_supabase_admin()
+                        try:
+                            supabase_admin.table("bingo_games").update({
+                                "status": "finished"
+                            }).eq("game_id", current_game['game_id']).execute()
+                            load_all_data()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to end game: {e}")
         else:
-            if st.button("🆕 Create New Game", width='stretch'):
+            if st.button("🆕 Create New Game", type="primary", use_container_width=True):
                 game = create_new_game()
                 if game:
                     st.success(f"✅ New game created! Game ID: {game['game_id']}")
@@ -874,8 +1132,9 @@ def main():
             "Username": u,
             "Name": d.get("name", ""),
             "Balance": d.get("balance", 0),
+            "Games Played": d.get("game_played", 0),
             "Role": d.get("role", "player")
-        } for u, d in st.session_state.user_db.items()])
+        } for u, d in st.session_state.user_db.items() if u != "admin"])
         st.dataframe(users_df, use_container_width=True)
         
         # Winner History
@@ -887,6 +1146,7 @@ def main():
         else:
             st.info("No winners yet")
     
+    # Game Lobby
     elif current_page == "🏠 Game Lobby":
         st.markdown("### 🎰 ደራሽ ቢንጎ")
         st.markdown("#### እንኳን ወደ ደራሽ ቢንጎ በደህና መጡ! 🎉")
@@ -904,61 +1164,36 @@ def main():
         game_id = current_game["game_id"]
         status = current_game["status"]
         
-        # Show game status
-        if status == "waiting":
-            st.markdown("### 🎯 Game Lobby - Select Your Cards")
-            
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                user_cards = show_card_selection(game_id, st.session_state.current_user)
-            with col2:
+        # Game display
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            show_game_board(current_game)
+        with col2:
+            if status == "waiting":
                 show_players_list(game_id)
-                show_balance()
-                
-        elif status == "running":
-            st.markdown("### 🎯 Game in Progress")
-            
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                show_game_board(current_game)
-            with col2:
+                st.markdown("---")
+                st.markdown("#### ℹ️ How to Play")
+                st.markdown("""
+                1. Select up to 2 cards
+                2. Each card costs 10 ETB
+                3. Wait for countdown to end
+                4. Game starts automatically
+                5. Watch numbers being called
+                6. Win by completing a pattern!
+                """)
+            elif status == "running":
                 show_players_list(game_id)
-                show_balance()
-                
-        elif status == "finished":
-            st.markdown("### 🏁 Game Finished")
-            
-            # Show winner
-            winner = None
-            for w in st.session_state.winners:
-                if w["game_id"] == game_id:
-                    winner = w
-                    break
-            
-            if winner:
-                st.balloons()
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #FFD700, #FFA500);
-                            padding: 2rem; border-radius: 20px; text-align: center;
-                            border: 4px solid #8B0000;">
-                    <div style="font-size: 4rem;">🎉🏆🎉</div>
-                    <h1 style="color: #8B0000;">Winner!</h1>
-                    <h2 style="color: #1a365d;">{winner.get('username', 'Unknown')}</h2>
-                    <p style="font-size: 2rem; color: #8B0000;">💰 {winner.get('prize', 0)} ETB</p>
-                    <p>Pattern: {get_pattern_name(json.loads(winner.get('winning_pattern', '{}')))}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown("---")
+                show_user_cards(game_id, st.session_state.current_user)
             else:
-                st.info("No winner declared. Game ended.")
-            
-            if st.button("🆕 New Game", width='stretch'):
-                create_new_game()
-                st.rerun()
+                show_players_list(game_id)
     
+    # Add Funds
     elif current_page == "💰 Add Funds":
         show_add_funds()
     
-    elif current_page == "📊 History" or current_page == "📊 My History":
+    # History
+    elif current_page in ["📊 History", "📊 My History"]:
         st.markdown("### 📊 Game History")
         
         if st.session_state.winners:
@@ -966,11 +1201,21 @@ def main():
             my_wins = [w for w in st.session_state.winners if w.get("username") == st.session_state.current_user]
             if my_wins:
                 df = pd.DataFrame(my_wins)
+                df['winning_pattern'] = df['winning_pattern'].apply(lambda x: get_pattern_name(json.loads(x)) if x else "Unknown")
                 st.dataframe(df, use_container_width=True)
             else:
                 st.info("You haven't won any games yet")
         else:
             st.info("No games played yet")
+        
+        # Show user statistics
+        st.markdown("#### 📈 Your Statistics")
+        user = st.session_state.user_db.get(st.session_state.current_user, {})
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("💰 Current Balance", f"{user.get('balance', 0)} ETB")
+        with col2:
+            st.metric("🎮 Games Played", user.get('game_played', 0))
 
 if __name__ == "__main__":
     main()
