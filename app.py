@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - Complete Automatic Bingo Game
-# Fixed database data corruption issue
+# FIXED: Correctly parsing Supabase data
 # ===================================================================
 
 import streamlit as st
@@ -63,44 +63,39 @@ def get_supabase_admin():
 def load_all_data():
     supabase = get_supabase()
     
-    # Users
+    # Users - FIXED: Properly parse the response
     try:
         res = supabase.table("bingo_users").select("*").execute()
         user_db = {}
+        
+        # Debug: Print the raw response
+        print(f"Raw response: {res}")
+        print(f"Data: {res.data}")
+        
         if res.data:
+            # The data is a list of dictionaries, each representing a row
             for u in res.data:
-                # Fix corrupted data: Extract password hash and balance
-                password = u["password"]
-                balance = u["balance"]
-                
-                # If password contains a dot, it might have balance appended
-                if '.' in str(password):
-                    parts = str(password).split('.')
-                    if len(parts) == 2:
-                        # Check if the second part is a number (balance)
-                        try:
-                            bal = float(parts[1])
-                            password = parts[0]
-                            # Only update if balance from password is different
-                            if balance == 0 and bal > 0:
-                                balance = bal
-                        except:
-                            pass
-                
-                user_db[u["username"]] = {
-                    "password": password,
-                    "balance": float(balance) if balance else 0,
-                    "role": u["role"],
-                    "name": u["name"],
-                    "phone": u.get("phone", ""),
-                    "game_played": u.get("game_played", 0)
-                }
+                username = u.get("username")
+                if username:
+                    user_db[username] = {
+                        "password": u.get("password", ""),
+                        "balance": float(u.get("balance", 0)),
+                        "role": u.get("role", "player"),
+                        "name": u.get("name", username),
+                        "phone": u.get("phone", ""),
+                        "game_played": u.get("game_played", 0)
+                    }
+                    print(f"Loaded user: {username} -> {user_db[username]}")
+        
         st.session_state.user_db = user_db
         st.session_state.user_db_loaded = True
         print(f"✅ Loaded {len(user_db)} users from database")
         print(f"Users: {list(user_db.keys())}")
+        
     except Exception as e:
         st.error(f"Error loading users: {e}")
+        print(f"Error loading users: {e}")
+        traceback.print_exc()
         st.session_state.user_db = {}
         st.session_state.user_db_loaded = False
     
@@ -109,6 +104,7 @@ def load_all_data():
         res = supabase.table("bingo_games").select("*").order("game_id", desc=True).execute()
         st.session_state.games = res.data if res.data else []
     except Exception as e:
+        print(f"Error loading games: {e}")
         st.session_state.games = []
     
     # Selected Cards
@@ -116,6 +112,7 @@ def load_all_data():
         res = supabase.table("bingo_selected_cards").select("*").execute()
         st.session_state.selected_cards = res.data if res.data else []
     except Exception as e:
+        print(f"Error loading selected cards: {e}")
         st.session_state.selected_cards = []
     
     # Winners
@@ -123,65 +120,8 @@ def load_all_data():
         res = supabase.table("bingo_winners").select("*").execute()
         st.session_state.winners = res.data if res.data else []
     except Exception as e:
+        print(f"Error loading winners: {e}")
         st.session_state.winners = []
-
-def fix_corrupted_data():
-    """Fix corrupted user data in the database"""
-    supabase_admin = get_supabase_admin()
-    fixed_count = 0
-    
-    try:
-        res = supabase_admin.table("bingo_users").select("*").execute()
-        if res.data:
-            for u in res.data:
-                username = u["username"]
-                password = u["password"]
-                balance = u["balance"]
-                needs_fix = False
-                
-                # Check if password contains balance appended
-                if '.' in str(password):
-                    parts = str(password).split('.')
-                    if len(parts) == 2:
-                        try:
-                            bal = float(parts[1])
-                            if bal > 0:
-                                # Extract the clean password hash
-                                clean_password = parts[0]
-                                # Update the record
-                                supabase_admin.table("bingo_users").update({
-                                    "password": clean_password,
-                                    "balance": bal
-                                }).eq("username", username).execute()
-                                fixed_count += 1
-                                print(f"✅ Fixed user: {username}")
-                        except:
-                            pass
-                
-                # Also fix if balance is 0 but should have balance from password
-                if balance == 0 and '.' in str(password):
-                    parts = str(password).split('.')
-                    if len(parts) == 2:
-                        try:
-                            bal = float(parts[1])
-                            if bal > 0:
-                                clean_password = parts[0]
-                                supabase_admin.table("bingo_users").update({
-                                    "password": clean_password,
-                                    "balance": bal
-                                }).eq("username", username).execute()
-                                fixed_count += 1
-                                print(f"✅ Fixed user: {username}")
-                        except:
-                            pass
-        
-        if fixed_count > 0:
-            load_all_data()
-            return True, f"✅ Fixed {fixed_count} user records"
-        else:
-            return True, "✅ No corrupted data found"
-    except Exception as e:
-        return False, f"❌ Error fixing data: {e}"
 
 def init_game_db():
     if "user_db" not in st.session_state:
@@ -220,45 +160,6 @@ def init_game_db():
         st.session_state.cards_data = {}
     if "debug_info" not in st.session_state:
         st.session_state.debug_info = ""
-    
-    # Fix corrupted data on startup
-    fix_corrupted_data()
-    
-    # Ensure admin exists with clean data
-    if "admin" not in st.session_state.user_db:
-        supabase_admin = get_supabase_admin()
-        admin_pw = hash_password("adminbb")
-        try:
-            supabase_admin.table("bingo_users").insert({
-                "username": "admin",
-                "password": admin_pw,
-                "balance": 1000,
-                "role": "admin",
-                "name": "Bingo Administrator"
-            }).execute()
-            load_all_data()
-            print("✅ Admin user created successfully")
-        except Exception as e:
-            if "duplicate key" in str(e) or "23505" in str(e):
-                load_all_data()
-                print("ℹ️ Admin user already exists")
-            else:
-                st.error(f"Could not create admin: {e}")
-    
-    # Fix admin password if needed
-    if "admin" in st.session_state.user_db:
-        admin_user = st.session_state.user_db["admin"]
-        expected_hash = hash_password("adminbb")
-        if admin_user["password"] != expected_hash:
-            supabase_admin = get_supabase_admin()
-            try:
-                supabase_admin.table("bingo_users").update({
-                    "password": expected_hash
-                }).eq("username", "admin").execute()
-                load_all_data()
-                print("✅ Admin password fixed")
-            except Exception as e:
-                print(f"Could not fix admin password: {e}")
 
 # ===================================================================
 # AUTHENTICATION
@@ -282,8 +183,13 @@ def login_user(username, password):
         return False, f"❌ Username not found. Available users: {', '.join(list(st.session_state.user_db.keys())[:5])}"
     
     user = st.session_state.user_db[username]
+    stored_hash = user["password"]
+    computed_hash = hash_password(password)
+    
     debug_msg += f"✅ User found: {username}\n"
-    debug_msg += f"Stored hash: {user['password'][:20]}...\n"
+    debug_msg += f"Stored hash: {stored_hash}\n"
+    debug_msg += f"Computed hash: {computed_hash}\n"
+    debug_msg += f"Match: {stored_hash == computed_hash}\n"
     
     if verify_password(password, user["password"]):
         debug_msg += "✅ Password verified successfully!\n"
@@ -331,56 +237,8 @@ def register_user(username, password, name, phone=""):
         st.session_state.debug_info = error_msg
         return False, error_msg
 
-def create_test_user():
-    """Create a test user directly"""
-    supabase_admin = get_supabase_admin()
-    username = "bm"
-    password = "246800"
-    hashed = hash_password(password)
-    
-    try:
-        # Check if user already exists
-        res = supabase_admin.table("bingo_users").select("*").eq("username", username).execute()
-        if res.data:
-            # Update existing user
-            supabase_admin.table("bingo_users").update({
-                "password": hashed,
-                "balance": 100,
-                "name": "Bm Player"
-            }).eq("username", username).execute()
-            load_all_data()
-            return True, f"✅ User '{username}' updated with password '{password}'"
-        
-        # Create user
-        supabase_admin.table("bingo_users").insert({
-            "username": username,
-            "password": hashed,
-            "balance": 100,
-            "role": "player",
-            "name": "Bm Player",
-            "phone": "0912345678"
-        }).execute()
-        load_all_data()
-        return True, f"✅ Test user '{username}' created with password '{password}'"
-    except Exception as e:
-        return False, f"❌ Failed to create test user: {e}"
-
-def fix_user_password(username, new_password):
-    """Fix a user's password"""
-    supabase_admin = get_supabase_admin()
-    hashed = hash_password(new_password)
-    
-    try:
-        supabase_admin.table("bingo_users").update({
-            "password": hashed
-        }).eq("username", username).execute()
-        load_all_data()
-        return True, f"✅ Password for '{username}' updated successfully"
-    except Exception as e:
-        return False, f"❌ Failed to update password: {e}"
-
 # ===================================================================
-# GAME FUNCTIONS (SAME AS BEFORE)
+# GAME FUNCTIONS
 # ===================================================================
 
 def get_current_game():
@@ -697,34 +555,19 @@ def show_login_page():
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     
     with tab1:
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col1:
-            st.markdown("#### Login")
-        with col2:
-            if st.button("🔧 Fix Data", use_container_width=True):
-                success, message = fix_corrupted_data()
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-        with col3:
-            if st.button("➕ Create Test User", use_container_width=True):
-                success, message = create_test_user()
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.warning(message)
-        
         with st.form("login_form"):
-            username = st.text_input("👤 Username", placeholder="Enter username", value=st.session_state.get('last_login_username', ''))
+            st.markdown("#### Login")
+            username = st.text_input("👤 Username", placeholder="Enter username")
             password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
+            
+            # Show available users
+            if st.session_state.user_db:
+                st.info(f"👥 Available users: {', '.join(list(st.session_state.user_db.keys()))}")
+            
             submitted = st.form_submit_button("🎰 Login to Play", use_container_width=True)
             
             if submitted:
                 if username and password:
-                    st.session_state.last_login_username = username
                     success, message = login_user(username, password)
                     if success:
                         st.success(message)
@@ -734,20 +577,10 @@ def show_login_page():
                         if st.session_state.debug_info:
                             with st.expander("🔍 Debug Info - Click to expand"):
                                 st.code(st.session_state.debug_info, language="text")
-        
-        with st.expander("ℹ️ Available Users (Debug)"):
-            if st.session_state.user_db:
-                users_list = list(st.session_state.user_db.keys())
-                st.write(f"Total users: {len(users_list)}")
-                for u in users_list:
-                    user_data = st.session_state.user_db[u]
-                    st.write(f"- **{u}** (Balance: {user_data['balance']} ETB, Role: {user_data['role']})")
-            else:
-                st.warning("No users found in database.")
-                st.write("Click 'Create Test User' above to create one, or register using the Register tab.")
     
     with tab2:
         with st.form("register_form"):
+            st.markdown("#### Register New Account")
             full_name = st.text_input("👤 Full Name", placeholder="Your full name")
             username = st.text_input("👤 Username", placeholder="Choose a username")
             phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
@@ -766,13 +599,9 @@ def show_login_page():
                     success, message = register_user(username, password, full_name, phone)
                     if success:
                         st.success(message)
-                        st.session_state.last_login_username = username
+                        st.info("✅ Please login with your new credentials")
                     else:
                         st.error(message)
-
-# ===================================================================
-# REST OF UI COMPONENTS
-# ===================================================================
 
 def show_bingo_card(card_id, called_numbers):
     card_data = get_card_data(card_id)
