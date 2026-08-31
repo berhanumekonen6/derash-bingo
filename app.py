@@ -62,32 +62,48 @@ def get_supabase_admin():
 def load_all_data():
     supabase = get_supabase()
     
-    # Users
-    res = supabase.table("bingo_users").select("*").execute()
-    user_db = {}
-    if res.data:
-        for u in res.data:
-            user_db[u["username"]] = {
-                "password": u["password"],
-                "balance": u["balance"],
-                "role": u["role"],
-                "name": u["name"],
-                "phone": u.get("phone", ""),
-                "game_played": u.get("game_played", 0)
-            }
-    st.session_state.user_db = user_db
+    # Users - handle missing columns gracefully
+    try:
+        res = supabase.table("bingo_users").select("*").execute()
+        user_db = {}
+        if res.data:
+            for u in res.data:
+                user_db[u["username"]] = {
+                    "password": u["password"],
+                    "balance": u["balance"],
+                    "role": u["role"],
+                    "name": u["name"],
+                    "phone": u.get("phone", ""),
+                    "game_played": u.get("game_played", 0)  # Default to 0 if column doesn't exist
+                }
+        st.session_state.user_db = user_db
+    except Exception as e:
+        st.error(f"Error loading users: {e}")
+        st.session_state.user_db = {}
     
     # Games
-    res = supabase.table("bingo_games").select("*").order("game_id", desc=True).execute()
-    st.session_state.games = res.data if res.data else []
+    try:
+        res = supabase.table("bingo_games").select("*").order("game_id", desc=True).execute()
+        st.session_state.games = res.data if res.data else []
+    except Exception as e:
+        st.error(f"Error loading games: {e}")
+        st.session_state.games = []
     
     # Selected Cards
-    res = supabase.table("bingo_selected_cards").select("*").execute()
-    st.session_state.selected_cards = res.data if res.data else []
+    try:
+        res = supabase.table("bingo_selected_cards").select("*").execute()
+        st.session_state.selected_cards = res.data if res.data else []
+    except Exception as e:
+        st.error(f"Error loading selected cards: {e}")
+        st.session_state.selected_cards = []
     
     # Winners
-    res = supabase.table("bingo_winners").select("*").execute()
-    st.session_state.winners = res.data if res.data else []
+    try:
+        res = supabase.table("bingo_winners").select("*").execute()
+        st.session_state.winners = res.data if res.data else []
+    except Exception as e:
+        st.error(f"Error loading winners: {e}")
+        st.session_state.winners = []
 
 def init_game_db():
     if "user_db" not in st.session_state:
@@ -122,8 +138,8 @@ def init_game_db():
         st.session_state.auto_play = False
     if "selected_temp_cards" not in st.session_state:
         st.session_state.selected_temp_cards = []
-    if "cards_loaded" not in st.session_state:
-        st.session_state.cards_loaded = False
+    if "cards_data" not in st.session_state:
+        st.session_state.cards_data = {}
     
     # Ensure admin exists
     if "admin" not in st.session_state.user_db:
@@ -135,8 +151,7 @@ def init_game_db():
                 "password": admin_pw,
                 "balance": 1000,
                 "role": "admin",
-                "name": "Bingo Administrator",
-                "game_played": 0
+                "name": "Bingo Administrator"
             }).execute()
             load_all_data()
         except Exception as e:
@@ -191,8 +206,7 @@ def register_user(username, password, name, phone=""):
             "balance": 0,
             "role": "player",
             "name": name,
-            "phone": phone,
-            "game_played": 0
+            "phone": phone
         }).execute()
         load_all_data()
         return True, "✅ Registration successful!"
@@ -243,43 +257,6 @@ def get_players(game_id):
             players[username] += 1
     return players
 
-def load_cards_from_db():
-    """Load all card data from the database"""
-    supabase = get_supabase()
-    try:
-        res = supabase.table("bingo_cards").select("*").execute()
-        if res.data:
-            st.session_state.bingo_cards = res.data
-            st.session_state.cards_loaded = True
-            return res.data
-        else:
-            # Create default cards if none exist
-            create_default_cards()
-            return st.session_state.bingo_cards
-    except Exception as e:
-        st.error(f"Error loading cards: {e}")
-        return []
-
-def create_default_cards():
-    """Create default bingo cards in the database"""
-    supabase_admin = get_supabase_admin()
-    cards = []
-    
-    for card_id in range(1, TOTAL_CARDS + 1):
-        card_data = generate_bingo_card_data(card_id)
-        cards.append({
-            "card_id": card_id,
-            "card_data": json.dumps(card_data)
-        })
-    
-    try:
-        supabase_admin.table("bingo_cards").insert(cards).execute()
-        load_all_data()
-        st.session_state.bingo_cards = cards
-        st.session_state.cards_loaded = True
-    except Exception as e:
-        st.error(f"Error creating cards: {e}")
-
 def generate_bingo_card_data(card_id):
     """Generate BINGO card data for a specific card ID"""
     columns = {
@@ -310,19 +287,11 @@ def generate_bingo_card_data(card_id):
     return card
 
 def get_card_data(card_id):
-    """Get card data from session state or database"""
-    if not st.session_state.get('cards_loaded', False):
-        load_cards_from_db()
-    
-    if 'bingo_cards' in st.session_state:
-        for card in st.session_state.bingo_cards:
-            if card.get('card_id') == card_id:
-                if isinstance(card.get('card_data'), str):
-                    return json.loads(card['card_data'])
-                return card.get('card_data')
-    
-    # Fallback: generate on the fly
-    return generate_bingo_card_data(card_id)
+    """Get card data - generate on the fly since no cards table exists"""
+    # Generate card data
+    if card_id not in st.session_state.cards_data:
+        st.session_state.cards_data[card_id] = generate_bingo_card_data(card_id)
+    return st.session_state.cards_data[card_id]
 
 def display_card_grid(card_data):
     """Display BINGO card as a grid from card data"""
@@ -409,6 +378,7 @@ def create_new_game():
             st.session_state.game_started = False
             st.session_state.countdown_active = True
             st.session_state.countdown_time = SELECTION_TIME
+            st.session_state.selected_temp_cards = []
             return res.data[0]
     except Exception as e:
         st.error(f"Failed to create game: {e}")
@@ -475,12 +445,16 @@ def declare_winner(game_id, winner_id, card_id, pattern):
             "winning_pattern": json.dumps(pattern)
         }).execute()
         
-        # Update winner's balance
+        # Update winner's balance - handle missing game_played column
         new_balance = user.get("balance", 0) + prize
-        supabase_admin.table("bingo_users").update({
-            "balance": new_balance,
-            "game_played": user.get("game_played", 0) + 1
-        }).eq("username", winner_id).execute()
+        update_data = {
+            "balance": new_balance
+        }
+        # Only add game_played if it exists in the user record
+        if "game_played" in user:
+            update_data["game_played"] = user.get("game_played", 0) + 1
+        
+        supabase_admin.table("bingo_users").update(update_data).eq("username", winner_id).execute()
         
         load_all_data()
         st.session_state.winner_declared = True
@@ -1025,7 +999,6 @@ def main():
     """, unsafe_allow_html=True)
     
     init_game_db()
-    load_cards_from_db()
     
     # Sidebar
     with st.sidebar:
