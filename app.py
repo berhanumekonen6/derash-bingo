@@ -1,5 +1,5 @@
 # ===================================================================
-# ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
+# ደራሽ ቢንጎ (Derash Bingo) - STREAMLIT CLOUD VERSION
 # ALL 201 BINGO CARDS - WITH COUNTDOWN & WINNER SHARING
 # ===================================================================
 
