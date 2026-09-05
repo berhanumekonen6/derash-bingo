@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH PROPER CARD SELECTION & GAME STATE MANAGEMENT
+# WITH ALL 201 CARDS ON ATTRACTIVE BOARD
 # ===================================================================
 
 import streamlit as st
@@ -348,7 +348,6 @@ def login_user(username, password):
     
     # Check for admin login
     if username == "admin" and password == "admin123":
-        # Create admin account if it doesn't exist
         if username not in st.session_state.user_db:
             user_data = {
                 "password": hash_password("admin123"),
@@ -435,17 +434,14 @@ def check_winning_pattern(card_data, called_numbers):
             return True
         return int(value) in called_set
     
-    # Check rows
     for row in range(5):
         if all(is_marked(card_data[row][col]) for col in range(5)):
             return {'type': 'row', 'index': row + 1}
     
-    # Check columns
     for col in range(5):
         if all(is_marked(card_data[row][col]) for row in range(5)):
             return {'type': 'column', 'letter': ['B', 'I', 'N', 'G', 'O'][col]}
     
-    # Check diagonals
     if all(is_marked(card_data[i][i]) for i in range(5)):
         return {'type': 'diagonal', 'direction': 'main'}
     
@@ -533,7 +529,6 @@ def create_new_game():
     """Create a new game and reset all selections"""
     game_id = f"BB{random.randint(1000, 9999)}{random.choice('ABCDEF')}{random.randint(10, 99)}"
     
-    # Reset all selections for the new game
     st.session_state.selected_cards = []
     st.session_state.selected_temp_cards = []
     st.session_state.called_numbers = []
@@ -612,7 +607,6 @@ def declare_winners(game_id):
         }
         game["winners"].append(winner_data)
         
-        # Update user balance
         if winner["username"] in st.session_state.user_db:
             st.session_state.user_db[winner["username"]]["balance"] = st.session_state.user_db[winner["username"]].get("balance", 0) + prize_per_winner
             st.session_state.user_db[winner["username"]]["game_played"] = st.session_state.user_db[winner["username"]].get("game_played", 0) + 1
@@ -741,7 +735,6 @@ def display_countdown():
     """
     st.markdown(html, unsafe_allow_html=True)
     
-    # Auto-refresh for live countdown
     if remaining > 0:
         time.sleep(0.1)
         st.rerun()
@@ -785,6 +778,127 @@ def display_bingo_card(card_data, called_numbers, card_id, is_winning=False):
     
     html += "</div></div>"
     st.markdown(html, unsafe_allow_html=True)
+
+def display_mini_card_preview(card_id):
+    """Display a mini card preview for the board"""
+    card_data = get_card_data(card_id)
+    if not card_data:
+        return
+    
+    taken = get_taken_cards(get_current_game()["game_id"] if get_current_game() else None)
+    is_taken = card_id in taken
+    is_selected = card_id in st.session_state.selected_temp_cards
+    
+    if is_taken:
+        bg_color = "#2a2a3e"
+        border = "2px solid #ff4444"
+        status_icon = "🔒"
+    elif is_selected:
+        bg_color = "#1a4a2a"
+        border = "3px solid #4CAF50"
+        status_icon = "✅"
+    else:
+        bg_color = "#1a1a2e"
+        border = "2px solid #444"
+        status_icon = "🎯"
+    
+    html = f"""
+    <div style="background:{bg_color};border:{border};border-radius:8px;padding:4px;margin:2px;text-align:center;cursor:pointer;transition:all 0.3s;">
+        <div style="color:#FFD700;font-size:10px;font-weight:bold;">#{card_id}</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;font-size:7px;color:#ccc;">
+    """
+    
+    for row in range(5):
+        for col in range(5):
+            value = card_data[row][col]
+            if value == 'F':
+                html += f'<div style="color:#FFD700;">⭐</div>'
+            else:
+                html += f'<div>{value}</div>'
+    
+    html += f"""
+        </div>
+        <div style="font-size:8px;color:{'#4CAF50' if is_selected else '#888'};margin-top:2px;">
+            {status_icon}
+        </div>
+    </div>
+    """
+    return html
+
+def display_card_board():
+    """Display all 201 cards in an attractive grid"""
+    st.markdown("### 🎯 BINGO Card Board")
+    st.markdown("*Click on any available card to select it (max 2 cards)*")
+    
+    # Legend
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("🟢 **Available** - Click to select")
+    with col2:
+        st.markdown("✅ **Selected** - Click to deselect")
+    with col3:
+        st.markdown("🔒 **Taken** - Already chosen")
+    with col4:
+        st.markdown(f"📊 **{len(st.session_state.selected_temp_cards)}/2** cards selected")
+    
+    # Filter options
+    filter_col1, filter_col2 = st.columns(2)
+    with filter_col1:
+        show_taken = st.checkbox("Show taken cards", value=False)
+    with filter_col2:
+        if st.button("🔄 Clear Selection", use_container_width=True):
+            st.session_state.selected_temp_cards = []
+            st.rerun()
+    
+    # Get current game
+    current_game = get_current_game()
+    if not current_game:
+        st.warning("No active game. Please wait for a new game to start.")
+        return
+    
+    game_id = current_game["game_id"]
+    taken_cards = get_taken_cards(game_id) if current_game else []
+    
+    # Display cards in a grid
+    cols_per_row = 8
+    cols = st.columns(cols_per_row)
+    
+    for i, card in enumerate(BINGO_CARDS):
+        card_id = card["id"]
+        is_taken = card_id in taken_cards
+        is_selected = card_id in st.session_state.selected_temp_cards
+        
+        # Skip taken cards if filter is off
+        if is_taken and not show_taken:
+            continue
+        
+        with cols[i % cols_per_row]:
+            if is_taken:
+                # Show taken card (locked)
+                st.markdown(f"""
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:6px;margin:2px;text-align:center;opacity:0.6;">
+                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                    <div style="font-size:8px;color:#888;">Taken</div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif is_selected:
+                # Selected card - click to deselect
+                if st.button(f"✅ #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
+                    if card_id in st.session_state.selected_temp_cards:
+                        st.session_state.selected_temp_cards.remove(card_id)
+                        st.rerun()
+            else:
+                # Available card - click to select
+                if st.button(f"🎯 #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
+                    if len(st.session_state.selected_temp_cards) < 2:
+                        user = st.session_state.user_db.get(st.session_state.current_user, {})
+                        if user.get('balance', 0) >= CARD_PRICE:
+                            st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                    else:
+                        st.warning("⚠️ Max 2 cards!")
 
 def display_called_numbers():
     """Display called numbers in a grid"""
@@ -861,9 +975,8 @@ def admin_panel():
     """Admin panel for managing user balances"""
     st.markdown("### 🔧 Admin Panel")
     
-    # User selection
     users = list(st.session_state.user_db.keys())
-    users = [u for u in users if u != "admin"]  # Exclude admin from list
+    users = [u for u in users if u != "admin"]
     
     if not users:
         st.info("No users registered yet.")
@@ -877,19 +990,14 @@ def admin_panel():
         
         st.info(f"👤 **{selected_user}** | Current Balance: **{current_balance} ETB**")
         
-        # Balance update options
         st.markdown("#### 💰 Update Balance")
         
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            # Predefined balance amounts
             balance_options = [20, 50, 100, 200, 300, 500, 1000, 1500, 2000, 3000]
-            
-            # Custom amount input
             custom_amount = st.number_input("Custom Amount (ETB)", min_value=0, step=10, value=100)
             
-            # Quick select buttons
             st.markdown("**Quick Select:**")
             cols = st.columns(5)
             for i, amount in enumerate(balance_options):
@@ -926,7 +1034,6 @@ def admin_panel():
                     st.success(f"✅ Set {selected_user}'s balance to {custom_amount} ETB!")
                     st.rerun()
         
-        # Handle quick selection
         if st.session_state.admin_target_user == selected_user and st.session_state.admin_balance_selection is not None:
             amount = st.session_state.admin_balance_selection
             if selected_user in st.session_state.user_db:
@@ -937,7 +1044,6 @@ def admin_panel():
                 st.session_state.admin_balance_selection = None
                 st.rerun()
         
-        # Show all users and their balances
         st.markdown("#### 📊 All Users")
         user_list = []
         for username, data in st.session_state.user_db.items():
@@ -983,6 +1089,13 @@ def main():
                 font-size: 12px !important;
                 padding: 6px !important;
             }
+        }
+        /* Card board styling */
+        .card-board {
+            background: linear-gradient(135deg, #0f0f1a, #1a1a2e);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid #333;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1139,41 +1252,37 @@ def main():
         players = get_total_players(game_id)
         st.metric("👥 Players", players)
     
-    # Countdown timer - with auto-refresh
+    # Countdown timer
     display_countdown()
     
     # Check if countdown ended and game should start
     remaining = get_remaining_time()
     if remaining <= 0 and status == "waiting":
-        # Only start if there are players
         if get_total_players(game_id) > 0:
             current_game["status"] = "running"
             current_game["selection_end_time"] = datetime.now().isoformat()
             save_local_games(st.session_state.games)
             st.rerun()
         else:
-            # No players, create new game
             st.warning("No players joined. Creating a new game...")
             create_new_game()
             st.rerun()
     
     # ===================================================================
-    # WAITING PHASE - Card Selection
+    # WAITING PHASE - Card Selection with Full Board
     # ===================================================================
     
     if status == "waiting":
         st.warning("⏰ Selecting cards... Time remaining: " + get_time_display())
-        st.info(f"📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
         # Show current balance
         user = st.session_state.user_db.get(st.session_state.current_user, {})
-        st.info(f"💰 Your balance: {user.get('balance', 0)} ETB")
+        st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
         # Check if user already has cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         if user_cards:
             st.success(f"✅ You already have {len(user_cards)} card(s) in this game!")
-            # Display user's cards
             st.markdown("### 📋 Your Cards")
             for card_id in user_cards:
                 card_data = get_card_data(card_id)
@@ -1181,54 +1290,29 @@ def main():
                     display_bingo_card(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
-            taken = get_taken_cards(game_id)
-            available = [i for i in range(1, 202) if i not in taken]
+            # Display the full card board
+            display_card_board()
             
-            if available:
-                st.markdown("### 🎯 Available Cards")
+            # Show selected cards preview
+            if st.session_state.selected_temp_cards:
+                st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
+                for cid in st.session_state.selected_temp_cards:
+                    card_data = get_card_data(cid)
+                    if card_data:
+                        display_bingo_card(card_data, [], cid)
                 
-                cols = st.columns(5)
-                for i, card_id in enumerate(available[:50]):
-                    with cols[i % 5]:
-                        is_selected = card_id in st.session_state.selected_temp_cards
-                        if is_selected:
-                            if st.button(f"✅ {card_id}", key=f"card_{card_id}", use_container_width=True):
-                                st.session_state.selected_temp_cards.remove(card_id)
-                                st.rerun()
-                        else:
-                            if st.button(f"🎯 {card_id}", key=f"card_{card_id}", use_container_width=True):
-                                if len(st.session_state.selected_temp_cards) < 2:
-                                    # Check balance before selecting
-                                    if user.get('balance', 0) >= CARD_PRICE:
-                                        st.session_state.selected_temp_cards.append(card_id)
-                                        st.rerun()
-                                    else:
-                                        st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB, you have {user.get('balance', 0)} ETB")
-                                else:
-                                    st.warning("⚠️ Max 2 cards!")
+                total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
+                st.info(f"💰 Total cost: {total_cost} ETB (Balance: {user.get('balance', 0)} ETB)")
                 
-                # Show selected cards preview
-                if st.session_state.selected_temp_cards:
-                    st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
-                    for cid in st.session_state.selected_temp_cards:
-                        card_data = get_card_data(cid)
-                        if card_data:
-                            display_bingo_card(card_data, [], cid)
-                    
-                    total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
-                    st.info(f"💰 Total cost: {total_cost} ETB (Balance: {user.get('balance', 0)} ETB)")
-                    
-                    if st.button("✅ Join Game", type="primary", use_container_width=True):
-                        success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
-                        if success:
-                            st.success(msg)
-                            st.rerun()
-                        else:
-                            st.error(msg)
-                else:
-                    st.info("👆 Click cards above to select (max 2)")
+                if st.button("✅ Join Game", type="primary", use_container_width=True):
+                    success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
+                    if success:
+                        st.success(msg)
+                        st.rerun()
+                    else:
+                        st.error(msg)
             else:
-                st.warning("⚠️ All cards are taken! Wait for next game.")
+                st.info("👆 Click on any card above to select (max 2)")
     
     # ===================================================================
     # RUNNING PHASE - Game in progress
@@ -1238,24 +1322,20 @@ def main():
         display_called_numbers()
         
         if st.session_state.auto_play and not st.session_state.game_over:
-            # Call numbers automatically
             if len(st.session_state.called_numbers) < 75:
                 num = call_next_number()
                 if num:
                     current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
                     save_local_games(st.session_state.games)
                     
-                    # Check for winners after each call
                     winners = check_all_winners(game_id)
                     if winners:
                         success, msg = declare_winners(game_id)
                         if success:
                             st.rerun()
-                    # Auto-refresh to show updated numbers
                     time.sleep(1)
                     st.rerun()
             else:
-                # All numbers called - check for winners
                 winners = check_all_winners(game_id)
                 if winners:
                     success, msg = declare_winners(game_id)
@@ -1311,7 +1391,6 @@ def main():
     elif status == "finished":
         st.info("🏆 Game Over!")
         
-        # Show winners if any
         winners = current_game.get("winners", [])
         if winners:
             display_winners_celebration(winners, current_game)
