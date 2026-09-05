@@ -335,12 +335,37 @@ def init_game_db():
         st.session_state.last_update = time.time()
     if "auto_play" not in st.session_state:
         st.session_state.auto_play = True
+    if "admin_balance_selection" not in st.session_state:
+        st.session_state.admin_balance_selection = None
+    if "admin_target_user" not in st.session_state:
+        st.session_state.admin_target_user = None
 
 def login_user(username, password):
     init_game_db()
     username = username.strip()
     password = password.strip()
     load_all_data()
+    
+    # Check for admin login
+    if username == "admin" and password == "admin123":
+        # Create admin account if it doesn't exist
+        if username not in st.session_state.user_db:
+            user_data = {
+                "password": hash_password("admin123"),
+                "balance": 0,
+                "role": "admin",
+                "name": "Admin",
+                "phone": "",
+                "game_played": 0
+            }
+            st.session_state.user_db[username] = user_data
+            save_local_users(st.session_state.user_db)
+            load_all_data()
+        
+        st.session_state.logged_in = True
+        st.session_state.current_user = username
+        st.session_state.current_role = "admin"
+        return True, "✅ Admin login successful!"
     
     if username not in st.session_state.user_db:
         return False, "❌ Username not found"
@@ -829,6 +854,105 @@ def display_winners_celebration(winners, game):
     st.snow()
 
 # ===================================================================
+# ADMIN FUNCTIONS
+# ===================================================================
+
+def admin_panel():
+    """Admin panel for managing user balances"""
+    st.markdown("### 🔧 Admin Panel")
+    
+    # User selection
+    users = list(st.session_state.user_db.keys())
+    users = [u for u in users if u != "admin"]  # Exclude admin from list
+    
+    if not users:
+        st.info("No users registered yet.")
+        return
+    
+    selected_user = st.selectbox("Select User", users)
+    
+    if selected_user:
+        user_data = st.session_state.user_db.get(selected_user, {})
+        current_balance = user_data.get("balance", 0)
+        
+        st.info(f"👤 **{selected_user}** | Current Balance: **{current_balance} ETB**")
+        
+        # Balance update options
+        st.markdown("#### 💰 Update Balance")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            # Predefined balance amounts
+            balance_options = [20, 50, 100, 200, 300, 500, 1000, 1500, 2000, 3000]
+            
+            # Custom amount input
+            custom_amount = st.number_input("Custom Amount (ETB)", min_value=0, step=10, value=100)
+            
+            # Quick select buttons
+            st.markdown("**Quick Select:**")
+            cols = st.columns(5)
+            for i, amount in enumerate(balance_options):
+                with cols[i % 5]:
+                    if st.button(f"{amount}", key=f"bal_{amount}_{selected_user}"):
+                        st.session_state.admin_target_user = selected_user
+                        st.session_state.admin_balance_selection = amount
+                        st.rerun()
+        
+        with col2:
+            st.markdown("**Action:**")
+            if st.button("➕ Add Balance", type="primary"):
+                if selected_user in st.session_state.user_db:
+                    st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + custom_amount
+                    save_local_users(st.session_state.user_db)
+                    st.success(f"✅ Added {custom_amount} ETB to {selected_user}'s balance!")
+                    st.rerun()
+            
+            if st.button("➖ Deduct Balance", type="secondary"):
+                if selected_user in st.session_state.user_db:
+                    current = st.session_state.user_db[selected_user].get("balance", 0)
+                    if current >= custom_amount:
+                        st.session_state.user_db[selected_user]["balance"] = current - custom_amount
+                        save_local_users(st.session_state.user_db)
+                        st.success(f"✅ Deducted {custom_amount} ETB from {selected_user}'s balance!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Insufficient balance! Current: {current} ETB")
+            
+            if st.button("💰 Set Balance", type="primary"):
+                if selected_user in st.session_state.user_db:
+                    st.session_state.user_db[selected_user]["balance"] = custom_amount
+                    save_local_users(st.session_state.user_db)
+                    st.success(f"✅ Set {selected_user}'s balance to {custom_amount} ETB!")
+                    st.rerun()
+        
+        # Handle quick selection
+        if st.session_state.admin_target_user == selected_user and st.session_state.admin_balance_selection is not None:
+            amount = st.session_state.admin_balance_selection
+            if selected_user in st.session_state.user_db:
+                st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + amount
+                save_local_users(st.session_state.user_db)
+                st.success(f"✅ Added {amount} ETB to {selected_user}'s balance!")
+                st.session_state.admin_target_user = None
+                st.session_state.admin_balance_selection = None
+                st.rerun()
+        
+        # Show all users and their balances
+        st.markdown("#### 📊 All Users")
+        user_list = []
+        for username, data in st.session_state.user_db.items():
+            if username != "admin":
+                user_list.append({
+                    "Username": username,
+                    "Name": data.get("name", ""),
+                    "Balance": data.get("balance", 0),
+                    "Games Played": data.get("game_played", 0)
+                })
+        
+        if user_list:
+            st.dataframe(user_list, use_container_width=True)
+
+# ===================================================================
 # MAIN APP
 # ===================================================================
 
@@ -894,6 +1018,7 @@ def main():
             <h1 style="font-size:3rem;color:#8B0000;">ደራሽ ቢንጎ</h1>
             <p style="color:#5F6368;">Derash Bingo - Premium Gaming Experience</p>
             <p>💰 10 ETB per card | Prize: 8 ETB per card</p>
+            <p style="color:#888;font-size:0.8rem;">👑 Admin: admin / admin123</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -941,6 +1066,14 @@ def main():
                         else:
                             st.error(message)
         return
+    
+    # ===================================================================
+    # ADMIN PANEL
+    # ===================================================================
+    
+    if st.session_state.current_role == "admin":
+        admin_panel()
+        st.markdown("---")
     
     # ===================================================================
     # GAME LOBBY
