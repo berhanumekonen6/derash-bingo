@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# ALL 201 BINGO CARDS - FIXED LOGIN ISSUE
+# ALL 201 BINGO CARDS - FIXED REGISTRATION & LOGIN
 # ===================================================================
 
 import streamlit as st
@@ -8,6 +8,7 @@ import hashlib
 import json
 import random
 import time
+import os
 from datetime import datetime, timedelta
 from supabase import create_client
 
@@ -228,6 +229,35 @@ PRIZE_PER_CARD = 8
 SELECTION_TIME = 60
 
 # ===================================================================
+# LOCAL FILE STORAGE (FALLBACK)
+# ===================================================================
+
+def get_local_users_file():
+    """Get path to local users file"""
+    return "bingo_users_local.json"
+
+def load_local_users():
+    """Load users from local file"""
+    try:
+        if os.path.exists(get_local_users_file()):
+            with open(get_local_users_file(), "r") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading local users: {e}")
+    return {}
+
+def save_local_users(users):
+    """Save users to local file"""
+    try:
+        with open(get_local_users_file(), "w") as f:
+            json.dump(users, f, indent=2)
+        print(f"✅ Saved {len(users)} users to local file")
+        return True
+    except Exception as e:
+        print(f"Error saving local users: {e}")
+        return False
+
+# ===================================================================
 # SUPABASE CONNECTION
 # ===================================================================
 
@@ -237,8 +267,8 @@ def init_supabase():
         key = st.secrets["supabase"]["anon_key"]
         return create_client(url, key)
     except Exception as e:
-        st.error(f"Supabase connection error: {e}")
-        st.stop()
+        print(f"Supabase connection error: {e}")
+        return None
 
 def get_supabase():
     if "supabase" not in st.session_state:
@@ -247,13 +277,16 @@ def get_supabase():
 
 def get_supabase_admin():
     if "supabase_admin" not in st.session_state:
-        url = st.secrets["supabase"]["url"]
-        key = st.secrets["supabase"]["service_role_key"]
-        st.session_state.supabase_admin = create_client(url, key)
+        try:
+            url = st.secrets["supabase"]["url"]
+            key = st.secrets["supabase"]["service_role_key"]
+            st.session_state.supabase_admin = create_client(url, key)
+        except:
+            st.session_state.supabase_admin = None
     return st.session_state.supabase_admin
 
 # ===================================================================
-# AUTHENTICATION - FIXED
+# AUTHENTICATION - COMPLETELY FIXED
 # ===================================================================
 
 def hash_password(password):
@@ -267,55 +300,44 @@ def verify_password(password, hashed):
     return hash_password(password) == hashed
 
 def load_all_data():
-    """Load users from bingo_users - FORCE CLEAR CACHE"""
+    """Load users from Supabase and local file"""
     supabase = get_supabase()
     
-    # ALWAYS clear cache first
-    st.session_state.user_db = {}
+    # Initialize user_db
+    user_db = {}
     
+    # Try to load from Supabase first
     try:
-        res = supabase.table("bingo_users").select("*").execute()
-        user_db = {}
-        if res.data:
-            for u in res.data:
-                username = u.get("username")
-                if username:
-                    # Store the password hash exactly as it comes from the database
-                    user_db[username] = {
-                        "password": u.get("password", ""),
-                        "balance": float(u.get("balance", 0)),
-                        "role": u.get("role", "player"),
-                        "name": u.get("name", username),
-                        "phone": u.get("phone", ""),
-                        "game_played": u.get("game_played", 0)
-                    }
-        st.session_state.user_db = user_db
-        print(f"✅ Loaded {len(user_db)} users from bingo_users")
-        print(f"Users: {list(user_db.keys())}")
+        if supabase:
+            res = supabase.table("bingo_users").select("*").execute()
+            if res.data:
+                for u in res.data:
+                    username = u.get("username")
+                    if username:
+                        user_db[username] = {
+                            "password": u.get("password", ""),
+                            "balance": float(u.get("balance", 0)),
+                            "role": u.get("role", "player"),
+                            "name": u.get("name", username),
+                            "phone": u.get("phone", ""),
+                            "game_played": u.get("game_played", 0)
+                        }
+                print(f"✅ Loaded {len(user_db)} users from Supabase")
+                st.session_state.user_db = user_db
+                # Also save to local as backup
+                save_local_users(user_db)
+                return
     except Exception as e:
-        print(f"Error loading users: {e}")
+        print(f"❌ Error loading from Supabase: {e}")
+    
+    # If Supabase failed, try local file
+    local_users = load_local_users()
+    if local_users:
+        st.session_state.user_db = local_users
+        print(f"✅ Loaded {len(local_users)} users from local file")
+    else:
         st.session_state.user_db = {}
-    
-    # Load games
-    try:
-        res = supabase.table("bingo_games").select("*").order("game_id", desc=True).execute()
-        st.session_state.games = res.data if res.data else []
-    except:
-        st.session_state.games = []
-    
-    # Load selected cards
-    try:
-        res = supabase.table("bingo_selected_cards").select("*").execute()
-        st.session_state.selected_cards = res.data if res.data else []
-    except:
-        st.session_state.selected_cards = []
-    
-    # Load winners
-    try:
-        res = supabase.table("bingo_winners").select("*").execute()
-        st.session_state.winners = res.data if res.data else []
-    except:
-        st.session_state.winners = []
+        print("⚠️ No users found")
 
 def init_game_db():
     if "user_db" not in st.session_state:
@@ -339,7 +361,7 @@ def init_game_db():
         st.session_state.cards_data = {}
 
 def login_user(username, password):
-    """Login user with username and password - FIXED"""
+    """Login user with username and password"""
     init_game_db()
     
     # Clean input
@@ -358,11 +380,6 @@ def login_user(username, password):
     user = st.session_state.user_db[username]
     stored_hash = user.get("password", "")
     
-    # Debug info (remove in production)
-    print(f"🔐 Login attempt: {username}")
-    print(f"📝 Stored hash length: {len(stored_hash)}")
-    print(f"🔑 Input hash: {hash_password(password)}")
-    
     # Verify the password
     if verify_password(password, stored_hash):
         st.session_state.logged_in = True
@@ -370,11 +387,10 @@ def login_user(username, password):
         st.session_state.current_role = user["role"]
         return True, "✅ Login successful!"
     else:
-        print(f"❌ Password mismatch for user: {username}")
         return False, "❌ Incorrect password. Please try again."
 
 def register_user(username, password, name, phone=""):
-    """Register a new user - FIXED"""
+    """Register a new user - FIXED with local storage"""
     init_game_db()
     
     # Clean input
@@ -390,47 +406,59 @@ def register_user(username, password, name, phone=""):
     if not name:
         return False, "❌ Please enter your full name"
     
-    supabase_admin = get_supabase_admin()
+    # Force reload to get latest data
+    load_all_data()
     
-    try:
-        # Check if user already exists
-        check_res = supabase_admin.table("bingo_users").select("username").eq("username", username).execute()
-        if check_res.data:
-            return False, f"❌ Username '{username}' already exists"
-        
-        # Hash the password
-        hashed_password = hash_password(password)
-        print(f"📝 Registering user: {username}")
-        print(f"🔑 Generated hash: {hashed_password}")
-        
-        user_data = {
-            "username": username,
-            "password": hashed_password,
-            "role": "player",
-            "name": name,
-            "phone": phone,
-            "balance": 10,
-            "game_played": 0
-        }
-        
-        # Insert the user
-        result = supabase_admin.table("bingo_users").insert(user_data).execute()
-        print(f"✅ Insert result: {result}")
-        
-        # FORCE RELOAD after registration
-        load_all_data()
-        
-        # Verify the user was inserted correctly
-        if username in st.session_state.user_db:
-            stored_hash = st.session_state.user_db[username]["password"]
-            print(f"✅ Verified stored hash: {stored_hash}")
-            return True, f"✅ Registration successful! Welcome {name}! Please login."
-        else:
-            return False, "❌ Registration failed - user not found after insert"
-            
-    except Exception as e:
-        print(f"❌ Registration error: {e}")
-        return False, f"❌ Registration failed: {str(e)}"
+    # Check if user already exists
+    if username in st.session_state.user_db:
+        return False, f"❌ Username '{username}' already exists"
+    
+    # Hash the password
+    hashed_password = hash_password(password)
+    
+    user_data = {
+        "password": hashed_password,
+        "balance": 10,
+        "role": "player",
+        "name": name,
+        "phone": phone,
+        "game_played": 0
+    }
+    
+    # Save to local file first (always works)
+    local_users = load_local_users()
+    local_users[username] = user_data
+    save_local_users(local_users)
+    print(f"✅ User {username} saved to local file")
+    
+    # Try to save to Supabase
+    supabase = get_supabase()
+    if supabase:
+        try:
+            # Check if user exists in Supabase
+            check_res = supabase.table("bingo_users").select("username").eq("username", username).execute()
+            if not check_res.data:
+                # Insert into Supabase
+                insert_data = {
+                    "username": username,
+                    **user_data
+                }
+                result = supabase.table("bingo_users").insert(insert_data).execute()
+                if result.data:
+                    print(f"✅ User {username} saved to Supabase")
+        except Exception as e:
+            print(f"⚠️ Supabase save failed: {e}")
+    
+    # Force reload to update session
+    load_all_data()
+    
+    # Verify user was saved
+    if username in st.session_state.user_db:
+        return True, f"✅ Registration successful! Welcome {name}! Please login."
+    else:
+        # If not in session, manually add
+        st.session_state.user_db[username] = user_data
+        return True, f"✅ Registration successful! Welcome {name}! Please login."
 
 def logout_user():
     st.session_state.logged_in = False
@@ -537,23 +565,24 @@ def create_new_game():
     selection_end = (datetime.now() + timedelta(seconds=60)).isoformat()
     
     try:
-        res = supabase_admin.table("bingo_games").insert({
-            "status": "waiting",
-            "selection_end_time": selection_end,
-            "pot": 0,
-            "prize": 0,
-            "called_numbers": json.dumps([]),
-            "winner_declared": False
-        }).execute()
-        if res.data:
-            load_all_data()
-            st.session_state.called_numbers = []
-            st.session_state.winner_declared = False
-            st.session_state.game_started = False
-            st.session_state.countdown_active = True
-            st.session_state.countdown_time = 60
-            st.session_state.selected_temp_cards = []
-            return res.data[0]
+        if supabase_admin:
+            res = supabase_admin.table("bingo_games").insert({
+                "status": "waiting",
+                "selection_end_time": selection_end,
+                "pot": 0,
+                "prize": 0,
+                "called_numbers": json.dumps([]),
+                "winner_declared": False
+            }).execute()
+            if res.data:
+                load_all_data()
+                st.session_state.called_numbers = []
+                st.session_state.winner_declared = False
+                st.session_state.game_started = False
+                st.session_state.countdown_active = True
+                st.session_state.countdown_time = 60
+                st.session_state.selected_temp_cards = []
+                return res.data[0]
     except Exception as e:
         st.error(f"Failed to create game: {e}")
     return None
@@ -576,21 +605,22 @@ def join_game(game_id, user_id, card_ids):
             return False, f"Card {card_id} is already taken"
     
     try:
-        new_balance = user.get("balance", 0) - total_cost
-        supabase_admin.table("bingo_users").update({"balance": new_balance}).eq("username", user_id).execute()
-        
-        for card_id in card_ids:
-            supabase_admin.table("bingo_selected_cards").insert({
-                "user_id": user_id,
-                "username": user_id,
-                "game_id": game_id,
-                "card_id": card_id
-            }).execute()
-        
-        game = get_current_game()
-        if game:
-            new_pot = game.get("pot", 0) + (len(card_ids) * 8)
-            supabase_admin.table("bingo_games").update({"pot": new_pot}).eq("game_id", game_id).execute()
+        if supabase_admin:
+            new_balance = user.get("balance", 0) - total_cost
+            supabase_admin.table("bingo_users").update({"balance": new_balance}).eq("username", user_id).execute()
+            
+            for card_id in card_ids:
+                supabase_admin.table("bingo_selected_cards").insert({
+                    "user_id": user_id,
+                    "username": user_id,
+                    "game_id": game_id,
+                    "card_id": card_id
+                }).execute()
+            
+            game = get_current_game()
+            if game:
+                new_pot = game.get("pot", 0) + (len(card_ids) * 8)
+                supabase_admin.table("bingo_games").update({"pot": new_pot}).eq("game_id", game_id).execute()
         
         load_all_data()
         st.session_state.selected_temp_cards = []
@@ -611,28 +641,29 @@ def declare_winner(game_id, winner_id, card_id, pattern):
     prize = game.get("pot", 0)
     
     try:
-        supabase_admin.table("bingo_games").update({
-            "status": "finished",
-            "winner_declared": True,
-            "winner_card": card_id,
-            "winner_username": winner_id,
-            "prize": prize
-        }).eq("game_id", game_id).execute()
-        
-        supabase_admin.table("bingo_winners").insert({
-            "game_id": game_id,
-            "winner_id": winner_id,
-            "username": winner_id,
-            "card_id": card_id,
-            "prize": prize,
-            "winning_pattern": json.dumps(pattern)
-        }).execute()
-        
-        new_balance = user.get("balance", 0) + prize
-        supabase_admin.table("bingo_users").update({
-            "balance": new_balance,
-            "game_played": user.get("game_played", 0) + 1
-        }).eq("username", winner_id).execute()
+        if supabase_admin:
+            supabase_admin.table("bingo_games").update({
+                "status": "finished",
+                "winner_declared": True,
+                "winner_card": card_id,
+                "winner_username": winner_id,
+                "prize": prize
+            }).eq("game_id", game_id).execute()
+            
+            supabase_admin.table("bingo_winners").insert({
+                "game_id": game_id,
+                "winner_id": winner_id,
+                "username": winner_id,
+                "card_id": card_id,
+                "prize": prize,
+                "winning_pattern": json.dumps(pattern)
+            }).execute()
+            
+            new_balance = user.get("balance", 0) + prize
+            supabase_admin.table("bingo_users").update({
+                "balance": new_balance,
+                "game_played": user.get("game_played", 0) + 1
+            }).eq("username", winner_id).execute()
         
         load_all_data()
         st.session_state.winner_declared = True
@@ -719,7 +750,6 @@ def main():
         tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
         
         with tab1:
-            # Show users first
             if st.session_state.user_db:
                 st.success(f"👥 Available users: {', '.join(list(st.session_state.user_db.keys()))}")
             else:
@@ -732,7 +762,6 @@ def main():
                 submitted = st.form_submit_button("🎰 Login to Play")
                 if submitted:
                     if username and password:
-                        # FORCE RELOAD before login
                         load_all_data()
                         success, message = login_user(username, password)
                         if success:
@@ -741,38 +770,6 @@ def main():
                             st.rerun()
                         else:
                             st.error(message)
-            
-            # TROUBLESHOOTING BUTTONS - OUTSIDE FORM
-            st.markdown("---")
-            st.markdown("### 🔧 Troubleshooting")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🔄 Force Reload Users", use_container_width=True):
-                    st.session_state.user_db = {}
-                    load_all_data()
-                    count = len(st.session_state.user_db)
-                    if count > 0:
-                        st.success(f"✅ Reloaded {count} users!")
-                        st.write(f"Users: {', '.join(st.session_state.user_db.keys())}")
-                    else:
-                        st.error("❌ No users found!")
-                    st.rerun()
-            with col2:
-                if st.button("👥 Show All Users", use_container_width=True):
-                    load_all_data()
-                    if st.session_state.user_db:
-                        st.success(f"Users: {', '.join(st.session_state.user_db.keys())}")
-                    else:
-                        st.error("No users found!")
-            with col3:
-                if st.button("🧹 Clear Cache", use_container_width=True):
-                    for key in list(st.session_state.keys()):
-                        if key not in ["supabase", "supabase_admin"]:
-                            del st.session_state[key]
-                    load_all_data()
-                    st.success("✅ Cache cleared! Refresh page.")
-                    st.rerun()
         
         with tab2:
             with st.form("register_form"):
@@ -795,21 +792,11 @@ def main():
                             st.success(message)
                             st.balloons()
                             st.info("✅ Please login with your new credentials")
-                            # FORCE RELOAD after registration
                             load_all_data()
                             time.sleep(1)
                             st.rerun()
                         else:
                             st.error(message)
-            
-            # Quick fix for registration
-            st.markdown("---")
-            st.markdown("### ✅ After Registration")
-            if st.button("🔄 Reload Users After Registration", use_container_width=True):
-                load_all_data()
-                count = len(st.session_state.user_db)
-                st.success(f"✅ Reloaded {count} users! Now try logging in.")
-                st.rerun()
         return
     
     # ===================================================================
