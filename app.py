@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# ALL 201 BINGO CARDS - FIXED GAME STATE
+# WITH VISIBLE COUNTDOWN & CARD DISPLAY
 # ===================================================================
 
 import streamlit as st
@@ -331,6 +331,8 @@ def init_game_db():
         st.session_state.winners_list = []
     if "game_over" not in st.session_state:
         st.session_state.game_over = False
+    if "last_update" not in st.session_state:
+        st.session_state.last_update = time.time()
 
 def login_user(username, password):
     init_game_db()
@@ -513,9 +515,7 @@ def create_new_game():
         "called_numbers": json.dumps([]),
         "winner_declared": False,
         "winners": [],
-        "total_players": 0,
-        "game_started": False,
-        "game_ended": False
+        "total_players": 0
     }
     
     if "games" not in st.session_state:
@@ -529,6 +529,7 @@ def create_new_game():
     st.session_state.selected_temp_cards = []
     st.session_state.winners_list = []
     st.session_state.game_over = False
+    st.session_state.last_update = time.time()
     
     return game
 
@@ -571,7 +572,6 @@ def declare_winners(game_id):
     game["winner_declared"] = True
     game["winners"] = []
     game["prize"] = prize_per_winner
-    game["game_ended"] = True
     
     for winner in winners:
         winner_data = {
@@ -602,7 +602,7 @@ def join_game(game_id, user_id, card_ids):
     
     user = st.session_state.user_db.get(user_id)
     if not user or user.get("balance", 0) < total_cost:
-        return False, f"Insufficient balance. Need {total_cost} ETB"
+        return False, f"Insufficient balance. Need {total_cost} ETB, you have {user.get('balance', 0)} ETB"
     
     existing = get_user_cards(game_id, user_id)
     if existing:
@@ -636,76 +636,41 @@ def join_game(game_id, user_id, card_ids):
     
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
 
-def auto_play_game():
-    """Auto-play the game - called numbers and check winners"""
-    game = get_current_game()
-    if not game or game.get("status") != "running":
-        return
-    
-    # Check if all numbers are already called
-    if len(st.session_state.called_numbers) >= 75:
-        # Check for winners before ending
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-        else:
-            # No winners, end game
-            game["status"] = "finished"
-            game["game_ended"] = True
-            save_local_games(st.session_state.games)
-            st.session_state.game_over = True
-        return
-    
-    num = call_next_number()
-    if num:
-        game["called_numbers"] = json.dumps(st.session_state.called_numbers)
-        save_local_games(st.session_state.games)
-        
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-    else:
-        # No more numbers available
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-        else:
-            game["status"] = "finished"
-            game["game_ended"] = True
-            save_local_games(st.session_state.games)
-            st.session_state.game_over = True
-
 # ===================================================================
 # UI COMPONENTS
 # ===================================================================
 
 def display_countdown():
-    """Display beautiful countdown timer"""
+    """Display beautiful countdown timer that updates every second"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
+    # Color based on remaining time
     if remaining > 30:
         color = "#4CAF50"
         emoji = "⏳"
+        bg_color = "rgba(76, 175, 80, 0.2)"
     elif remaining > 10:
         color = "#FF9800"
         emoji = "⚡"
+        bg_color = "rgba(255, 152, 0, 0.2)"
     else:
         color = "#F44336"
         emoji = "🔥"
+        bg_color = "rgba(244, 67, 54, 0.2)"
     
+    # Progress bar
     progress = remaining / SELECTION_TIME if remaining > 0 else 0
     
+    # Auto-refresh for live countdown
+    if remaining > 0 and st.session_state.get("logged_in"):
+        # Use st.empty() to create a placeholder that can be updated
+        pass
+    
     html = f"""
-    <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;margin:10px 0;border:2px solid rgba(255,215,0,0.3);">
+    <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;margin:10px 0;border:2px solid {color};{bg_color}">
         <div style="font-size:3.5rem;font-weight:bold;color:white;text-shadow:0 0 30px {color};">
-            {emoji} {time_str}
+            {emoji} <span id="countdownDisplay">{time_str}</span>
         </div>
         <div style="background:#333;border-radius:10px;height:10px;margin:10px 20px;overflow:hidden;">
             <div style="background:linear-gradient(90deg,{color},#FFD700);height:100%;width:{progress*100}%;transition:width 1s;border-radius:10px;"></div>
@@ -716,13 +681,18 @@ def display_countdown():
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+    
+    # Auto-refresh every second for countdown
+    if remaining > 0:
+        time.sleep(0.1)
+        st.rerun()
 
 def display_bingo_card(card_data, called_numbers, card_id, is_winning=False):
     """Display a single bingo card"""
     if not card_data:
         return
     
-    border_color = "#FFD700" if is_winning else "#8B0000"
+    border_color = "#FFD700" if is_winning else "#00C9B7"
     glow = "box-shadow: 0 0 30px rgba(255,215,0,0.6);" if is_winning else ""
     bg = "linear-gradient(135deg,#2a1a3e,#1a2a3e)" if is_winning else "linear-gradient(135deg,#1a1a2e,#16213e)"
     
@@ -760,6 +730,14 @@ def display_bingo_card(card_data, called_numbers, card_id, is_winning=False):
 def display_called_numbers():
     """Display called numbers in a grid"""
     if not st.session_state.called_numbers:
+        html = """
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;padding:15px;margin:10px 0;">
+            <div style="text-align:center;color:#aaa;font-size:1.2rem;">
+                🎯 No numbers called yet
+            </div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
         return
     
     html = f"""
@@ -830,11 +808,46 @@ def main():
     
     st.markdown("""
     <style>
-        .stButton > button { width: 100%; border-radius: 10px; font-weight: bold; padding: 10px; }
-        .stColumns { gap: 5px; }
+        .stButton > button { 
+            width: 100%; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            padding: 10px;
+        }
+        .stColumns {
+            gap: 5px;
+        }
         @media (max-width: 768px) {
-            .stColumns > div { padding: 0 2px !important; }
-            .stButton > button { font-size: 12px !important; padding: 6px !important; }
+            .stColumns > div {
+                padding: 0 2px !important;
+            }
+            .stButton > button {
+                font-size: 12px !important;
+                padding: 6px !important;
+            }
+        }
+        /* Countdown timer styling */
+        .countdown-container {
+            text-align: center;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 10px 0;
+        }
+        .countdown-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+        }
+        .progress-bar {
+            background: #333;
+            border-radius: 10px;
+            height: 10px;
+            margin: 10px 20px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -962,24 +975,6 @@ def main():
             st.rerun()
         return
     
-    # Check if all numbers are called but no winner - auto-end game
-    if current_game.get("status") == "running":
-        called = json.loads(current_game.get("called_numbers", "[]"))
-        if len(called) >= 75:
-            # Check for winners
-            winners = check_all_winners(current_game["game_id"])
-            if winners:
-                success, msg = declare_winners(current_game["game_id"])
-                if success:
-                    st.rerun()
-            else:
-                # End game with no winner
-                current_game["status"] = "finished"
-                current_game["game_ended"] = True
-                save_local_games(st.session_state.games)
-                st.session_state.game_over = True
-                st.rerun()
-    
     game_id = current_game["game_id"]
     status = current_game["status"]
     called = json.loads(current_game.get("called_numbers", "[]"))
@@ -1000,7 +995,7 @@ def main():
         players = get_total_players(game_id)
         st.metric("👥 Players", players)
     
-    # Countdown timer
+    # Countdown timer - with auto-refresh
     display_countdown()
     
     # Check if countdown ended and game should start
@@ -1013,7 +1008,7 @@ def main():
             save_local_games(st.session_state.games)
             st.rerun()
         else:
-            # No players, wait or create new game
+            # No players, create new game
             st.warning("No players joined. Creating a new game...")
             create_new_game()
             st.rerun()
@@ -1026,10 +1021,20 @@ def main():
         st.warning("⏰ Selecting cards... Time remaining: " + get_time_display())
         st.info(f"📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
+        # Show current balance
+        user = st.session_state.user_db.get(st.session_state.current_user, {})
+        st.info(f"💰 Your balance: {user.get('balance', 0)} ETB")
+        
         # Check if user already has cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         if user_cards:
             st.success(f"✅ You already have {len(user_cards)} card(s) in this game!")
+            # Display user's cards
+            st.markdown("### 📋 Your Cards")
+            for card_id in user_cards:
+                card_data = get_card_data(card_id)
+                if card_data:
+                    display_bingo_card(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
             taken = get_taken_cards(game_id)
@@ -1049,15 +1054,25 @@ def main():
                         else:
                             if st.button(f"🎯 {card_id}", key=f"card_{card_id}", use_container_width=True):
                                 if len(st.session_state.selected_temp_cards) < 2:
-                                    st.session_state.selected_temp_cards.append(card_id)
-                                    st.rerun()
+                                    # Check balance before selecting
+                                    if user.get('balance', 0) >= CARD_PRICE:
+                                        st.session_state.selected_temp_cards.append(card_id)
+                                        st.rerun()
+                                    else:
+                                        st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB, you have {user.get('balance', 0)} ETB")
                                 else:
                                     st.warning("⚠️ Max 2 cards!")
                 
+                # Show selected cards preview
                 if st.session_state.selected_temp_cards:
                     st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
                     for cid in st.session_state.selected_temp_cards:
-                        st.write(f"- Card #{cid}")
+                        card_data = get_card_data(cid)
+                        if card_data:
+                            display_bingo_card(card_data, [], cid)
+                    
+                    total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
+                    st.info(f"💰 Total cost: {total_cost} ETB (Balance: {user.get('balance', 0)} ETB)")
                     
                     if st.button("✅ Join Game", type="primary", use_container_width=True):
                         success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
@@ -1082,8 +1097,34 @@ def main():
             st.session_state.auto_play = True
         
         if st.session_state.auto_play and not st.session_state.game_over:
-            # Call numbers automatically with a small delay
-            auto_play_game()
+            # Call numbers automatically
+            if len(st.session_state.called_numbers) < 75:
+                num = call_next_number()
+                if num:
+                    current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
+                    save_local_games(st.session_state.games)
+                    
+                    # Check for winners after each call
+                    winners = check_all_winners(game_id)
+                    if winners:
+                        success, msg = declare_winners(game_id)
+                        if success:
+                            st.rerun()
+                    # Auto-refresh to show updated numbers
+                    time.sleep(1)
+                    st.rerun()
+            else:
+                # All numbers called - check for winners
+                winners = check_all_winners(game_id)
+                if winners:
+                    success, msg = declare_winners(game_id)
+                    if success:
+                        st.rerun()
+                else:
+                    current_game["status"] = "finished"
+                    save_local_games(st.session_state.games)
+                    st.session_state.game_over = True
+                    st.rerun()
         
         # Show user's cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
@@ -1100,18 +1141,19 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🎯 Draw Number", type="primary", use_container_width=True):
-                num = call_next_number()
-                if num:
-                    current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
-                    save_local_games(st.session_state.games)
-                    st.success(f"🎯 Number {num} called!")
-                    
-                    winners = check_all_winners(game_id)
-                    if winners:
-                        success, msg = declare_winners(game_id)
-                        if success:
-                            st.rerun()
-                    st.rerun()
+                if len(st.session_state.called_numbers) < 75:
+                    num = call_next_number()
+                    if num:
+                        current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
+                        save_local_games(st.session_state.games)
+                        st.success(f"🎯 Number {num} called!")
+                        
+                        winners = check_all_winners(game_id)
+                        if winners:
+                            success, msg = declare_winners(game_id)
+                            if success:
+                                st.rerun()
+                        st.rerun()
                 else:
                     st.warning("All numbers called!")
         
