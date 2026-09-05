@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS ON ATTRACTIVE BOARD
+# WITH ALL 201 CARDS - FIXED CARD SELECTION
 # ===================================================================
 
 import streamlit as st
@@ -837,88 +837,9 @@ def display_winners_celebration(winners, game):
     st.balloons()
     st.snow()
 
-def display_card_board():
-    """Display all 201 cards in an attractive grid"""
-    st.markdown("### 🎯 BINGO Card Board")
-    st.markdown("*Click on any available card to select it (max 2 cards)*")
-    
-    # Legend
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown("🟢 **Available** - Click to select")
-    with col2:
-        st.markdown("✅ **Selected** - Click to deselect")
-    with col3:
-        st.markdown("🔒 **Taken** - Already chosen")
-    with col4:
-        st.markdown(f"📊 **{len(st.session_state.selected_temp_cards)}/2** cards selected")
-    
-    # Get current game
-    current_game = get_current_game()
-    if not current_game:
-        st.warning("No active game. Please wait for a new game to start.")
-        return
-    
-    game_id = current_game["game_id"]
-    taken_cards = get_taken_cards(game_id) if current_game else []
-    
-    # Pagination controls
-    cards_per_page = 50
-    total_pages = (len(BINGO_CARDS) + cards_per_page - 1) // cards_per_page
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col1:
-        if st.button("⬅️ Previous", disabled=st.session_state.board_page == 0):
-            st.session_state.board_page -= 1
-            st.rerun()
-    with col2:
-        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
-    with col3:
-        if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
-            st.session_state.board_page += 1
-            st.rerun()
-    
-    # Get cards for current page
-    start_idx = st.session_state.board_page * cards_per_page
-    end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
-    page_cards = BINGO_CARDS[start_idx:end_idx]
-    
-    # Display cards in a grid - 10 columns
-    cols_per_row = 10
-    cols = st.columns(cols_per_row)
-    
-    for i, card in enumerate(page_cards):
-        card_id = card["id"]
-        is_taken = card_id in taken_cards
-        is_selected = card_id in st.session_state.selected_temp_cards
-        
-        with cols[i % cols_per_row]:
-            if is_taken:
-                # Show taken card (locked)
-                st.markdown(f"""
-                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
-                    <div style="color:#ff4444;font-size:9px;font-weight:bold;">🔒 #{card_id}</div>
-                    <div style="font-size:7px;color:#888;">Taken</div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif is_selected:
-                # Selected card - click to deselect
-                if st.button(f"✅ #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
-                    if card_id in st.session_state.selected_temp_cards:
-                        st.session_state.selected_temp_cards.remove(card_id)
-                        st.rerun()
-            else:
-                # Available card - click to select
-                if st.button(f"🎯 #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
-                    if len(st.session_state.selected_temp_cards) < 2:
-                        user = st.session_state.user_db.get(st.session_state.current_user, {})
-                        if user.get('balance', 0) >= CARD_PRICE:
-                            st.session_state.selected_temp_cards.append(card_id)
-                            st.rerun()
-                        else:
-                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
-                    else:
-                        st.warning("⚠️ Max 2 cards!")
+# ===================================================================
+# ADMIN FUNCTIONS
+# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1060,43 +981,6 @@ def main():
             padding: 20px;
             border: 1px solid #333;
             margin: 10px 0;
-        }
-        .card-btn {
-            background: linear-gradient(135deg, #1a1a3e, #2a2a5e);
-            border: 2px solid #444;
-            border-radius: 8px;
-            padding: 8px 4px;
-            margin: 2px;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            min-height: 50px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .card-btn:hover {
-            transform: scale(1.05);
-            border-color: #FFD700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-        }
-        .card-btn.taken {
-            opacity: 0.5;
-            border-color: #ff4444;
-            cursor: not-allowed;
-        }
-        .card-btn.selected {
-            border-color: #4CAF50;
-            background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
-        }
-        .card-btn .card-price {
-            font-size: 8px;
-            color: #888;
-            margin-top: 2px;
         }
     </style>
     """, unsafe_allow_html=True)
