@@ -10,7 +10,6 @@ import random
 import time
 import os
 from datetime import datetime, timedelta
-from supabase import create_client
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -229,7 +228,7 @@ PRIZE_PER_CARD = 8
 SELECTION_TIME = 60
 
 # ===================================================================
-# LOCAL FILE STORAGE (FALLBACK)
+# LOCAL FILE STORAGE
 # ===================================================================
 
 def get_local_users_file():
@@ -274,25 +273,21 @@ def save_local_games(games):
 
 def load_all_data():
     """Load all data from local storage"""
-    # Load users
     local_users = load_local_users()
     if local_users:
         st.session_state.user_db = local_users
     else:
         st.session_state.user_db = {}
     
-    # Load games
     local_games = load_local_games()
     if local_games:
         st.session_state.games = local_games
     else:
         st.session_state.games = []
     
-    # Load selected cards
     if "selected_cards" not in st.session_state:
         st.session_state.selected_cards = []
     
-    # Load winners
     if "winners_list" not in st.session_state:
         st.session_state.winners_list = []
 
@@ -606,22 +601,18 @@ def join_game(game_id, user_id, card_ids):
     if not user or user.get("balance", 0) < total_cost:
         return False, f"Insufficient balance. Need {total_cost} ETB"
     
-    # Check if already in game
     existing = get_user_cards(game_id, user_id)
     if existing:
         return False, "You already have cards in this game"
     
-    # Check if cards are taken
     taken = get_taken_cards(game_id)
     for card_id in card_ids:
         if card_id in taken:
             return False, f"Card {card_id} is already taken"
     
-    # Deduct balance
     new_balance = user.get("balance", 0) - total_cost
     st.session_state.user_db[user_id]["balance"] = new_balance
     
-    # Add selected cards
     for card_id in card_ids:
         st.session_state.selected_cards.append({
             "user_id": user_id,
@@ -630,7 +621,6 @@ def join_game(game_id, user_id, card_ids):
             "card_id": card_id
         })
     
-    # Update pot
     game = get_current_game()
     if game:
         game["pot"] = game.get("pot", 0) + (len(card_ids) * PRIZE_PER_CARD)
@@ -649,16 +639,13 @@ def auto_play_game():
     if not game or game.get("status") != "running":
         return
     
-    # Call a number
     num = call_next_number()
     if num is None:
-        # No more numbers - end game
         success, msg = declare_winners(game["game_id"])
         if success:
             st.session_state.game_over = True
         return
     
-    # Check for winners
     winners = check_all_winners(game["game_id"])
     if winners:
         success, msg = declare_winners(game["game_id"])
@@ -674,7 +661,6 @@ def display_countdown():
     remaining = get_remaining_time()
     time_str = get_time_display()
     
-    # Color based on remaining time
     if remaining > 30:
         color = "#4CAF50"
         emoji = "⏳"
@@ -685,7 +671,6 @@ def display_countdown():
         color = "#F44336"
         emoji = "🔥"
     
-    # Progress bar
     progress = remaining / SELECTION_TIME if remaining > 0 else 0
     
     html = f"""
@@ -796,11 +781,9 @@ def display_winners_celebration(winners, game):
         </div>
         """, unsafe_allow_html=True)
         
-        # Show winning card
         if 'card_data' in winner:
             display_bingo_card(winner['card_data'], st.session_state.called_numbers, winner['card_id'], is_winning=True)
     
-    # Celebration effects
     st.balloons()
     st.snow()
 
@@ -816,33 +799,19 @@ def main():
         initial_sidebar_state="collapsed"
     )
     
-    # Custom CSS for mobile responsiveness
     st.markdown("""
     <style>
-        .stButton > button {
-            width: 100%;
-            border-radius: 10px;
-            font-weight: bold;
-            padding: 10px;
-        }
-        .stColumns {
-            gap: 5px;
-        }
+        .stButton > button { width: 100%; border-radius: 10px; font-weight: bold; padding: 10px; }
+        .stColumns { gap: 5px; }
         @media (max-width: 768px) {
-            .stColumns > div {
-                padding: 0 2px !important;
-            }
-            .stButton > button {
-                font-size: 12px !important;
-                padding: 6px !important;
-            }
+            .stColumns > div { padding: 0 2px !important; }
+            .stButton > button { font-size: 12px !important; padding: 6px !important; }
         }
     </style>
     """, unsafe_allow_html=True)
     
     init_game_db()
     
-    # Sidebar
     with st.sidebar:
         st.markdown("### 🎰 ደራሽ ቢንጎ")
         st.markdown("---")
@@ -865,7 +834,6 @@ def main():
             if st.button("🔐 Login / Register", use_container_width=True):
                 st.rerun()
     
-    # Login/Register
     if not st.session_state.logged_in:
         st.markdown("""
         <div style="text-align:center;padding:2rem 0;">
@@ -932,21 +900,17 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Check for game over state to show winners
     if st.session_state.game_over and st.session_state.winners_list:
         game = get_current_game()
         if game:
             display_winners_celebration(st.session_state.winners_list, game)
-            
             if st.button("🔄 New Game", use_container_width=True):
                 create_new_game()
                 st.rerun()
             return
     
-    # Get current game
     current_game = get_current_game()
     
-    # Auto-start new game if none exists
     if not current_game:
         st.info("No active game. Creating a new game...")
         game = create_new_game()
@@ -961,7 +925,6 @@ def main():
     
     st.session_state.called_numbers = called
     
-    # Game stats
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("🎮 Status", "🟢 Live" if status == "running" else "⏳ Waiting")
@@ -973,13 +936,10 @@ def main():
         players = get_total_players(game_id)
         st.metric("👥 Players", players)
     
-    # Countdown timer
     display_countdown()
     
-    # Check if countdown ended and game should start
     remaining = get_remaining_time()
     if remaining <= 0 and status == "waiting":
-        # Start the game
         current_game["status"] = "running"
         current_game["selection_end_time"] = datetime.now().isoformat()
         save_local_games(st.session_state.games)
@@ -996,7 +956,6 @@ def main():
         taken = get_taken_cards(game_id)
         available = [i for i in range(1, 202) if i not in taken]
         
-        # Show available cards in a grid
         if available:
             st.markdown("### 🎯 Available Cards")
             
@@ -1016,7 +975,6 @@ def main():
                             else:
                                 st.warning("⚠️ Max 2 cards!")
             
-            # Show selected cards
             if st.session_state.selected_temp_cards:
                 st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
                 for cid in st.session_state.selected_temp_cards:
@@ -1039,30 +997,23 @@ def main():
     # ===================================================================
     
     elif status == "running":
-        # Display called numbers
         display_called_numbers()
         
-        # Auto-play logic
         if "auto_play" not in st.session_state:
             st.session_state.auto_play = True
         
-        # Auto-play if enabled
         if st.session_state.auto_play and not st.session_state.game_over:
-            # Call numbers automatically
             num = call_next_number()
             if num:
-                # Update game
                 current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
                 save_local_games(st.session_state.games)
                 
-                # Check for winners
                 winners = check_all_winners(game_id)
                 if winners:
                     success, msg = declare_winners(game_id)
                     if success:
                         st.rerun()
         
-        # Show user's cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         if user_cards:
             st.markdown("### 📋 Your Cards")
@@ -1073,7 +1024,6 @@ def main():
         else:
             st.info("You haven't joined this game. Wait for the next round!")
         
-        # Controls
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🎯 Draw Number", type="primary", use_container_width=True):
@@ -1083,7 +1033,6 @@ def main():
                     save_local_games(st.session_state.games)
                     st.success(f"🎯 Number {num} called!")
                     
-                    # Check for winners
                     winners = check_all_winners(game_id)
                     if winners:
                         success, msg = declare_winners(game_id)
@@ -1106,7 +1055,6 @@ def main():
     elif status == "finished":
         st.info("🏆 Game Over!")
         
-        # Show winners if any
         winners = current_game.get("winners", [])
         if winners:
             st.markdown("### 🏆 Winners")
