@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH VISIBLE COUNTDOWN & CARD DISPLAY
+# WITH PROPER CARD SELECTION & GAME STATE MANAGEMENT
 # ===================================================================
 
 import streamlit as st
@@ -333,6 +333,8 @@ def init_game_db():
         st.session_state.game_over = False
     if "last_update" not in st.session_state:
         st.session_state.last_update = time.time()
+    if "auto_play" not in st.session_state:
+        st.session_state.auto_play = True
 
 def login_user(username, password):
     init_game_db()
@@ -503,7 +505,18 @@ def call_next_number():
     return number
 
 def create_new_game():
+    """Create a new game and reset all selections"""
     game_id = f"BB{random.randint(1000, 9999)}{random.choice('ABCDEF')}{random.randint(10, 99)}"
+    
+    # Reset all selections for the new game
+    st.session_state.selected_cards = []
+    st.session_state.selected_temp_cards = []
+    st.session_state.called_numbers = []
+    st.session_state.winners_list = []
+    st.session_state.game_over = False
+    st.session_state.winner_declared = False
+    st.session_state.game_started = False
+    st.session_state.auto_play = True
     
     game = {
         "game_id": game_id,
@@ -522,14 +535,6 @@ def create_new_game():
         st.session_state.games = []
     st.session_state.games.insert(0, game)
     save_local_games(st.session_state.games)
-    
-    st.session_state.called_numbers = []
-    st.session_state.winner_declared = False
-    st.session_state.game_started = False
-    st.session_state.selected_temp_cards = []
-    st.session_state.winners_list = []
-    st.session_state.game_over = False
-    st.session_state.last_update = time.time()
     
     return game
 
@@ -602,7 +607,7 @@ def join_game(game_id, user_id, card_ids):
     
     user = st.session_state.user_db.get(user_id)
     if not user or user.get("balance", 0) < total_cost:
-        return False, f"Insufficient balance. Need {total_cost} ETB, you have {user.get('balance', 0)} ETB"
+        return False, f"Insufficient balance. Need {total_cost} ETB"
     
     existing = get_user_cards(game_id, user_id)
     if existing:
@@ -636,41 +641,70 @@ def join_game(game_id, user_id, card_ids):
     
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
 
+def auto_play_game():
+    """Auto-play the game - called numbers and check winners"""
+    game = get_current_game()
+    if not game or game.get("status") != "running":
+        return
+    
+    if len(st.session_state.called_numbers) >= 75:
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+        else:
+            game["status"] = "finished"
+            save_local_games(st.session_state.games)
+            st.session_state.game_over = True
+        return
+    
+    num = call_next_number()
+    if num:
+        game["called_numbers"] = json.dumps(st.session_state.called_numbers)
+        save_local_games(st.session_state.games)
+        
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+    else:
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+        else:
+            game["status"] = "finished"
+            save_local_games(st.session_state.games)
+            st.session_state.game_over = True
+
 # ===================================================================
 # UI COMPONENTS
 # ===================================================================
 
 def display_countdown():
-    """Display beautiful countdown timer that updates every second"""
+    """Display beautiful countdown timer"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
-    # Color based on remaining time
     if remaining > 30:
         color = "#4CAF50"
         emoji = "⏳"
-        bg_color = "rgba(76, 175, 80, 0.2)"
     elif remaining > 10:
         color = "#FF9800"
         emoji = "⚡"
-        bg_color = "rgba(255, 152, 0, 0.2)"
     else:
         color = "#F44336"
         emoji = "🔥"
-        bg_color = "rgba(244, 67, 54, 0.2)"
     
-    # Progress bar
     progress = remaining / SELECTION_TIME if remaining > 0 else 0
     
-    # Auto-refresh for live countdown
-    if remaining > 0 and st.session_state.get("logged_in"):
-        # Use st.empty() to create a placeholder that can be updated
-        pass
-    
     html = f"""
-    <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;margin:10px 0;border:2px solid {color};{bg_color}">
+    <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;margin:10px 0;border:2px solid {color};">
         <div style="font-size:3.5rem;font-weight:bold;color:white;text-shadow:0 0 30px {color};">
-            {emoji} <span id="countdownDisplay">{time_str}</span>
+            {emoji} {time_str}
         </div>
         <div style="background:#333;border-radius:10px;height:10px;margin:10px 20px;overflow:hidden;">
             <div style="background:linear-gradient(90deg,{color},#FFD700);height:100%;width:{progress*100}%;transition:width 1s;border-radius:10px;"></div>
@@ -682,7 +716,7 @@ def display_countdown():
     """
     st.markdown(html, unsafe_allow_html=True)
     
-    # Auto-refresh every second for countdown
+    # Auto-refresh for live countdown
     if remaining > 0:
         time.sleep(0.1)
         st.rerun()
@@ -808,10 +842,10 @@ def main():
     
     st.markdown("""
     <style>
-        .stButton > button { 
-            width: 100%; 
-            border-radius: 10px; 
-            font-weight: bold; 
+        .stButton > button {
+            width: 100%;
+            border-radius: 10px;
+            font-weight: bold;
             padding: 10px;
         }
         .stColumns {
@@ -825,29 +859,6 @@ def main():
                 font-size: 12px !important;
                 padding: 6px !important;
             }
-        }
-        /* Countdown timer styling */
-        .countdown-container {
-            text-align: center;
-            padding: 15px;
-            border-radius: 15px;
-            margin: 10px 0;
-        }
-        .countdown-display {
-            font-size: 3.5rem;
-            font-weight: bold;
-        }
-        .progress-bar {
-            background: #333;
-            border-radius: 10px;
-            height: 10px;
-            margin: 10px 20px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            border-radius: 10px;
-            transition: width 1s;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1092,9 +1103,6 @@ def main():
     
     elif status == "running":
         display_called_numbers()
-        
-        if "auto_play" not in st.session_state:
-            st.session_state.auto_play = True
         
         if st.session_state.auto_play and not st.session_state.game_over:
             # Call numbers automatically
