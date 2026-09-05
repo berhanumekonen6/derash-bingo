@@ -436,17 +436,14 @@ def check_winning_pattern(card_data, called_numbers):
             return True
         return int(value) in called_set
     
-    # Check rows
     for row in range(5):
         if all(is_marked(card_data[row][col]) for col in range(5)):
             return {'type': 'row', 'index': row + 1}
     
-    # Check columns
     for col in range(5):
         if all(is_marked(card_data[row][col]) for row in range(5)):
             return {'type': 'column', 'letter': ['B', 'I', 'N', 'G', 'O'][col]}
     
-    # Check diagonals
     if all(is_marked(card_data[i][i]) for i in range(5)):
         return {'type': 'diagonal', 'direction': 'main'}
     
@@ -534,7 +531,6 @@ def create_new_game():
     """Create a new game and reset all selections"""
     game_id = f"BB{random.randint(1000, 9999)}{random.choice('ABCDEF')}{random.randint(10, 99)}"
     
-    # Reset all selections for the new game
     st.session_state.selected_cards = []
     st.session_state.selected_temp_cards = []
     st.session_state.called_numbers = []
@@ -614,7 +610,6 @@ def declare_winners(game_id):
         }
         game["winners"].append(winner_data)
         
-        # Update user balance
         if winner["username"] in st.session_state.user_db:
             st.session_state.user_db[winner["username"]]["balance"] = st.session_state.user_db[winner["username"]].get("balance", 0) + prize_per_winner
             st.session_state.user_db[winner["username"]]["game_played"] = st.session_state.user_db[winner["username"]].get("game_played", 0) + 1
@@ -668,51 +663,11 @@ def join_game(game_id, user_id, card_ids):
     
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
 
-def auto_play_game():
-    """Auto-play the game - called numbers and check winners"""
-    game = get_current_game()
-    if not game or game.get("status") != "running":
-        return
-    
-    if len(st.session_state.called_numbers) >= 75:
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-        else:
-            game["status"] = "finished"
-            save_local_games(st.session_state.games)
-            st.session_state.game_over = True
-        return
-    
-    num = call_next_number()
-    if num:
-        game["called_numbers"] = json.dumps(st.session_state.called_numbers)
-        save_local_games(st.session_state.games)
-        
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-    else:
-        winners = check_all_winners(game["game_id"])
-        if winners:
-            success, msg = declare_winners(game["game_id"])
-            if success:
-                st.session_state.game_over = True
-        else:
-            game["status"] = "finished"
-            save_local_games(st.session_state.games)
-            st.session_state.game_over = True
-
 # ===================================================================
 # UI COMPONENTS
 # ===================================================================
 
 def display_countdown():
-    """Display beautiful countdown timer"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
@@ -748,7 +703,6 @@ def display_countdown():
         st.rerun()
 
 def display_bingo_card(card_data, called_numbers, card_id, is_winning=False):
-    """Display a single bingo card"""
     if not card_data:
         return
     
@@ -788,7 +742,6 @@ def display_bingo_card(card_data, called_numbers, card_id, is_winning=False):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_called_numbers():
-    """Display called numbers in a grid"""
     if not st.session_state.called_numbers:
         html = """
         <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;padding:15px;margin:10px 0;">
@@ -815,47 +768,30 @@ def display_called_numbers():
     st.markdown(html, unsafe_allow_html=True)
 
 def display_winners_celebration(winners, game):
-    """Display winners with celebration - Using PHP file celebration texts"""
     if not winners:
         return
     
     prize_per = game.get("prize", 0) if game else 0
     total_prize = game.get("pot", 0) if game else 0
     
-    # Celebration texts from PHP file
     celebration_html = f"""
     <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;margin:15px 0;border:3px solid #FFD700;animation: pulse 2s infinite;">
         <div style="font-size:4rem;color:#FFD700;margin-bottom:20px;">🎉 BINGO! 🎉</div>
-        
-        <div style="font-size:2.5rem;color:#FFD700;margin:20px 0;font-weight:bold;">
-            🎉 እንኳን ደስ አለዎት! 🎉
-        </div>
-        
+        <div style="font-size:2.5rem;color:#FFD700;margin:20px 0;font-weight:bold;">🎉 እንኳን ደስ አለዎት! 🎉</div>
         <div style="font-size:2.2rem;color:white;margin-bottom:30px;background:rgba(255,215,0,0.2);padding:20px;border-radius:15px;">
             {winners[0]['username'] if winners else 'Player'}
         </div>
-        
-        <div style="font-size:1.8rem;color:#FFD700;margin:20px 0;font-weight:bold;">
-            🎉የጨዋታዉ አሸናፊ ሆነዋል!🎉
-        </div>
-        
-        <div style="font-size:3rem;color:#00C9B7;margin-bottom:40px;font-weight:bold;">
-            {total_prize} ETB
-        </div>
-        
+        <div style="font-size:1.8rem;color:#FFD700;margin:20px 0;font-weight:bold;">🎉የጨዋታዉ አሸናፊ ሆነዋል!🎉</div>
+        <div style="font-size:3rem;color:#00C9B7;margin-bottom:40px;font-weight:bold;">{total_prize} ETB</div>
         <div style="background:rgba(255,255,255,0.1);padding:20px;border-radius:15px;margin:20px 0;">
             <div style="color:white;font-size:1.5rem;margin-bottom:15px;">Winning Pattern: {winners[0]['pattern_name'] if winners else 'BINGO!'}</div>
             <div style="color:#FFD700;font-size:1.3rem;">Card: {winners[0]['card_id'] if winners else 'N/A'}</div>
         </div>
-        
-        <div style="font-size:1.5rem;color:#4CAF50;margin-top:15px;">
-            🎉መልካም የጨዋታ ጊዜ!🎉
-        </div>
+        <div style="font-size:1.5rem;color:#4CAF50;margin-top:15px;">🎉መልካም የጨዋታ ጊዜ!🎉</div>
     </div>
     """
     st.markdown(celebration_html, unsafe_allow_html=True)
     
-    # Show each winner's card
     for winner in winners:
         if 'card_data' in winner:
             display_bingo_card(winner['card_data'], st.session_state.called_numbers, winner['card_id'], is_winning=True)
@@ -864,7 +800,7 @@ def display_winners_celebration(winners, game):
     st.snow()
 
 def display_card_board():
-    """Display all 201 cards in an attractive grid"""
+    """Display all 201 cards in an attractive grid - FIXED VERSION"""
     st.markdown("### 🎯 BINGO Card Board")
     st.markdown("*Click on any available card to select it (max 2 cards)*")
     
@@ -1084,6 +1020,13 @@ def main():
         .stAlert {
             margin: 10px 0;
         }
+        .card-board-container {
+            background: linear-gradient(135deg, #0f0f1a, #1a1a2e);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #333;
+            margin: 10px 0;
+        }
     </style>
     """, unsafe_allow_html=True)
     
@@ -1276,7 +1219,9 @@ def main():
             st.info("Waiting for the game to start...")
         else:
             # Display the full card board
+            st.markdown('<div class="card-board-container">', unsafe_allow_html=True)
             display_card_board()
+            st.markdown('</div>', unsafe_allow_html=True)
             
             # Show selected cards preview
             if st.session_state.selected_temp_cards:
