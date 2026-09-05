@@ -257,9 +257,13 @@ def get_supabase_admin():
 # ===================================================================
 
 def hash_password(password):
+    """Hash password using SHA256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def verify_password(password, hashed):
+    """Verify password against hash"""
+    if not hashed:
+        return False
     return hash_password(password) == hashed
 
 def load_all_data():
@@ -276,6 +280,7 @@ def load_all_data():
             for u in res.data:
                 username = u.get("username")
                 if username:
+                    # Store the password hash exactly as it comes from the database
                     user_db[username] = {
                         "password": u.get("password", ""),
                         "balance": float(u.get("balance", 0)),
@@ -334,41 +339,73 @@ def init_game_db():
         st.session_state.cards_data = {}
 
 def login_user(username, password):
+    """Login user with username and password - FIXED"""
     init_game_db()
+    
+    # Clean input
+    username = username.strip()
+    password = password.strip()
+    
     # FORCE RELOAD before checking
     load_all_data()
+    
+    if not username or not password:
+        return False, "❌ Please enter both username and password"
     
     if username not in st.session_state.user_db:
         return False, f"❌ Username '{username}' not found. Please register first."
     
     user = st.session_state.user_db[username]
+    stored_hash = user.get("password", "")
     
-    if verify_password(password, user["password"]):
+    # Debug info (remove in production)
+    print(f"🔐 Login attempt: {username}")
+    print(f"📝 Stored hash length: {len(stored_hash)}")
+    print(f"🔑 Input hash: {hash_password(password)}")
+    
+    # Verify the password
+    if verify_password(password, stored_hash):
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = user["role"]
         return True, "✅ Login successful!"
     else:
-        return False, "❌ Incorrect password."
+        print(f"❌ Password mismatch for user: {username}")
+        return False, "❌ Incorrect password. Please try again."
 
 def register_user(username, password, name, phone=""):
+    """Register a new user - FIXED"""
     init_game_db()
+    
+    # Clean input
+    username = username.strip()
+    password = password.strip()
+    name = name.strip()
+    phone = phone.strip()
     
     if len(username) < 2:
         return False, "❌ Username must be at least 2 characters"
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
+    if not name:
+        return False, "❌ Please enter your full name"
     
     supabase_admin = get_supabase_admin()
     
     try:
+        # Check if user already exists
         check_res = supabase_admin.table("bingo_users").select("username").eq("username", username).execute()
         if check_res.data:
             return False, f"❌ Username '{username}' already exists"
         
+        # Hash the password
+        hashed_password = hash_password(password)
+        print(f"📝 Registering user: {username}")
+        print(f"🔑 Generated hash: {hashed_password}")
+        
         user_data = {
             "username": username,
-            "password": hash_password(password),
+            "password": hashed_password,
             "role": "player",
             "name": name,
             "phone": phone,
@@ -376,12 +413,24 @@ def register_user(username, password, name, phone=""):
             "game_played": 0
         }
         
-        supabase_admin.table("bingo_users").insert(user_data).execute()
+        # Insert the user
+        result = supabase_admin.table("bingo_users").insert(user_data).execute()
+        print(f"✅ Insert result: {result}")
+        
         # FORCE RELOAD after registration
         load_all_data()
-        return True, f"✅ Registration successful! Welcome {name}! Please login."
+        
+        # Verify the user was inserted correctly
+        if username in st.session_state.user_db:
+            stored_hash = st.session_state.user_db[username]["password"]
+            print(f"✅ Verified stored hash: {stored_hash}")
+            return True, f"✅ Registration successful! Welcome {name}! Please login."
+        else:
+            return False, "❌ Registration failed - user not found after insert"
+            
     except Exception as e:
-        return False, f"❌ Registration failed: {e}"
+        print(f"❌ Registration error: {e}")
+        return False, f"❌ Registration failed: {str(e)}"
 
 def logout_user():
     st.session_state.logged_in = False
@@ -674,7 +723,7 @@ def main():
             if st.session_state.user_db:
                 st.success(f"👥 Available users: {', '.join(list(st.session_state.user_db.keys()))}")
             else:
-                st.warning("⚠️ No users found. Click 'Force Reload' below.")
+                st.warning("⚠️ No users found. Please register first.")
             
             with st.form("login_form"):
                 username = st.text_input("👤 Username", placeholder="Enter username")
