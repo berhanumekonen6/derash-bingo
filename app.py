@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS ON ATTRACTIVE BOARD
+# WITH ALL 201 CARDS ON ATTRACTIVE BOARD - FIXED
 # ===================================================================
 
 import streamlit as st
@@ -824,8 +824,8 @@ def display_winners_celebration(winners, game):
     
     # Celebration texts from PHP file
     celebration_html = f"""
-    <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;margin:15px 0;border:3px solid #FFD700;">
-        <div style="font-size:4rem;color:#FFD700;margin-bottom:20px;animation:pulse 2s infinite;">🎉 BINGO! 🎉</div>
+    <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;margin:15px 0;border:3px solid #FFD700;animation: pulse 2s infinite;">
+        <div style="font-size:4rem;color:#FFD700;margin-bottom:20px;">🎉 BINGO! 🎉</div>
         
         <div style="font-size:2.5rem;color:#FFD700;margin:20px 0;font-weight:bold;">
             🎉 እንኳን ደስ አለዎት! 🎉
@@ -909,7 +909,7 @@ def display_card_board():
     end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
     page_cards = BINGO_CARDS[start_idx:end_idx]
     
-    # Display cards in a grid
+    # Display cards in a grid - 10 columns
     cols_per_row = 10
     cols = st.columns(cols_per_row)
     
@@ -1080,6 +1080,9 @@ def main():
         }
         .winner-card {
             animation: pulse 1.5s infinite, fadeIn 0.5s ease;
+        }
+        .stAlert {
+            margin: 10px 0;
         }
     </style>
     """, unsafe_allow_html=True)
