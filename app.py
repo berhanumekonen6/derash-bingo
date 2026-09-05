@@ -837,9 +837,88 @@ def display_winners_celebration(winners, game):
     st.balloons()
     st.snow()
 
-# ===================================================================
-# ADMIN FUNCTIONS
-# ===================================================================
+def display_card_board():
+    """Display all 201 cards in an attractive grid - FIXED VERSION"""
+    st.markdown("### 🎯 BINGO Card Board")
+    st.markdown("*Click on any available card to select it (max 2 cards)*")
+    
+    # Legend
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("🟢 **Available** - Click to select")
+    with col2:
+        st.markdown("✅ **Selected** - Click to deselect")
+    with col3:
+        st.markdown("🔒 **Taken** - Already chosen")
+    with col4:
+        st.markdown(f"📊 **{len(st.session_state.selected_temp_cards)}/2** cards selected")
+    
+    # Get current game
+    current_game = get_current_game()
+    if not current_game:
+        st.warning("No active game. Please wait for a new game to start.")
+        return
+    
+    game_id = current_game["game_id"]
+    taken_cards = get_taken_cards(game_id) if current_game else []
+    
+    # Pagination controls
+    cards_per_page = 50
+    total_pages = (len(BINGO_CARDS) + cards_per_page - 1) // cards_per_page
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅️ Previous", disabled=st.session_state.board_page == 0):
+            st.session_state.board_page -= 1
+            st.rerun()
+    with col2:
+        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+    with col3:
+        if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
+            st.session_state.board_page += 1
+            st.rerun()
+    
+    # Get cards for current page
+    start_idx = st.session_state.board_page * cards_per_page
+    end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
+    page_cards = BINGO_CARDS[start_idx:end_idx]
+    
+    # Display cards in a grid - 10 columns
+    cols_per_row = 10
+    cols = st.columns(cols_per_row)
+    
+    for i, card in enumerate(page_cards):
+        card_id = card["id"]
+        is_taken = card_id in taken_cards
+        is_selected = card_id in st.session_state.selected_temp_cards
+        
+        with cols[i % cols_per_row]:
+            if is_taken:
+                # Show taken card (locked)
+                st.markdown(f"""
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
+                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                    <div style="font-size:8px;color:#888;">Taken</div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif is_selected:
+                # Selected card - click to deselect
+                if st.button(f"✅ #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
+                    if card_id in st.session_state.selected_temp_cards:
+                        st.session_state.selected_temp_cards.remove(card_id)
+                        st.rerun()
+            else:
+                # Available card - click to select
+                if st.button(f"🎯 #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
+                    if len(st.session_state.selected_temp_cards) < 2:
+                        user = st.session_state.user_db.get(st.session_state.current_user, {})
+                        if user.get('balance', 0) >= CARD_PRICE:
+                            st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                    else:
+                        st.warning("⚠️ Max 2 cards!")
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -981,6 +1060,8 @@ def main():
             padding: 20px;
             border: 1px solid #333;
             margin: 10px 0;
+            max-height: 600px;
+            overflow-y: auto;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1173,64 +1254,12 @@ def main():
                     display_bingo_card(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
+            # Get taken cards for this game
+            taken_cards = get_taken_cards(game_id)
+            
             # Display the full card board
             st.markdown('<div class="card-board-container">', unsafe_allow_html=True)
-            
-            # Cards per page
-            cards_per_page = 50
-            total_pages = (len(BINGO_CARDS) + cards_per_page - 1) // cards_per_page
-            
-            # Pagination controls
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                if st.button("⬅️ Previous", disabled=st.session_state.board_page == 0):
-                    st.session_state.board_page -= 1
-                    st.rerun()
-            with col2:
-                st.markdown(f"<div style='text-align:center;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
-            with col3:
-                if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
-                    st.session_state.board_page += 1
-                    st.rerun()
-            
-            # Get cards for current page
-            start_idx = st.session_state.board_page * cards_per_page
-            end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
-            page_cards = BINGO_CARDS[start_idx:end_idx]
-            
-            # Display cards in a grid - 10 columns
-            cols_per_row = 10
-            cols = st.columns(cols_per_row)
-            
-            for i, card in enumerate(page_cards):
-                card_id = card["id"]
-                is_taken = card_id in taken_cards
-                is_selected = card_id in st.session_state.selected_temp_cards
-                
-                with cols[i % cols_per_row]:
-                    if is_taken:
-                        st.markdown(f"""
-                        <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
-                            <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
-                            <div style="font-size:8px;color:#888;">Taken</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    elif is_selected:
-                        if st.button(f"✅ #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
-                            if card_id in st.session_state.selected_temp_cards:
-                                st.session_state.selected_temp_cards.remove(card_id)
-                                st.rerun()
-                    else:
-                        if st.button(f"🎯 #{card_id}", key=f"board_card_{card_id}", use_container_width=True):
-                            if len(st.session_state.selected_temp_cards) < 2:
-                                if user.get('balance', 0) >= CARD_PRICE:
-                                    st.session_state.selected_temp_cards.append(card_id)
-                                    st.rerun()
-                                else:
-                                    st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
-                            else:
-                                st.warning("⚠️ Max 2 cards!")
-            
+            display_card_board()
             st.markdown('</div>', unsafe_allow_html=True)
             
             # Show selected cards preview
