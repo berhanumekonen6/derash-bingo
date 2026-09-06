@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - SELECTABLE ANYTIME
+# WITH ALL 201 CARDS - FIXED SELECTION
 # ===================================================================
 
 import streamlit as st
@@ -257,12 +257,8 @@ def init_session_state():
         st.session_state.game_phase = "waiting"
     if "selected_cards" not in st.session_state:
         st.session_state.selected_cards = []
-    if "games" not in st.session_state:
-        st.session_state.games = []
     if "user_db" not in st.session_state:
         st.session_state.user_db = {}
-    if "game_started" not in st.session_state:
-        st.session_state.game_started = False
     if "game_id" not in st.session_state:
         st.session_state.game_id = None
     if "game_start_time" not in st.session_state:
@@ -580,7 +576,7 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
     st.markdown(html, unsafe_allow_html=True)
 
 def display_bingo_board():
-    """Display BINGO board with green theme - shows called numbers in different colors"""
+    """Display BINGO board with green theme"""
     st.markdown("""
     <style>
         .bingo-board-container {
@@ -689,7 +685,6 @@ def display_bingo_board():
     
     if called_numbers:
         last_num = called_numbers[-1]
-        # Determine column letter
         if 1 <= last_num <= 15:
             letter = 'B'
         elif 16 <= last_num <= 30:
@@ -736,11 +731,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY CARDS GRID - ALWAYS SELECTABLE
+# DISPLAY CARDS GRID - FIXED SELECTION
 # ===================================================================
 
 def display_cards_grid():
-    """Display all 201 cards - ALWAYS CLICKABLE when in waiting phase"""
+    """Display all 201 cards - FIXED with proper selection using session state"""
     st.markdown("### 🎯 Select Your Cards")
     st.markdown("*Click on any available card to select/deselect it (max 2 cards)*")
     
@@ -779,7 +774,7 @@ def display_cards_grid():
     end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
     page_cards = BINGO_CARDS[start_idx:end_idx]
     
-    # Display cards in a grid
+    # Display cards in a grid using Streamlit columns
     cols_per_row = 10
     cols = st.columns(cols_per_row)
     
@@ -793,6 +788,7 @@ def display_cards_grid():
                 st.markdown(f"""
                 <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.6;">
                     <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                    <div style="font-size:7px;color:#888;">Taken</div>
                 </div>
                 """, unsafe_allow_html=True)
             elif is_selected:
@@ -802,24 +798,16 @@ def display_cards_grid():
                         st.session_state.selected_temp_cards.remove(card_id)
                         st.rerun()
             else:
-                # AVAILABLE - Click to select (ONLY during waiting phase)
-                if st.session_state.game_phase == "waiting":
-                    if st.button(f"#{card_id}", key=f"card_{card_id}", use_container_width=True):
-                        if len(st.session_state.selected_temp_cards) < 2:
-                            if user.get('balance', 0) >= CARD_PRICE:
-                                st.session_state.selected_temp_cards.append(card_id)
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                # AVAILABLE - Click to select
+                if st.button(f"#{card_id}", key=f"card_{card_id}", use_container_width=True):
+                    if len(st.session_state.selected_temp_cards) < 2:
+                        if user.get('balance', 0) >= CARD_PRICE:
+                            st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
                         else:
-                            st.warning("⚠️ Max 2 cards!")
-                else:
-                    # Game is running - show as disabled
-                    st.markdown(f"""
-                    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.5;">
-                        <div style="color:#888;font-size:10px;font-weight:bold;">#{card_id}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                    else:
+                        st.warning("⚠️ Max 2 cards!")
 
 # ===================================================================
 # MAIN APP
@@ -976,7 +964,7 @@ def main():
         user = st.session_state.user_db.get(st.session_state.current_user, {})
         st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
-        # Display cards grid - ALWAYS SELECTABLE during waiting
+        # Display cards grid - CLICKABLE during waiting
         display_cards_grid()
         
         # Show selected cards
