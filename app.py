@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - FIXED SELECTION & EARLY DISPLAY
+# WITH ALL 201 CARDS - LIVE COUNTDOWN TIMER
 # ===================================================================
 
 import streamlit as st
@@ -340,6 +340,8 @@ def init_game_db():
         st.session_state.admin_target_user = None
     if "board_page" not in st.session_state:
         st.session_state.board_page = 0
+    if "game_phase" not in st.session_state:
+        st.session_state.game_phase = "waiting"
 
 def login_user(username, password):
     init_game_db()
@@ -537,6 +539,7 @@ def create_new_game():
     st.session_state.game_started = False
     st.session_state.auto_play = True
     st.session_state.board_page = 0
+    st.session_state.game_phase = "waiting"
     
     game = {
         "game_id": game_id,
@@ -616,6 +619,7 @@ def declare_winners(game_id):
     st.session_state.game_over = True
     st.session_state.game_started = False
     st.session_state.winner_declared = True
+    st.session_state.game_phase = "finished"
     
     return True, f"🎉 {len(winners)} winner(s) declared!"
 
@@ -663,19 +667,26 @@ def join_game(game_id, user_id, card_ids):
 # ===================================================================
 
 def display_countdown_timer():
-    """Display timer with refresh button instead of auto-rerun"""
+    """Display timer with LIVE countdown that updates every second"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
     if remaining > 30:
         color = "#4CAF50"
         emoji = "⏳"
+        status = "🔄 Select your cards quickly!"
     elif remaining > 10:
         color = "#FF9800"
         emoji = "⚡"
-    else:
+        status = "⚡ Hurry! Time running out!"
+    elif remaining > 0:
         color = "#F44336"
         emoji = "🔥"
+        status = "🔥 Last seconds!"
+    else:
+        color = "#F44336"
+        emoji = "🎯"
+        status = "🎯 Game starting!"
     
     progress = remaining / SELECTION_TIME if remaining > 0 else 0
     
@@ -713,13 +724,14 @@ def display_countdown_timer():
             background: linear-gradient(90deg, {color}, #FFD700);
             height: 100%;
             width: {progress*100}%;
-            transition: width 1s;
+            transition: width 0.5s;
             border-radius: 10px;
         }}
         .timer-status {{
-            color: #aaa;
+            color: {color};
             font-size: 0.9rem;
             margin-top: 5px;
+            font-weight: bold;
         }}
     </style>
     <div class="timer-container">
@@ -728,10 +740,15 @@ def display_countdown_timer():
         <div class="timer-progress">
             <div class="timer-progress-fill"></div>
         </div>
-        <div class="timer-status">{'🔄 Select your cards quickly!' if remaining > 0 else '🎯 Game starting!'}</div>
+        <div class="timer-status">{status}</div>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+    
+    # AUTO-RERUN EVERY SECOND for LIVE countdown
+    if remaining > 0 and st.session_state.game_phase == "waiting":
+        time.sleep(1)
+        st.rerun()
 
 def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=False):
     if not card_data:
@@ -847,23 +864,25 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
     st.markdown(html, unsafe_allow_html=True)
 
 def display_bingo_board():
+    """Display BINGO board with green theme"""
     st.markdown("""
     <style>
         .bingo-board-container {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            background: linear-gradient(135deg, #0a1a0a, #1a3a1a);
             border-radius: 15px;
             padding: 20px;
             margin: 10px 0;
-            border: 2px solid #FFD700;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 3px solid #00FF00;
+            box-shadow: 0 0 40px rgba(0,255,0,0.15);
         }
         .bingo-board-title {
             text-align: center;
-            color: #FFD700;
-            font-size: 1.5rem;
+            color: #00FF00;
+            font-size: 1.8rem;
             font-weight: bold;
             margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(255,215,0,0.3);
+            text-shadow: 0 0 30px rgba(0,255,0,0.3);
+            letter-spacing: 8px;
         }
         .bingo-board-table {
             width: 100%;
@@ -872,48 +891,51 @@ def display_bingo_board():
             margin: 0 auto;
         }
         .bingo-board-table th {
-            background: linear-gradient(135deg, #FF3366, #FF6699);
-            color: white;
+            background: linear-gradient(135deg, #00cc44, #22ff77);
+            color: #003300;
             padding: 8px 4px;
             font-size: 1.1rem;
             font-weight: bold;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(0,255,0,0.2);
         }
         .bingo-board-table td {
             padding: 5px 3px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,255,0,0.1);
             font-weight: bold;
             font-size: 0.85rem;
-            color: white;
+            color: #88ff88;
             transition: all 0.3s;
             cursor: default;
+            background: rgba(0,255,0,0.05);
         }
         .bingo-board-table td.called {
-            background: #4CAF50;
             color: white;
             border-radius: 6px;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
             transform: scale(1.05);
         }
-        .bingo-board-table td.called-B { background: #FF3366; }
-        .bingo-board-table td.called-I { background: #00C9B7; }
-        .bingo-board-table td.called-N { background: #9C27B0; }
-        .bingo-board-table td.called-G { background: #4CAF50; }
-        .bingo-board-table td.called-O { background: #FF9800; }
+        .bingo-board-table td.called-B { background: #00cc44; border-color: #00cc44; box-shadow: 0 0 20px rgba(0,204,68,0.5); }
+        .bingo-board-table td.called-I { background: #00dd55; border-color: #00dd55; box-shadow: 0 0 20px rgba(0,221,85,0.5); }
+        .bingo-board-table td.called-N { background: #00ee66; border-color: #00ee66; box-shadow: 0 0 20px rgba(0,238,102,0.5); }
+        .bingo-board-table td.called-G { background: #22ff77; border-color: #22ff77; box-shadow: 0 0 20px rgba(34,255,119,0.5); color: #003300; }
+        .bingo-board-table td.called-O { background: #44ff88; border-color: #44ff88; box-shadow: 0 0 20px rgba(68,255,136,0.5); color: #003300; }
         .bingo-board-table td:hover {
             transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px rgba(0,255,0,0.2);
         }
         .bingo-called-count {
             text-align: center;
-            color: #FFD700;
+            color: #00FF00;
             font-size: 1rem;
             margin-top: 10px;
             padding: 8px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,255,0,0.1);
             border-radius: 10px;
+            border: 1px solid rgba(0,255,0,0.1);
+        }
+        .bingo-called-count span {
+            font-weight: bold;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -921,7 +943,7 @@ def display_bingo_board():
     called_numbers = st.session_state.called_numbers
     
     html = '<div class="bingo-board-container">'
-    html += '<div class="bingo-board-title">🎯 BINGO Board</div>'
+    html += '<div class="bingo-board-title">🎯 B I N G O</div>'
     html += '<table class="bingo-board-table">'
     html += '<tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>'
     
@@ -943,7 +965,7 @@ def display_bingo_board():
         html += '</tr>'
     
     html += '</table>'
-    html += f'<div class="bingo-called-count">🎯 Called: {len(called_numbers)}/75</div>'
+    html += f'<div class="bingo-called-count">🎯 Called: <span>{len(called_numbers)}</span> / 75 | Remaining: <span>{75 - len(called_numbers)}</span></div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -1361,7 +1383,7 @@ def main():
     # ===================================================================
     
     if status == "waiting":
-        # Display countdown timer (no auto-rerun)
+        # Display LIVE countdown timer (auto-updates every second)
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1423,6 +1445,7 @@ def main():
             if get_total_players(game_id) > 0:
                 current_game["status"] = "running"
                 current_game["selection_end_time"] = datetime.now().isoformat()
+                st.session_state.game_phase = "running"
                 save_local_games(st.session_state.games)
                 st.rerun()
             else:
