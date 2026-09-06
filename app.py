@@ -723,11 +723,11 @@ def display_countdown_timer():
     </style>
     <div class="timer-container">
         <div class="timer-display">{emoji} {time_str}</div>
-        <div class="timer-label">Time Remaining</div>
+        <div class="timer-label">⏱️ Time Remaining</div>
         <div class="timer-progress">
             <div class="timer-progress-fill"></div>
         </div>
-        <div class="timer-status">{'🔄 Selecting cards...' if remaining > 0 else '🎯 Game starting!'}</div>
+        <div class="timer-status">{'🔄 Select your cards quickly!' if remaining > 0 else '🎯 Game starting!'}</div>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
@@ -1028,6 +1028,7 @@ def display_all_cards_grid():
                     if len(st.session_state.selected_temp_cards) < 2:
                         if user.get('balance', 0) >= CARD_PRICE:
                             st.session_state.selected_temp_cards.append(card_id)
+                            st.success(f"✅ Card #{card_id} selected! ({len(st.session_state.selected_temp_cards)}/2)")
                             st.rerun()
                         else:
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
@@ -1360,12 +1361,11 @@ def main():
         st.metric("👥 Players", players)
     
     # ===================================================================
-    # CARD DISPLAY - ALWAYS SHOW EARLY FOR PLAYERS
+    # WAITING PHASE - Card Selection with Countdown
     # ===================================================================
     
-    # ALWAYS display the card board for ALL players when game is in waiting or running state
     if status == "waiting":
-        # Display countdown timer prominently at the top
+        # Display countdown timer
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1373,38 +1373,53 @@ def main():
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         
-        # Display the card board - THIS IS THE CRITICAL PART - SHOW EARLY
+        # ALWAYS display the card board for ALL players
+        st.markdown("### 🎯 Select Your Cards")
         display_all_cards_grid()
+        
+        # Show selected cards clearly
+        if st.session_state.selected_temp_cards:
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #FFD700;border-radius:15px;padding:15px;margin:10px 0;">
+                <h4 style="color:#FFD700;margin:0 0 10px 0;">📋 Your Selected Cards ({len(st.session_state.selected_temp_cards)}/2)</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            for cid in st.session_state.selected_temp_cards:
+                card_data = get_card_data(cid)
+                if card_data:
+                    display_bingo_card_format(card_data, [], cid)
+            
+            total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info(f"💰 Total cost: {total_cost} ETB")
+            with col2:
+                st.info(f"💳 Balance: {user.get('balance', 0)} ETB")
+            
+            if st.button("✅ JOIN GAME NOW", type="primary", use_container_width=True):
+                if len(st.session_state.selected_temp_cards) > 0:
+                    success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
+                    if success:
+                        st.success(msg)
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(msg)
+                else:
+                    st.warning("Please select at least one card!")
         
         if user_cards:
             st.success(f"✅ You already have {len(user_cards)} card(s) in this game!")
-            st.markdown("### 📋 Your Cards")
+            st.markdown("### 📋 Your Cards in Game")
             for card_id in user_cards:
                 card_data = get_card_data(card_id)
                 if card_data:
                     display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
-            st.info("Waiting for the game to start...")
+            st.info("⏳ Waiting for the game to start...")
         else:
-            # Show selected cards preview for players who haven't joined yet
-            if st.session_state.selected_temp_cards:
-                st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
-                for cid in st.session_state.selected_temp_cards:
-                    card_data = get_card_data(cid)
-                    if card_data:
-                        display_bingo_card_format(card_data, [], cid)
-                
-                total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
-                st.info(f"💰 Total cost: {total_cost} ETB (Balance: {user.get('balance', 0)} ETB)")
-                
-                if st.button("✅ Join Game", type="primary", use_container_width=True):
-                    success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
-                    if success:
-                        st.success(msg)
-                        st.rerun()
-                    else:
-                        st.error(msg)
-            else:
-                st.info("👆 Click on any card above to select (max 2)")
+            if not st.session_state.selected_temp_cards:
+                st.info("👆 Click on any card above to select (max 2), then click 'JOIN GAME NOW'")
         
         # Check if countdown ended and game should start
         remaining = get_remaining_time()
