@@ -1,4 +1,5 @@
 import streamlit as st
+import random
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ",
@@ -11,6 +12,10 @@ if 'clicked_numbers' not in st.session_state:
     st.session_state.clicked_numbers = set()
 if 'selected_card' not in st.session_state:
     st.session_state.selected_card = None
+if 'called_numbers' not in st.session_state:
+    st.session_state.called_numbers = set()
+if 'last_called_number' not in st.session_state:
+    st.session_state.last_called_number = None
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -58,7 +63,7 @@ BINGO_CARDS = [
     {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
     {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
     {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
-    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
+    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '35', '52', '71'], ['2', '23', '35', '51', '64']]},
     {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
     {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
     {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
@@ -227,7 +232,7 @@ def get_card(card_id):
     return None
 
 def display_bingo_card(card_id):
-    """Display a BINGO card in the exact format shown in the image"""
+    """Display a BINGO card with called numbers highlighted"""
     card = get_card(card_id)
     if not card:
         return
@@ -276,8 +281,8 @@ def display_bingo_card(card_id):
             height: 40px;
         }}
         .bingo-table .row-label {{
-            background: #E8F5E9;
-            color: #333;
+            background: #2E7D32 !important;
+            color: white !important;
             font-weight: bold;
             font-size: 0.8rem;
             min-width: 30px;
@@ -289,6 +294,16 @@ def display_bingo_card(card_id):
         }}
         .bingo-table .number-cell {{
             color: #1A237E;
+        }}
+        .bingo-table .called-number {{
+            background: #FF9800 !important;
+            color: white !important;
+            border-radius: 4px;
+        }}
+        .bingo-table .ticked-number {{
+            background: #4CAF50 !important;
+            color: white !important;
+            border-radius: 4px;
         }}
         .bingo-footer {{
             text-align: center;
@@ -314,7 +329,7 @@ def display_bingo_card(card_id):
     </style>
     """, unsafe_allow_html=True)
     
-        # Card wrapper
+    # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
     html += f'<div class="bingo-card-title">Card #{card_id}</div>'
     
@@ -339,7 +354,18 @@ def display_bingo_card(card_id):
             if value == 'F':
                 html += '<td class="free-space">★</td>'
             else:
-                html += f'<td class="number-cell">{value}</td>'
+                # Check if this number has been called
+                num = int(value)
+                is_called = num in st.session_state.called_numbers
+                # Check if this number is on the selected card (ticked)
+                is_ticked = num in st.session_state.clicked_numbers
+                
+                if is_ticked and is_called:
+                    html += f'<td class="number-cell ticked-number">{value}</td>'
+                elif is_called:
+                    html += f'<td class="number-cell called-number">{value}</td>'
+                else:
+                    html += f'<td class="number-cell">{value}</td>'
         html += '</tr>'
     
     html += '</tbody></table>'
@@ -349,7 +375,7 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the BINGO board with B, I, N, G, O rows - NO FREE CELL"""
+    """Display the BINGO board with called numbers highlighted"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -391,6 +417,11 @@ def display_master_board():
             color: #1A237E;
             background: #FAFAFA;
         }
+        .master-table .called-cell {
+            background: #FF9800 !important;
+            color: white !important;
+            border-radius: 4px;
+        }
         @media (max-width: 600px) {
             .master-table td {
                 padding: 4px 2px;
@@ -415,17 +446,30 @@ def display_master_board():
     }
     
     html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯BINGO Board</div>'
+    html += '<div class="master-board-title">🎯 BINGO Board</div>'
+    
+    # Show last called number if exists
+    if st.session_state.last_called_number:
+        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: {st.session_state.last_called_number}</div>'
+    
     html += '<table class="master-table">'
     
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<tr>'
         html += f'<td class="row-label">{letter}</td>'
         for num in master_board[letter]:
-            html += f'<td>{num}</td>'
+            is_called = num in st.session_state.called_numbers
+            if is_called:
+                html += f'<td class="called-cell">{num}</td>'
+            else:
+                html += f'<td>{num}</td>'
         html += '</tr>'
     
     html += '</table>'
+    
+    # Show count of called numbers
+    html += f'<div style="text-align:center;margin-top:10px;font-size:1rem;color:#333;">📊 Called: {len(st.session_state.called_numbers)} / 75 numbers</div>'
+    
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -437,8 +481,48 @@ def display_master_board():
 # Display Master Board at top
 display_master_board()
 
-st.markdown("")
-st.markdown("## Cards 1 - 201")
+# Call Number Section
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown("### 🎲 Call a Number")
+    
+    # Check if all numbers are called
+    all_called = len(st.session_state.called_numbers) >= 75
+    
+    if all_called:
+        st.warning("🎉 All numbers have been called! Reset to start a new game.")
+    
+    call_col1, call_col2, call_col3 = st.columns(3)
+    
+    with call_col1:
+        if not all_called:
+            if st.button("🎯 Call Random Number", use_container_width=True, type="primary"):
+                # Find available numbers (1-75 not yet called)
+                available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+                if available:
+                    called_num = random.choice(available)
+                    st.session_state.called_numbers.add(called_num)
+                    st.session_state.last_called_number = called_num
+                    st.rerun()
+    
+    with call_col2:
+        if st.button("🔄 Reset Game", use_container_width=True):
+            st.session_state.called_numbers = set()
+            st.session_state.clicked_numbers = set()
+            st.session_state.selected_card = None
+            st.session_state.last_called_number = None
+            st.rerun()
+    
+    with call_col3:
+        if st.session_state.last_called_number and not all_called:
+            st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
+        elif all_called:
+            st.success("🎉 All numbers called!")
+
+# Cards selection section
+st.markdown("---")
+st.markdown("## Select Cards (1 - 201)")
 
 # Numbers in a grid
 cols = st.columns(10)
@@ -466,11 +550,12 @@ for i in range(1, 202):
 # Footer with stats
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards
+    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)} numbers
 </div>
 """, unsafe_allow_html=True)
 
 # Display selected card
 if st.session_state.selected_card:
     st.markdown("---")
+    st.markdown("### 📋 Selected Card")
     display_bingo_card(st.session_state.selected_card)
