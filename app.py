@@ -1,4 +1,6 @@
 import streamlit as st
+import random
+import time
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ",
@@ -11,6 +13,16 @@ if 'clicked_numbers' not in st.session_state:
     st.session_state.clicked_numbers = set()
 if 'selected_card' not in st.session_state:
     st.session_state.selected_card = None
+if 'called_numbers' not in st.session_state:
+    st.session_state.called_numbers = set()
+if 'last_called_number' not in st.session_state:
+    st.session_state.last_called_number = None
+if 'is_auto_calling' not in st.session_state:
+    st.session_state.is_auto_calling = False
+if 'auto_called_count' not in st.session_state:
+    st.session_state.auto_called_count = 0
+if 'last_update_time' not in st.session_state:
+    st.session_state.last_update_time = time.time()
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -58,7 +70,7 @@ BINGO_CARDS = [
     {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
     {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
     {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
-    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
+    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '35', '52', '71'], ['2', '23', '35', '51', '64']]},
     {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
     {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
     {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
@@ -226,8 +238,19 @@ def get_card(card_id):
             return card
     return None
 
+def call_random_number():
+    """Call a random number from 1-75 that hasn't been called yet"""
+    available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+    if available:
+        called_num = random.choice(available)
+        st.session_state.called_numbers.add(called_num)
+        st.session_state.last_called_number = called_num
+        st.session_state.auto_called_count += 1
+        return True
+    return False
+
 def display_bingo_card(card_id):
-    """Display a BINGO card in the exact format shown in the image"""
+    """Display a BINGO card with called numbers highlighted"""
     card = get_card(card_id)
     if not card:
         return
@@ -276,8 +299,8 @@ def display_bingo_card(card_id):
             height: 40px;
         }}
         .bingo-table .row-label {{
-            background: #E8F5E9;
-            color: #333;
+            background: #2E7D32 !important;
+            color: white !important;
             font-weight: bold;
             font-size: 0.8rem;
             min-width: 30px;
@@ -289,6 +312,16 @@ def display_bingo_card(card_id):
         }}
         .bingo-table .number-cell {{
             color: #1A237E;
+        }}
+        .bingo-table .called-number {{
+            background: #FF9800 !important;
+            color: white !important;
+            border-radius: 4px;
+        }}
+        .bingo-table .ticked-number {{
+            background: #4CAF50 !important;
+            color: white !important;
+            border-radius: 4px;
         }}
         .bingo-footer {{
             text-align: center;
@@ -314,7 +347,7 @@ def display_bingo_card(card_id):
     </style>
     """, unsafe_allow_html=True)
     
-        # Card wrapper
+    # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
     html += f'<div class="bingo-card-title">Card #{card_id}</div>'
     
@@ -339,7 +372,18 @@ def display_bingo_card(card_id):
             if value == 'F':
                 html += '<td class="free-space">★</td>'
             else:
-                html += f'<td class="number-cell">{value}</td>'
+                # Check if this number has been called
+                num = int(value)
+                is_called = num in st.session_state.called_numbers
+                # Check if this number is on the selected card (ticked)
+                is_ticked = num in st.session_state.clicked_numbers
+                
+                if is_ticked and is_called:
+                    html += f'<td class="number-cell ticked-number">{value}</td>'
+                elif is_called:
+                    html += f'<td class="number-cell called-number">{value}</td>'
+                else:
+                    html += f'<td class="number-cell">{value}</td>'
         html += '</tr>'
     
     html += '</tbody></table>'
@@ -349,7 +393,7 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the BINGO board with B, I, N, G, O rows - NO FREE CELL"""
+    """Display the BINGO board with all letters and numbers in circles"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -386,10 +430,60 @@ def display_master_board():
             font-size: 1.5rem;
             font-weight: bold;
             min-width: 50px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
         }
-        .master-table td:not(.row-label) {
+        .circle-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #E8F5E9;
             color: #1A237E;
-            background: #FAFAFA;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: 2px solid #2E7D32;
+            transition: all 0.3s ease;
+        }
+        .circle-number.called {
+            background: #FF9800;
+            color: white;
+            border-color: #E65100;
+            transform: scale(1.1);
+        }
+        .circle-number.last-called {
+            background: #E53935;
+            color: white;
+            border-color: #B71C1C;
+            transform: scale(1.2);
+            animation: pulse 0.5s ease-in-out;
+            box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
+        }
+        .circle-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #2E7D32;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            border: 3px solid #1B5E20;
+            margin: auto;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
         }
         @media (max-width: 600px) {
             .master-table td {
@@ -397,9 +491,20 @@ def display_master_board():
                 font-size: 0.7rem;
                 min-width: 20px;
             }
-            .master-table .row-label {
+            .circle-number {
+                width: 28px;
+                height: 28px;
+                font-size: 0.7rem;
+            }
+            .circle-letter {
+                width: 35px;
+                height: 35px;
                 font-size: 1rem;
-                min-width: 30px;
+            }
+            .master-table .row-label {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
             }
         }
     </style>
@@ -415,17 +520,34 @@ def display_master_board():
     }
     
     html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯BINGO Board</div>'
+    html += '<div class="master-board-title">🎯 BINGO Board</div>'
+    
+    # Show last called number if exists
+    if st.session_state.last_called_number:
+        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
+    
     html += '<table class="master-table">'
     
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<tr>'
-        html += f'<td class="row-label">{letter}</td>'
+        html += f'<td><div class="circle-letter">{letter}</div></td>'
         for num in master_board[letter]:
-            html += f'<td>{num}</td>'
+            is_called = num in st.session_state.called_numbers
+            is_last = num == st.session_state.last_called_number
+            
+            if is_last:
+                html += f'<td><div class="circle-number last-called">{num}</div></td>'
+            elif is_called:
+                html += f'<td><div class="circle-number called">{num}</div></td>'
+            else:
+                html += f'<td><div class="circle-number">{num}</div></td>'
         html += '</tr>'
     
     html += '</table>'
+    
+    # Show count of called numbers
+    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
+    
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -434,11 +556,85 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
+# Auto-call logic
+if st.session_state.is_auto_calling:
+    # Check if all numbers have been called
+    if len(st.session_state.called_numbers) >= 75:
+        st.session_state.is_auto_calling = False
+        st.success("🎉 All numbers have been called! Auto-call stopped.")
+    else:
+        # Check if 2 seconds have passed since last update
+        current_time = time.time()
+        if current_time - st.session_state.last_update_time >= 2.0:
+            if call_random_number():
+                st.session_state.last_update_time = current_time
+                st.rerun()
+        else:
+            # Auto-refresh to check time
+            time.sleep(0.1)
+            st.rerun()
+
 # Display Master Board at top
 display_master_board()
 
-st.markdown("")
-st.markdown("## Cards 1 - 201")
+# Call Number Section
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown("### 🎲 Number Calling")
+    
+    # Check if all numbers are called
+    all_called = len(st.session_state.called_numbers) >= 75
+    
+    # Control buttons
+    control_col1, control_col2, control_col3, control_col4 = st.columns(4)
+    
+    with control_col1:
+        if not st.session_state.is_auto_calling and not all_called:
+            if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
+                st.session_state.is_auto_calling = True
+                st.session_state.last_update_time = time.time()
+                call_random_number()
+                st.rerun()
+    
+    with control_col2:
+        if st.session_state.is_auto_calling:
+            if st.button("⏹️ Stop Auto-Call", use_container_width=True):
+                st.session_state.is_auto_calling = False
+                st.rerun()
+    
+    with control_col3:
+        if not st.session_state.is_auto_calling and not all_called:
+            if st.button("🎯 Call One", use_container_width=True):
+                call_random_number()
+                st.rerun()
+    
+    with control_col4:
+        if st.button("🔄 Reset Game", use_container_width=True):
+            st.session_state.called_numbers = set()
+            st.session_state.clicked_numbers = set()
+            st.session_state.selected_card = None
+            st.session_state.last_called_number = None
+            st.session_state.is_auto_calling = False
+            st.session_state.auto_called_count = 0
+            st.rerun()
+    
+    # Status display
+    if st.session_state.is_auto_calling:
+        st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
+        progress = len(st.session_state.called_numbers) / 75
+        st.progress(progress)
+    elif all_called:
+        st.success("🎉 All 75 numbers have been called!")
+        st.progress(1.0)
+    elif st.session_state.last_called_number:
+        st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
+        progress = len(st.session_state.called_numbers) / 75
+        st.progress(progress)
+
+# Cards selection section
+st.markdown("---")
+st.markdown("## Select Cards (1 - 201)")
 
 # Numbers in a grid
 cols = st.columns(10)
@@ -466,11 +662,13 @@ for i in range(1, 202):
 # Footer with stats
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards
+    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)}/75 numbers
+    {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
 
 # Display selected card
 if st.session_state.selected_card:
     st.markdown("---")
+    st.markdown("### 📋 Selected Card")
     display_bingo_card(st.session_state.selected_card)
