@@ -343,7 +343,7 @@ def display_bingo_card(card_id):
         html += '</tr>'
     
     html += '</tbody></table>'
-    html += '<div class="bingo-footer">ЧСТА ФТС:4</div>'
+    html += '<div class="bingo-footer"></div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
