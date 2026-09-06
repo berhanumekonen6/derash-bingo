@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS & PROPER SELECTION
+# WITH ALL 201 CARDS - FIXED FOR PLAYERS
 # ===================================================================
 
 import streamlit as st
@@ -220,294 +220,12 @@ BINGO_CARDS = [
 ]
 
 # ===================================================================
-# GAME CONFIGURATION
+# CONTINUED - REST OF THE CODE
 # ===================================================================
 
-CARD_PRICE = 10
-PRIZE_PER_CARD = 8
-SELECTION_TIME = 60
-
 # ===================================================================
-# LOCAL FILE STORAGE & AUTHENTICATION FUNCTIONS
+# GAME FUNCTIONS (Continued)
 # ===================================================================
-
-def get_local_users_file():
-    return "bingo_users_local.json"
-
-def load_local_users():
-    try:
-        if os.path.exists(get_local_users_file()):
-            with open(get_local_users_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return {}
-
-def save_local_users(users):
-    try:
-        with open(get_local_users_file(), "w") as f:
-            json.dump(users, f, indent=2)
-        return True
-    except:
-        return False
-
-def get_local_games_file():
-    return "bingo_games_local.json"
-
-def load_local_games():
-    try:
-        if os.path.exists(get_local_games_file()):
-            with open(get_local_games_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return []
-
-def save_local_games(games):
-    try:
-        with open(get_local_games_file(), "w") as f:
-            json.dump(games, f, indent=2)
-        return True
-    except:
-        return False
-
-def load_all_data():
-    local_users = load_local_users()
-    if local_users:
-        st.session_state.user_db = local_users
-    else:
-        st.session_state.user_db = {}
-    
-    local_games = load_local_games()
-    if local_games:
-        st.session_state.games = local_games
-    else:
-        st.session_state.games = []
-    
-    if "selected_cards" not in st.session_state:
-        st.session_state.selected_cards = []
-    
-    if "winners_list" not in st.session_state:
-        st.session_state.winners_list = []
-
-def save_all_data():
-    if "user_db" in st.session_state and st.session_state.user_db:
-        save_local_users(st.session_state.user_db)
-    if "games" in st.session_state and st.session_state.games:
-        save_local_games(st.session_state.games)
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def verify_password(password, hashed):
-    if not hashed:
-        return False
-    return hash_password(password) == hashed
-
-def init_game_db():
-    if "user_db" not in st.session_state:
-        load_all_data()
-    
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-    if "current_user" not in st.session_state:
-        st.session_state.current_user = None
-    if "current_role" not in st.session_state:
-        st.session_state.current_role = None
-    if "called_numbers" not in st.session_state:
-        st.session_state.called_numbers = []
-    if "game_started" not in st.session_state:
-        st.session_state.game_started = False
-    if "selected_temp_cards" not in st.session_state:
-        st.session_state.selected_temp_cards = []
-    if "cards_data" not in st.session_state:
-        st.session_state.cards_data = {}
-    if "winners_list" not in st.session_state:
-        st.session_state.winners_list = []
-    if "game_over" not in st.session_state:
-        st.session_state.game_over = False
-    if "last_update" not in st.session_state:
-        st.session_state.last_update = time.time()
-    if "auto_play" not in st.session_state:
-        st.session_state.auto_play = True
-    if "admin_balance_selection" not in st.session_state:
-        st.session_state.admin_balance_selection = None
-    if "admin_target_user" not in st.session_state:
-        st.session_state.admin_target_user = None
-    if "board_page" not in st.session_state:
-        st.session_state.board_page = 0
-
-def login_user(username, password):
-    init_game_db()
-    username = username.strip()
-    password = password.strip()
-    load_all_data()
-    
-    if username == "admin" and password == "admin123":
-        if username not in st.session_state.user_db:
-            user_data = {
-                "password": hash_password("admin123"),
-                "balance": 0,
-                "role": "admin",
-                "name": "Admin",
-                "phone": "",
-                "game_played": 0
-            }
-            st.session_state.user_db[username] = user_data
-            save_local_users(st.session_state.user_db)
-            load_all_data()
-        
-        st.session_state.logged_in = True
-        st.session_state.current_user = username
-        st.session_state.current_role = "admin"
-        return True, "✅ Admin login successful!"
-    
-    if username not in st.session_state.user_db:
-        return False, "❌ Username not found"
-    
-    if verify_password(password, st.session_state.user_db[username]["password"]):
-        st.session_state.logged_in = True
-        st.session_state.current_user = username
-        st.session_state.current_role = st.session_state.user_db[username]["role"]
-        return True, "✅ Login successful!"
-    return False, "❌ Incorrect password"
-
-def register_user(username, password, name, phone=""):
-    init_game_db()
-    username = username.strip()
-    password = password.strip()
-    name = name.strip()
-    
-    if len(username) < 2:
-        return False, "❌ Username must be at least 2 characters"
-    if len(password) < 6:
-        return False, "❌ Password must be at least 6 characters"
-    
-    load_all_data()
-    
-    if username in st.session_state.user_db:
-        return False, "❌ Username already exists"
-    
-    user_data = {
-        "password": hash_password(password),
-        "balance": 10,
-        "role": "player",
-        "name": name,
-        "phone": phone,
-        "game_played": 0
-    }
-    
-    st.session_state.user_db[username] = user_data
-    save_local_users(st.session_state.user_db)
-    load_all_data()
-    
-    return True, "✅ Registration successful!"
-
-def logout_user():
-    st.session_state.logged_in = False
-    st.session_state.current_user = None
-    st.session_state.current_role = None
-
-# ===================================================================
-# GAME FUNCTIONS
-# ===================================================================
-
-def get_card_data(card_id):
-    if card_id not in st.session_state.cards_data:
-        card = next((c for c in BINGO_CARDS if c["id"] == card_id), None)
-        if card:
-            st.session_state.cards_data[card_id] = card["cells"]
-    return st.session_state.cards_data.get(card_id)
-
-def check_winning_pattern(card_data, called_numbers):
-    if not called_numbers:
-        return None
-    
-    called_set = set(called_numbers)
-    
-    def is_marked(value):
-        if value == 'F':
-            return True
-        return int(value) in called_set
-    
-    for row in range(5):
-        if all(is_marked(card_data[row][col]) for col in range(5)):
-            return {'type': 'row', 'index': row + 1}
-    
-    for col in range(5):
-        if all(is_marked(card_data[row][col]) for row in range(5)):
-            return {'type': 'column', 'letter': ['B', 'I', 'N', 'G', 'O'][col]}
-    
-    if all(is_marked(card_data[i][i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'main'}
-    
-    if all(is_marked(card_data[i][4 - i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'anti'}
-    
-    return None
-
-def get_pattern_name(pattern):
-    if not pattern:
-        return "Unknown"
-    if pattern['type'] == 'row':
-        return f"Row {pattern['index']}"
-    elif pattern['type'] == 'column':
-        return f"Column {pattern['letter']}"
-    elif pattern['type'] == 'diagonal':
-        return f"{pattern['direction'].title()} Diagonal"
-    return "Unknown"
-
-def get_current_game():
-    if "games" not in st.session_state:
-        return None
-    for game in st.session_state.games:
-        if game.get("status") in ["waiting", "running"]:
-            return game
-    return None
-
-def get_remaining_time():
-    game = get_current_game()
-    if not game:
-        return 0
-    
-    if game.get("status") == "finished":
-        return 0
-    
-    end_time = datetime.fromisoformat(game.get("selection_end_time"))
-    remaining = (end_time - datetime.now()).total_seconds()
-    return max(0, remaining)
-
-def get_time_display():
-    remaining = get_remaining_time()
-    if remaining <= 0:
-        return "00:00"
-    minutes = int(remaining // 60)
-    seconds = int(remaining % 60)
-    return f"{minutes:02d}:{seconds:02d}"
-
-def get_user_cards(game_id, user_id):
-    cards = []
-    for sc in st.session_state.selected_cards:
-        if sc.get("game_id") == game_id and sc.get("user_id") == user_id:
-            cards.append(sc.get("card_id"))
-    return cards
-
-def get_taken_cards(game_id):
-    cards = []
-    for sc in st.session_state.selected_cards:
-        if sc.get("game_id") == game_id:
-            cards.append(sc.get("card_id"))
-    return cards
-
-def get_players(game_id):
-    players = {}
-    for sc in st.session_state.selected_cards:
-        if sc.get("game_id") == game_id:
-            username = sc.get("username", "Unknown")
-            if username not in players:
-                players[username] = 0
-            players[username] += 1
-    return players
 
 def get_total_players(game_id):
     return len(get_players(game_id))
@@ -653,6 +371,44 @@ def join_game(game_id, user_id, card_ids):
     st.session_state.selected_temp_cards = []
     
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
+
+def auto_play_game():
+    game = get_current_game()
+    if not game or game.get("status") != "running":
+        return
+    
+    if len(st.session_state.called_numbers) >= 75:
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+        else:
+            game["status"] = "finished"
+            save_local_games(st.session_state.games)
+            st.session_state.game_over = True
+        return
+    
+    num = call_next_number()
+    if num:
+        game["called_numbers"] = json.dumps(st.session_state.called_numbers)
+        save_local_games(st.session_state.games)
+        
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+    else:
+        winners = check_all_winners(game["game_id"])
+        if winners:
+            success, msg = declare_winners(game["game_id"])
+            if success:
+                st.session_state.game_over = True
+        else:
+            game["status"] = "finished"
+            save_local_games(st.session_state.games)
+            st.session_state.game_over = True
 
 # ===================================================================
 # UI COMPONENTS
@@ -948,11 +704,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ATTRACTIVE CARDS USING STREAMLIT BUTTONS
+# DISPLAY ATTRACTIVE CARDS - LIKE THE SCREENSHOT
 # ===================================================================
 
 def display_attractive_cards():
-    """Display all 201 cards in attractive green rectangular format using Streamlit buttons"""
+    """Display all 201 cards in a grid like the screenshot"""
     st.markdown("### 🎯 BINGO Card Board")
     st.markdown("*Click on any available card to select it (max 2 cards)*")
     
@@ -1029,6 +785,10 @@ def display_attractive_cards():
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1249,7 +1009,7 @@ def main():
         return
     
     # ===================================================================
-    # ADMIN PANEL
+    # ADMIN PANEL - ONLY SHOWS FOR ADMIN
     # ===================================================================
     
     if st.session_state.current_role == "admin":
@@ -1257,7 +1017,7 @@ def main():
         st.markdown("---")
     
     # ===================================================================
-    # GAME LOBBY
+    # GAME LOBBY - SHOWS FOR ALL USERS
     # ===================================================================
     
     st.markdown("""
@@ -1356,7 +1116,7 @@ def main():
         st.metric("👥 Players", players)
     
     # ===================================================================
-    # WAITING PHASE - Card Selection with Countdown
+    # WAITING PHASE - Card Selection with Countdown (FOR ALL PLAYERS)
     # ===================================================================
     
     if status == "waiting":
@@ -1376,7 +1136,7 @@ def main():
                     display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
-            # Display attractive cards using Streamlit buttons
+            # Display attractive cards for ALL players
             display_attractive_cards()
             
             # Show selected cards preview
@@ -1418,8 +1178,10 @@ def main():
     # ===================================================================
     
     elif status == "running":
+        # Display BINGO Board (1-75)
         display_bingo_board()
         
+        # Auto-play
         if st.session_state.auto_play and not st.session_state.game_over:
             if len(st.session_state.called_numbers) < 75:
                 num = call_next_number()
@@ -1427,6 +1189,7 @@ def main():
                     current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
                     save_local_games(st.session_state.games)
                     
+                    # Show last called number
                     st.markdown(f"""
                     <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:2px solid #4CAF50;margin:10px 0;">
                         <div style="font-size:2rem;color:#4CAF50;">🎯 Last Called: <strong>{num}</strong></div>
@@ -1452,6 +1215,7 @@ def main():
                     st.session_state.game_over = True
                     st.rerun()
         
+        # Show user's cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         if user_cards:
             st.markdown("### 📋 Your Cards")
@@ -1462,6 +1226,7 @@ def main():
         else:
             st.info("You haven't joined this game. Wait for the next round!")
         
+        # Controls
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🎯 Draw Number", type="primary", use_container_width=True):
