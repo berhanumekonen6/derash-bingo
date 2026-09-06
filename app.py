@@ -20,7 +20,7 @@ def display_bingo_board(board):
     st.markdown("""
     <style>
         .bingo-container {
-            max-width: 900px;
+            max-width: 950px;
             margin: 0 auto;
             padding: 20px;
             background: white;
@@ -30,36 +30,68 @@ def display_bingo_board(board):
         .bingo-table {
             width: 100%;
             border-collapse: collapse;
-            font-family: monospace;
         }
         .bingo-table td {
             border: 1px solid #333;
-            padding: 8px 6px;
+            padding: 6px 4px;
             text-align: center;
-            font-size: 0.95rem;
-            font-weight: bold;
             min-width: 35px;
         }
-        .bingo-table .row-label {
+        .bingo-table .circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            background: #FAFAFA;
+            color: #1A237E;
+            border: 2px solid #2E7D32;
+        }
+        .bingo-table .row-label .circle {
+            width: 45px;
+            height: 45px;
+            font-size: 1.3rem;
             background: #2E7D32;
             color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 50px;
+            border: 2px solid #1B5E20;
+            font-weight: 900;
         }
-        .bingo-table td:not(.row-label) {
-            color: #1A237E;
-            background: #FAFAFA;
+        .bingo-table td:not(.row-label) .circle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
         }
         @media (max-width: 600px) {
             .bingo-table td {
-                padding: 4px 2px;
-                font-size: 0.7rem;
-                min-width: 20px;
+                padding: 3px 2px;
+                min-width: 22px;
             }
-            .bingo-table .row-label {
-                font-size: 1rem;
-                min-width: 30px;
+            .bingo-table .circle {
+                width: 26px;
+                height: 26px;
+                font-size: 0.65rem;
+                border-width: 1.5px;
+            }
+            .bingo-table .row-label .circle {
+                width: 30px;
+                height: 30px;
+                font-size: 0.9rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .bingo-table .circle {
+                width: 20px;
+                height: 20px;
+                font-size: 0.5rem;
+                border-width: 1px;
+            }
+            .bingo-table .row-label .circle {
+                width: 24px;
+                height: 24px;
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -68,12 +100,11 @@ def display_bingo_board(board):
     html = '<div class="bingo-container">'
     html += '<table class="bingo-table">'
     
-    # Data rows only - no header
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<tr>'
-        html += f'<td class="row-label">{letter}</td>'
+        html += f'<td class="row-label"><div class="circle">{letter}</div></td>'
         for num in board[letter]:
-            html += f'<td>{num}</td>'
+            html += f'<td><div class="circle">{num}</div></td>'
         html += '</tr>'
     
     html += '</table>'
