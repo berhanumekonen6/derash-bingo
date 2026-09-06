@@ -16,12 +16,14 @@ for i in range(1, 202):
     with cols[col_idx]:
         st.markdown(f"""
         <div style="
-            border: 2px solid #ddd;
+            border: 2px solid #2d6a4f;
             border-radius: 5px;
             padding: 10px;
             text-align: center;
             margin: 2px;
             font-weight: bold;
+            background-color: #2d6a4f;
+            color: white;
         ">
             {i}
         </div>
