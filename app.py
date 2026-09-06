@@ -36,3 +36,10 @@ for i in range(1, 202):
             else:
                 st.session_state.clicked_numbers.add(i)
             st.rerun()
+
+# Footer with stats
+st.markdown(f"""
+<div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
+    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards
+</div>
+""", unsafe_allow_html=True)
