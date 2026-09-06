@@ -864,26 +864,30 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
     html += '</table></div>'
     st.markdown(html, unsafe_allow_html=True)
 
+# ===================================================================
+# DISPLAY BINGO BOARD - GREEN COLOR THEME
+# ===================================================================
+
 def display_bingo_board():
-    """Display BINGO board in grid format"""
+    """Display BINGO board in green color theme"""
     st.markdown("""
     <style>
         .bingo-board-wrapper {
-            background: linear-gradient(135deg, #0d0d1a, #1a1a3e);
+            background: linear-gradient(135deg, #0a1a0a, #1a3a1a);
             border-radius: 15px;
             padding: 20px;
             margin: 15px 0;
-            border: 3px solid #FFD700;
-            box-shadow: 0 0 40px rgba(255,215,0,0.15);
+            border: 3px solid #00FF00;
+            box-shadow: 0 0 40px rgba(0,255,0,0.15);
         }
         .bingo-board-title {
             text-align: center;
-            color: #FFD700;
-            font-size: 1.8rem;
+            color: #00FF00;
+            font-size: 2rem;
             font-weight: bold;
             margin-bottom: 15px;
-            text-shadow: 0 0 20px rgba(255,215,0,0.3);
-            letter-spacing: 8px;
+            text-shadow: 0 0 30px rgba(0,255,0,0.3);
+            letter-spacing: 10px;
         }
         .bingo-board-grid {
             display: grid;
@@ -893,26 +897,27 @@ def display_bingo_board():
             margin: 0 auto;
         }
         .bingo-number {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,255,0,0.08);
+            border: 1px solid rgba(0,255,0,0.15);
             border-radius: 4px;
             padding: 5px 0;
             text-align: center;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #ccc;
+            color: #88ff88;
             transition: all 0.3s;
             cursor: default;
         }
         .bingo-number:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+            box-shadow: 0 0 15px rgba(0,255,0,0.15);
         }
-        .bingo-number.called-B { background: #FF3366; color: white; border-color: #FF3366; box-shadow: 0 0 15px rgba(255,51,102,0.4); }
-        .bingo-number.called-I { background: #00C9B7; color: white; border-color: #00C9B7; box-shadow: 0 0 15px rgba(0,201,183,0.4); }
-        .bingo-number.called-N { background: #9C27B0; color: white; border-color: #9C27B0; box-shadow: 0 0 15px rgba(156,39,176,0.4); }
-        .bingo-number.called-G { background: #4CAF50; color: white; border-color: #4CAF50; box-shadow: 0 0 15px rgba(76,175,80,0.4); }
-        .bingo-number.called-O { background: #FF9800; color: white; border-color: #FF9800; box-shadow: 0 0 15px rgba(255,152,0,0.4); }
+        /* Green theme called numbers */
+        .bingo-number.called-B { background: #00cc44; color: white; border-color: #00cc44; box-shadow: 0 0 20px rgba(0,204,68,0.5); }
+        .bingo-number.called-I { background: #00dd55; color: white; border-color: #00dd55; box-shadow: 0 0 20px rgba(0,221,85,0.5); }
+        .bingo-number.called-N { background: #00ee66; color: white; border-color: #00ee66; box-shadow: 0 0 20px rgba(0,238,102,0.5); }
+        .bingo-number.called-G { background: #22ff77; color: #003300; border-color: #22ff77; box-shadow: 0 0 20px rgba(34,255,119,0.5); }
+        .bingo-number.called-O { background: #44ff88; color: #003300; border-color: #44ff88; box-shadow: 0 0 20px rgba(68,255,136,0.5); }
         .bingo-header-row {
             display: grid;
             grid-template-columns: repeat(15, 1fr);
@@ -924,35 +929,37 @@ def display_bingo_board():
             text-align: center;
             font-size: 0.9rem;
             font-weight: 900;
-            color: #FFD700;
+            color: #00FF00;
             letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(0,255,0,0.2);
         }
         .bingo-stats {
             text-align: center;
-            color: #aaa;
+            color: #88ff88;
             font-size: 0.9rem;
             margin-top: 12px;
             padding: 8px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,255,0,0.08);
             border-radius: 8px;
+            border: 1px solid rgba(0,255,0,0.1);
         }
         .bingo-stats span {
-            color: #FFD700;
+            color: #00FF00;
             font-weight: bold;
         }
         .bingo-last-called {
             text-align: center;
             padding: 10px;
-            background: rgba(76,175,80,0.15);
+            background: rgba(0,255,0,0.1);
             border-radius: 8px;
             margin: 10px 0;
-            border: 1px solid rgba(76,175,80,0.3);
+            border: 1px solid rgba(0,255,0,0.2);
             font-size: 1rem;
-            color: #4CAF50;
+            color: #00FF00;
         }
         .bingo-last-called strong {
             font-size: 1.3rem;
-            color: #FFD700;
+            color: #88ff88;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -968,6 +975,7 @@ def display_bingo_board():
         </div>
         """, unsafe_allow_html=True)
     
+    # B:1-15, I:16-30, N:31-45, G:46-60, O:61-75
     columns = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -1004,6 +1012,10 @@ def display_bingo_board():
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
+
+# ===================================================================
+# DISPLAY ALL 201 CARDS IN GRID FORMAT
+# ===================================================================
 
 def display_all_cards_grid():
     """Display all 201 cards in grid format"""
