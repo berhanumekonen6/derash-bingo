@@ -1,21 +1,85 @@
-# ===================================================================
-# ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - SCROLLABLE GRID - BINGO BOARD 1-75
-# FIXED: Cards display properly as clickable buttons
-# ===================================================================
-
 import streamlit as st
-import hashlib
-import json
-import random
-import time
-import os
-from datetime import datetime, timedelta
 
-# ===================================================================
-# ALL 201 BINGO CARDS - FULL LIST
-# ===================================================================
+st.set_page_config(
+    page_title="ደራሽ ቢንጎ - Numbers 1-201",
+    page_icon="🔢",
+    layout="wide"
+)
 
+# Custom CSS for number display
+st.markdown("""
+<style>
+    .number-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 8px;
+        padding: 20px;
+        background: #0e1117;
+        border-radius: 10px;
+    }
+    .number-item {
+        background: #262730;
+        color: #fafafa;
+        padding: 12px 8px;
+        text-align: center;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: 600;
+        border: 1px solid #333;
+        transition: all 0.2s;
+        cursor: default;
+    }
+    .number-item:hover {
+        background: #3d3d4a;
+        transform: scale(1.05);
+        border-color: #ffd700;
+    }
+    .header {
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .header h1 {
+        color: #ffd700;
+        font-size: 2.5em;
+        margin: 0;
+    }
+    .header p {
+        color: #888;
+        font-size: 1.1em;
+        margin: 5px 0 0 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown("""
+<div class="header">
+    <h1>🎯 ደራሽ ቢንጎ</h1>
+    <p>Cards 1 - 201</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Generate numbers 1-201
+numbers = list(range(1, 202))
+
+# Display as grid
+st.markdown('<div class="number-grid">', unsafe_allow_html=True)
+
+# Display each number
+for num in numbers:
+    st.markdown(f'<div class="number-item">{num}</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer with count
+st.markdown(f"""
+<div style="text-align: center; color: #666; padding: 20px; margin-top: 20px; border-top: 1px solid #333;">
+    Total: {len(numbers)} Cards | Numbers 1-201
+</div>
+""", unsafe_allow_html=True)
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
     {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
