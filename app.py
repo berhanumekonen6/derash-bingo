@@ -1,5 +1,6 @@
 import streamlit as st
 import random
+import time
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ",
@@ -16,6 +17,10 @@ if 'called_numbers' not in st.session_state:
     st.session_state.called_numbers = set()
 if 'last_called_number' not in st.session_state:
     st.session_state.last_called_number = None
+if 'is_auto_calling' not in st.session_state:
+    st.session_state.is_auto_calling = False
+if 'auto_called_count' not in st.session_state:
+    st.session_state.auto_called_count = 0
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -231,6 +236,17 @@ def get_card(card_id):
             return card
     return None
 
+def call_random_number():
+    """Call a random number from 1-75 that hasn't been called yet"""
+    available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+    if available:
+        called_num = random.choice(available)
+        st.session_state.called_numbers.add(called_num)
+        st.session_state.last_called_number = called_num
+        st.session_state.auto_called_count += 1
+        return True
+    return False
+
 def display_bingo_card(card_id):
     """Display a BINGO card with called numbers highlighted"""
     card = get_card(card_id)
@@ -422,6 +438,17 @@ def display_master_board():
             color: white !important;
             border-radius: 4px;
         }
+        .master-table .last-called-cell {
+            background: #E53935 !important;
+            color: white !important;
+            border-radius: 4px;
+            animation: pulse 0.5s ease-in-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
         @media (max-width: 600px) {
             .master-table td {
                 padding: 4px 2px;
@@ -459,7 +486,10 @@ def display_master_board():
         html += f'<td class="row-label">{letter}</td>'
         for num in master_board[letter]:
             is_called = num in st.session_state.called_numbers
-            if is_called:
+            is_last = num == st.session_state.last_called_number
+            if is_last:
+                html += f'<td class="last-called-cell">{num}</td>'
+            elif is_called:
                 html += f'<td class="called-cell">{num}</td>'
             else:
                 html += f'<td>{num}</td>'
@@ -478,6 +508,19 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
+# Auto-call logic
+if st.session_state.is_auto_calling:
+    # Check if all numbers have been called
+    if len(st.session_state.called_numbers) >= 75:
+        st.session_state.is_auto_calling = False
+        st.success("🎉 All numbers have been called! Auto-call stopped.")
+    else:
+        # Call a number
+        if call_random_number():
+            # Force rerun after 2 seconds
+            time.sleep(2)
+            st.rerun()
+
 # Display Master Board at top
 display_master_board()
 
@@ -485,40 +528,51 @@ display_master_board()
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    st.markdown("### 🎲 Call a Number")
+    st.markdown("### 🎲 Number Calling")
     
     # Check if all numbers are called
     all_called = len(st.session_state.called_numbers) >= 75
     
-    if all_called:
-        st.warning("🎉 All numbers have been called! Reset to start a new game.")
+    # Control buttons
+    control_col1, control_col2, control_col3, control_col4 = st.columns(4)
     
-    call_col1, call_col2, call_col3 = st.columns(3)
+    with control_col1:
+        if not st.session_state.is_auto_calling and not all_called:
+            if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
+                st.session_state.is_auto_calling = True
+                # Call first number immediately
+                call_random_number()
+                st.rerun()
     
-    with call_col1:
-        if not all_called:
-            if st.button("🎯 Call Random Number", use_container_width=True, type="primary"):
-                # Find available numbers (1-75 not yet called)
-                available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-                if available:
-                    called_num = random.choice(available)
-                    st.session_state.called_numbers.add(called_num)
-                    st.session_state.last_called_number = called_num
-                    st.rerun()
+    with control_col2:
+        if st.session_state.is_auto_calling:
+            if st.button("⏹️ Stop Auto-Call", use_container_width=True):
+                st.session_state.is_auto_calling = False
+                st.rerun()
     
-    with call_col2:
+    with control_col3:
+        if not st.session_state.is_auto_calling and not all_called:
+            if st.button("🎯 Call One", use_container_width=True):
+                call_random_number()
+                st.rerun()
+    
+    with control_col4:
         if st.button("🔄 Reset Game", use_container_width=True):
             st.session_state.called_numbers = set()
             st.session_state.clicked_numbers = set()
             st.session_state.selected_card = None
             st.session_state.last_called_number = None
+            st.session_state.is_auto_calling = False
+            st.session_state.auto_called_count = 0
             st.rerun()
     
-    with call_col3:
-        if st.session_state.last_called_number and not all_called:
-            st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
-        elif all_called:
-            st.success("🎉 All numbers called!")
+    # Status display
+    if st.session_state.is_auto_calling:
+        st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
+    elif all_called:
+        st.success("🎉 All 75 numbers have been called!")
+    elif st.session_state.last_called_number:
+        st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
 
 # Cards selection section
 st.markdown("---")
@@ -550,7 +604,8 @@ for i in range(1, 202):
 # Footer with stats
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)} numbers
+    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)}/75 numbers
+    {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
 
