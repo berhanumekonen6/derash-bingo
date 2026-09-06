@@ -1,6 +1,6 @@
 # ===================================================================
-# ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - FIXED SELECTION & EARLY DISPLAY
+# ደራሽ ቢንጎ (Derash Bingo) - MOBILE OPTIMIZED
+# WITH ALL 201 CARDS - AUTO START & AUTO CALL
 # ===================================================================
 
 import streamlit as st
@@ -226,6 +226,7 @@ BINGO_CARDS = [
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
 SELECTION_TIME = 60
+AUTO_CALL_DELAY = 2  # seconds between auto calls
 
 # ===================================================================
 # LOCAL FILE STORAGE
@@ -290,12 +291,6 @@ def load_all_data():
     if "winners_list" not in st.session_state:
         st.session_state.winners_list = []
 
-def save_all_data():
-    if "user_db" in st.session_state and st.session_state.user_db:
-        save_local_users(st.session_state.user_db)
-    if "games" in st.session_state and st.session_state.games:
-        save_local_games(st.session_state.games)
-
 # ===================================================================
 # AUTHENTICATION
 # ===================================================================
@@ -340,6 +335,10 @@ def init_game_db():
         st.session_state.admin_target_user = None
     if "board_page" not in st.session_state:
         st.session_state.board_page = 0
+    if "next_auto_call_time" not in st.session_state:
+        st.session_state.next_auto_call_time = 0
+    if "last_call_time" not in st.session_state:
+        st.session_state.last_call_time = 0
 
 def login_user(username, password):
     init_game_db()
@@ -422,6 +421,25 @@ def get_card_data(card_id):
         if card:
             st.session_state.cards_data[card_id] = card["cells"]
     return st.session_state.cards_data.get(card_id)
+
+def get_number_position(num):
+    """Get column and row position of a number on the bingo board"""
+    if num < 1 or num > 75:
+        return None, None
+    col = 0
+    if num >= 1 and num <= 15:
+        col = 0  # B
+    elif num >= 16 and num <= 30:
+        col = 1  # I
+    elif num >= 31 and num <= 45:
+        col = 2  # N
+    elif num >= 46 and num <= 60:
+        col = 3  # G
+    else:
+        col = 4  # O
+    
+    row = (num - 1) % 15
+    return col, row
 
 def check_winning_pattern(card_data, called_numbers):
     if not called_numbers:
@@ -523,6 +541,7 @@ def call_next_number():
         return None
     number = random.choice(available)
     st.session_state.called_numbers.append(number)
+    st.session_state.last_call_time = time.time()
     return number
 
 def create_new_game():
@@ -537,6 +556,8 @@ def create_new_game():
     st.session_state.game_started = False
     st.session_state.auto_play = True
     st.session_state.board_page = 0
+    st.session_state.next_auto_call_time = 0
+    st.session_state.last_call_time = 0
     
     game = {
         "game_id": game_id,
@@ -659,11 +680,38 @@ def join_game(game_id, user_id, card_ids):
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
 
 # ===================================================================
-# UI COMPONENTS
+# UI COMPONENTS - MOBILE OPTIMIZED
 # ===================================================================
 
-def display_countdown_timer():
-    """Display timer with refresh button instead of auto-rerun"""
+def display_mobile_header():
+    """Display mobile-optimized header with game info"""
+    current_game = get_current_game()
+    if not current_game:
+        return
+    
+    game_id = current_game["game_id"]
+    called = len(st.session_state.called_numbers)
+    players = get_total_players(game_id)
+    pot = current_game.get("pot", 0)
+    
+    # Mobile-optimized header
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg, #1a1a2e, #16213e);padding:12px;border-radius:12px;margin-bottom:10px;border:1px solid #333;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+            <div style="color:#FFD700;font-weight:bold;font-size:1.1rem;">🎰 Beteseb Bingo</div>
+            <div style="color:#888;font-size:0.8rem;">#{game_id}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:8px;">
+            <div style="color:#aaa;font-size:0.8rem;">👥 {players}</div>
+            <div style="color:#aaa;font-size:0.8rem;">💰 {pot} ETB</div>
+            <div style="color:#4CAF50;font-size:0.8rem;">🎯 {called}/75</div>
+            <div style="color:#FFD700;font-size:0.8rem;">💳 10 ETB</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def display_small_timer():
+    """Display compact timer for mobile"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
@@ -680,316 +728,134 @@ def display_countdown_timer():
     progress = remaining / SELECTION_TIME if remaining > 0 else 0
     
     html = f"""
-    <style>
-        .timer-container {{
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-radius: 15px;
-            margin: 10px 0;
-            border: 2px solid {color};
-            box-shadow: 0 0 30px rgba(0,0,0,0.3);
-        }}
-        .timer-display {{
-            font-size: 4rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 0 30px {color};
-            font-family: 'Courier New', monospace;
-        }}
-        .timer-label {{
-            color: #aaa;
-            font-size: 1rem;
-            margin-top: 5px;
-        }}
-        .timer-progress {{
-            background: #333;
-            border-radius: 10px;
-            height: 8px;
-            margin: 15px 20px;
-            overflow: hidden;
-        }}
-        .timer-progress-fill {{
-            background: linear-gradient(90deg, {color}, #FFD700);
-            height: 100%;
-            width: {progress*100}%;
-            transition: width 1s;
-            border-radius: 10px;
-        }}
-        .timer-status {{
-            color: #aaa;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }}
-    </style>
-    <div class="timer-container">
-        <div class="timer-display">{emoji} {time_str}</div>
-        <div class="timer-label">⏱️ Time Remaining</div>
-        <div class="timer-progress">
-            <div class="timer-progress-fill"></div>
+    <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:10px;padding:8px 12px;margin:8px 0;border:2px solid {color};">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:{color};font-size:1.2rem;font-weight:bold;">{emoji} {time_str}</span>
+            <span style="color:#aaa;font-size:0.7rem;">Select cards</span>
         </div>
-        <div class="timer-status">{'🔄 Select your cards quickly!' if remaining > 0 else '🎯 Game starting!'}</div>
+        <div style="background:#333;border-radius:5px;height:4px;margin-top:4px;overflow:hidden;">
+            <div style="background:linear-gradient(90deg,{color},#FFD700);height:100%;width:{progress*100}%;transition:width 1s;border-radius:5px;"></div>
+        </div>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
 
-def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=False):
+def display_compact_bingo_card(card_data, called_numbers, card_id, is_winning=False):
+    """Display compact bingo card for mobile"""
     if not card_data:
         return
     
-    col_colors = {
-        'B': '#FF3366',
-        'I': '#00C9B7',
-        'N': '#9C27B0',
-        'G': '#4CAF50',
-        'O': '#FF9800'
-    }
+    called_set = set(called_numbers) if called_numbers else set()
+    
+    # Determine if card is a winner
+    is_winner_card = is_winning
     
     html = f"""
-    <style>
-        .card-wrapper-{card_id} {{
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border: 3px solid {'#FFD700' if is_winning else '#4CAF50'};
-            border-radius: 15px;
-            padding: 12px;
-            margin: 8px 0;
-            box-shadow: {'0 0 30px rgba(255,215,0,0.4)' if is_winning else '0 5px 20px rgba(0,0,0,0.3)'};
-            transition: all 0.3s;
-        }}
-        .card-wrapper-{card_id}:hover {{
-            transform: scale(1.02);
-            box-shadow: 0 0 30px rgba(76, 175, 80, 0.2);
-        }}
-        .card-header-{card_id} {{
-            text-align: center;
-            color: {'#FFD700' if is_winning else '#4CAF50'};
-            font-size: 1rem;
-            font-weight: bold;
-            margin-bottom: 8px;
-            padding: 4px;
-            border-radius: 8px;
-        }}
-        .card-table-{card_id} {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        .card-table-{card_id} th {{
-            padding: 4px 2px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.8rem;
-            color: white;
-        }}
-        .card-table-{card_id} td {{
-            padding: 6px 2px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px;
-            background: rgba(255,255,255,0.05);
-            color: white;
-            transition: all 0.3s;
-        }}
-        .card-table-{card_id} td.called {{
-            background: #4CAF50;
-            color: white;
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
-        }}
-        .card-table-{card_id} td.free {{
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #000;
-            font-weight: bold;
-        }}
-        .card-table-{card_id} td.winner {{
-            background: linear-gradient(135deg, #FFD700, #FF6B00) !important;
-            color: white !important;
-            animation: pulse 1s infinite;
-        }}
-        @keyframes pulse {{
-            0% {{ transform: scale(1); }}
-            50% {{ transform: scale(1.1); box-shadow: 0 0 20px rgba(255,215,0,0.5); }}
-            100% {{ transform: scale(1); }}
-        }}
-    </style>
+    <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid {'#FFD700' if is_winner_card else '#4CAF50'};border-radius:10px;padding:6px;margin:4px 0;">
+        <div style="color:{'#FFD700' if is_winner_card else '#4CAF50'};font-size:0.7rem;text-align:center;font-weight:bold;">
+            {'🏆 WINNER!' if is_winner_card else f'Card #{card_id}'}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+            <tr>
+                <th style="color:#FF3366;padding:2px;text-align:center;">B</th>
+                <th style="color:#00C9B7;padding:2px;text-align:center;">I</th>
+                <th style="color:#9C27B0;padding:2px;text-align:center;">N</th>
+                <th style="color:#4CAF50;padding:2px;text-align:center;">G</th>
+                <th style="color:#FF9800;padding:2px;text-align:center;">O</th>
+            </tr>
     """
-    st.markdown(html, unsafe_allow_html=True)
-    
-    html = f'<div class="card-wrapper-{card_id}">'
-    
-    if is_winning:
-        html += f'<div class="card-header-{card_id}">🏆 WINNER! Card #{card_id}</div>'
-    else:
-        html += f'<div class="card-header-{card_id}">🎯 Card #{card_id}</div>'
-    
-    html += '<table class="card-table-{card_id}"><tr>'
-    for col_name in ['B', 'I', 'N', 'G', 'O']:
-        color = col_colors[col_name]
-        html += f'<th style="color:{color};">{col_name}</th>'
-    html += '</tr>'
     
     for row in range(5):
-        html += '<tr>'
+        html += "<tr>"
         for col in range(5):
             value = card_data[row][col]
             is_free = value == 'F'
-            is_called = not is_free and int(value) in called_numbers if called_numbers else False
+            is_called = not is_free and int(value) in called_set
             
             if is_free:
-                html += '<td class="free">⭐</td>'
+                html += f'<td style="padding:2px;text-align:center;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border-radius:3px;font-weight:bold;">⭐</td>'
             elif is_called:
-                html += f'<td class="called">{value}</td>'
+                html += f'<td style="padding:2px;text-align:center;background:#4CAF50;color:white;border-radius:3px;font-weight:bold;">{value}</td>'
             else:
-                html += f'<td>{value}</td>'
-        html += '</tr>'
+                html += f'<td style="padding:2px;text-align:center;color:white;border:1px solid rgba(255,255,255,0.05);border-radius:3px;">{value}</td>'
+        html += "</tr>"
     
-    html += '</table></div>'
+    html += "</table></div>"
     st.markdown(html, unsafe_allow_html=True)
 
 def display_bingo_board():
-    st.markdown("""
-    <style>
-        .bingo-board-container {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 10px 0;
-            border: 2px solid #FFD700;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .bingo-board-title {
-            text-align: center;
-            color: #FFD700;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(255,215,0,0.3);
-        }
-        .bingo-board-table {
-            width: 100%;
-            border-collapse: collapse;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .bingo-board-table th {
-            background: linear-gradient(135deg, #FF3366, #FF6699);
-            color: white;
-            padding: 8px 4px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .bingo-board-table td {
-            padding: 5px 3px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
-            font-weight: bold;
-            font-size: 0.85rem;
-            color: white;
-            transition: all 0.3s;
-            cursor: default;
-        }
-        .bingo-board-table td.called {
-            background: #4CAF50;
-            color: white;
-            border-radius: 6px;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
-            transform: scale(1.05);
-        }
-        .bingo-board-table td.called-B { background: #FF3366; }
-        .bingo-board-table td.called-I { background: #00C9B7; }
-        .bingo-board-table td.called-N { background: #9C27B0; }
-        .bingo-board-table td.called-G { background: #4CAF50; }
-        .bingo-board-table td.called-O { background: #FF9800; }
-        .bingo-board-table td:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(255,255,255,0.2);
-        }
-        .bingo-called-count {
-            text-align: center;
-            color: #FFD700;
-            font-size: 1rem;
-            margin-top: 10px;
-            padding: 8px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
+    """Display the 1-75 bingo board with called numbers colored"""
     called_numbers = st.session_state.called_numbers
+    called_set = set(called_numbers)
     
-    html = '<div class="bingo-board-container">'
-    html += '<div class="bingo-board-title">🎯 BINGO Board</div>'
-    html += '<table class="bingo-board-table">'
-    html += '<tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>'
+    # Column headers
+    html = f"""
+    <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:10px;padding:10px;margin:8px 0;border:2px solid #FFD700;">
+        <div style="color:#FFD700;font-size:0.9rem;font-weight:bold;text-align:center;margin-bottom:6px;">🎯 BINGO Board</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+            <tr>
+                <th style="color:#FF3366;padding:2px;text-align:center;font-size:0.8rem;">B</th>
+                <th style="color:#00C9B7;padding:2px;text-align:center;font-size:0.8rem;">I</th>
+                <th style="color:#9C27B0;padding:2px;text-align:center;font-size:0.8rem;">N</th>
+                <th style="color:#4CAF50;padding:2px;text-align:center;font-size:0.8rem;">G</th>
+                <th style="color:#FF9800;padding:2px;text-align:center;font-size:0.8rem;">O</th>
+            </tr>
+    """
     
-    columns = {
-        'B': list(range(1, 16)),
-        'I': list(range(16, 31)),
-        'N': list(range(31, 46)),
-        'G': list(range(46, 61)),
-        'O': list(range(61, 76))
-    }
-    
+    # 15 rows
     for row in range(15):
-        html += '<tr>'
-        for col_name in ['B', 'I', 'N', 'G', 'O']:
-            number = columns[col_name][row]
-            is_called = number in called_numbers
-            called_class = f' called called-{col_name}' if is_called else ''
-            html += f'<td class="{called_class}">{number}</td>'
-        html += '</tr>'
+        html += "<tr>"
+        for col, col_name in enumerate(['B', 'I', 'N', 'G', 'O']):
+            num = row + 1 + (col * 15)
+            is_called = num in called_set
+            bg_color = "#4CAF50" if is_called else "rgba(255,255,255,0.05)"
+            color = "white" if is_called else "#ccc"
+            html += f'<td style="padding:2px;text-align:center;background:{bg_color};color:{color};border-radius:3px;font-weight:bold;">{num}</td>'
+        html += "</tr>"
     
-    html += '</table>'
-    html += f'<div class="bingo-called-count">🎯 Called: {len(called_numbers)}/75</div>'
-    html += '</div>'
-    
+    html += f"""
+        </table>
+        <div style="color:#aaa;font-size:0.7rem;text-align:center;margin-top:6px;">🎯 {len(called_numbers)}/75 called</div>
+    </div>
+    """
     st.markdown(html, unsafe_allow_html=True)
 
-# ===================================================================
-# DISPLAY ALL 201 CARDS WITH PROPER SELECTION
-# ===================================================================
-
-def display_all_cards_grid():
-    """Display all 201 cards with proper selection"""
-    st.markdown("### 🎯 BINGO Card Board")
-    st.markdown("*Click on any available card to select it (max 2 cards)*")
+def display_all_cards_grid_mobile():
+    """Display all 201 cards in compact mobile format"""
+    st.markdown("### 🎯 Select Your Cards")
+    st.markdown("*Tap a card to select (max 2)*")
     
     current_game = get_current_game()
     if not current_game:
-        st.warning("No active game. Please wait for a new game to start.")
+        st.warning("No active game.")
         return
     
     game_id = current_game["game_id"]
     taken_cards = get_taken_cards(game_id) if current_game else []
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     
-    # Legend
-    col1, col2, col3, col4 = st.columns(4)
+    # Compact legend
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("🟢 **Available** - Click to select")
+        st.markdown("🟢 Available")
     with col2:
-        st.markdown("✅ **Selected** - Click to deselect")
+        st.markdown("✅ Selected")
     with col3:
-        st.markdown("🔒 **Taken** - Already chosen")
-    with col4:
-        st.markdown(f"📊 **{len(st.session_state.selected_temp_cards)}/2** selected")
+        st.markdown(f"📊 {len(st.session_state.selected_temp_cards)}/2")
     
-    # Pagination
-    cards_per_page = 50
+    # Pagination - fewer per page for mobile
+    cards_per_page = 30
     total_pages = (len(BINGO_CARDS) + cards_per_page - 1) // cards_per_page
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Previous", disabled=st.session_state.board_page == 0):
+        if st.button("◀", disabled=st.session_state.board_page == 0):
             st.session_state.board_page -= 1
             st.rerun()
     with col2:
-        st.markdown(f"<div style='text-align:center;color:#FFD700;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center;color:#FFD700;font-size:0.8rem;'>{st.session_state.board_page + 1}/{total_pages}</div>", unsafe_allow_html=True)
     with col3:
-        if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
+        if st.button("▶", disabled=st.session_state.board_page >= total_pages - 1):
             st.session_state.board_page += 1
             st.rerun()
     
@@ -998,8 +864,8 @@ def display_all_cards_grid():
     end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
     page_cards = BINGO_CARDS[start_idx:end_idx]
     
-    # Display cards in a grid using Streamlit columns
-    cols_per_row = 10
+    # Display cards in a compact grid
+    cols_per_row = 5
     cols = st.columns(cols_per_row)
     
     for i, card in enumerate(page_cards):
@@ -1010,13 +876,12 @@ def display_all_cards_grid():
         with cols[i % cols_per_row]:
             if is_taken:
                 st.markdown(f"""
-                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.6;">
-                    <div style="color:#ff4444;font-size:11px;font-weight:bold;">🔒 #{card_id}</div>
-                    <div style="font-size:8px;color:#888;">Taken</div>
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:6px;padding:4px;margin:2px;text-align:center;opacity:0.5;font-size:0.6rem;">
+                    🔒 #{card_id}
                 </div>
                 """, unsafe_allow_html=True)
             elif is_selected:
-                if st.button(f"✅ #{card_id}", key=f"card_sel_{card_id}", use_container_width=True):
+                if st.button(f"✅ #{card_id}", key=f"sel_{card_id}", use_container_width=True):
                     if card_id in st.session_state.selected_temp_cards:
                         st.session_state.selected_temp_cards.remove(card_id)
                         st.rerun()
@@ -1027,9 +892,44 @@ def display_all_cards_grid():
                             st.session_state.selected_temp_cards.append(card_id)
                             st.rerun()
                         else:
-                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                            st.error(f"Need {CARD_PRICE} ETB")
                     else:
-                        st.warning("⚠️ Max 2 cards!")
+                        st.warning("Max 2 cards!")
+
+def display_compact_selected_cards():
+    """Display selected cards compactly"""
+    if not st.session_state.selected_temp_cards:
+        return
+    
+    st.markdown("### 📋 Selected Cards")
+    for cid in st.session_state.selected_temp_cards:
+        card_data = get_card_data(cid)
+        if card_data:
+            display_compact_bingo_card(card_data, [], cid)
+    
+    total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
+    user = st.session_state.user_db.get(st.session_state.current_user, {})
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"💰 {total_cost} ETB")
+    with col2:
+        st.info(f"💳 {user.get('balance', 0)} ETB")
+    
+    if st.button("✅ JOIN GAME", type="primary", use_container_width=True):
+        game = get_current_game()
+        if game:
+            success, msg = join_game(game["game_id"], st.session_state.current_user, st.session_state.selected_temp_cards)
+            if success:
+                st.success(msg)
+                st.balloons()
+                st.rerun()
+            else:
+                st.error(msg)
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1048,75 +948,66 @@ def admin_panel():
         user_data = st.session_state.user_db.get(selected_user, {})
         current_balance = user_data.get("balance", 0)
         
-        st.info(f"👤 **{selected_user}** | Current Balance: **{current_balance} ETB**")
+        st.info(f"👤 **{selected_user}** | Balance: **{current_balance} ETB**")
         
         st.markdown("#### 💰 Update Balance")
         
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            balance_options = [20, 50, 100, 200, 300, 500, 1000, 1500, 2000, 3000]
-            custom_amount = st.number_input("Custom Amount (ETB)", min_value=0, step=10, value=100)
+            balance_options = [20, 50, 100, 200, 300, 500, 1000]
+            custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100)
             
-            st.markdown("**Quick Select:**")
-            cols = st.columns(5)
-            for i, amount in enumerate(balance_options):
-                with cols[i % 5]:
+            st.markdown("**Quick:**")
+            cols = st.columns(4)
+            for i, amount in enumerate(balance_options[:4]):
+                with cols[i]:
                     if st.button(f"{amount}", key=f"bal_{amount}_{selected_user}"):
                         st.session_state.admin_target_user = selected_user
                         st.session_state.admin_balance_selection = amount
                         st.rerun()
         
         with col2:
-            st.markdown("**Action:**")
-            if st.button("➕ Add Balance", type="primary"):
+            if st.button("➕ Add", type="primary"):
                 if selected_user in st.session_state.user_db:
                     st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + custom_amount
                     save_local_users(st.session_state.user_db)
-                    st.success(f"✅ Added {custom_amount} ETB to {selected_user}'s balance!")
+                    st.success(f"✅ Added {custom_amount} ETB!")
                     st.rerun()
             
-            if st.button("➖ Deduct Balance", type="secondary"):
+            if st.button("➖ Deduct"):
                 if selected_user in st.session_state.user_db:
                     current = st.session_state.user_db[selected_user].get("balance", 0)
                     if current >= custom_amount:
                         st.session_state.user_db[selected_user]["balance"] = current - custom_amount
                         save_local_users(st.session_state.user_db)
-                        st.success(f"✅ Deducted {custom_amount} ETB from {selected_user}'s balance!")
+                        st.success(f"✅ Deducted {custom_amount} ETB!")
                         st.rerun()
                     else:
-                        st.error(f"❌ Insufficient balance! Current: {current} ETB")
-            
-            if st.button("💰 Set Balance", type="primary"):
-                if selected_user in st.session_state.user_db:
-                    st.session_state.user_db[selected_user]["balance"] = custom_amount
-                    save_local_users(st.session_state.user_db)
-                    st.success(f"✅ Set {selected_user}'s balance to {custom_amount} ETB!")
-                    st.rerun()
+                        st.error(f"Insufficient! Current: {current} ETB")
         
         if st.session_state.admin_target_user == selected_user and st.session_state.admin_balance_selection is not None:
             amount = st.session_state.admin_balance_selection
             if selected_user in st.session_state.user_db:
                 st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + amount
                 save_local_users(st.session_state.user_db)
-                st.success(f"✅ Added {amount} ETB to {selected_user}'s balance!")
+                st.success(f"✅ Added {amount} ETB!")
                 st.session_state.admin_target_user = None
                 st.session_state.admin_balance_selection = None
                 st.rerun()
         
-        st.markdown("#### 📊 All Users")
+        st.markdown("#### 📊 Users")
         user_list = []
         for username, data in st.session_state.user_db.items():
             if username != "admin":
                 user_list.append({
-                    "Username": username,
-                    "Name": data.get("name", ""),
+                    "User": username,
                     "Balance": data.get("balance", 0),
-                    "Games Played": data.get("game_played", 0)
+                    "Games": data.get("game_played", 0)
                 })
         
         if user_list:
-            st.dataframe(user_list, use_container_width=True)
+            st.dataframe(user_list, use_container_width=True, height=200)
 
 # ===================================================================
 # MAIN APP
@@ -1124,64 +1015,91 @@ def admin_panel():
 
 def main():
     st.set_page_config(
-        page_title="🎰 ደራሽ ቢንጎ",
+        page_title="🎰 Beteseb Bingo",
         page_icon="🎰",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
     
+    # Mobile-optimized CSS
     st.markdown("""
     <style>
         .stButton > button {
             width: 100%;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: bold;
-            padding: 10px;
+            padding: 8px 4px;
+            font-size: 0.8rem;
         }
         .stColumns {
-            gap: 5px;
+            gap: 3px;
         }
         @media (max-width: 768px) {
             .stColumns > div {
                 padding: 0 2px !important;
             }
             .stButton > button {
-                font-size: 12px !important;
-                padding: 6px !important;
+                font-size: 0.7rem !important;
+                padding: 4px !important;
+            }
+            .stMetric {
+                padding: 4px !important;
+            }
+            .stMetric label {
+                font-size: 0.7rem !important;
+            }
+            .stMetric div {
+                font-size: 1rem !important;
             }
         }
         .stAlert {
-            margin: 10px 0;
+            margin: 4px 0;
+            font-size: 0.8rem;
+            padding: 6px;
         }
         .main-header {
             text-align: center;
-            padding: 20px 0;
+            padding: 8px 0;
         }
         .main-header h1 {
             color: #FFD700;
-            font-size: 2.5rem;
-            text-shadow: 0 0 30px rgba(255,215,0,0.3);
+            font-size: 1.8rem;
+            margin: 0;
         }
         .main-header p {
             color: #aaa;
-            font-size: 1rem;
+            font-size: 0.8rem;
+            margin: 0;
+        }
+        .stExpander {
+            border: none !important;
+        }
+        .stExpander details {
+            background: transparent !important;
+        }
+        div[data-testid="stMetricValue"] {
+            font-size: 1rem !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            font-size: 0.7rem !important;
         }
     </style>
     """, unsafe_allow_html=True)
     
     init_game_db()
     
+    # Sidebar - Mobile friendly
     with st.sidebar:
-        st.markdown("### 🎰 ደራሽ ቢንጎ")
+        st.markdown("### 🎰 Beteseb Bingo")
         st.markdown("---")
         
         if st.session_state.logged_in:
             user = st.session_state.user_db.get(st.session_state.current_user, {})
             st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1rem;border-radius:12px;color:white;border:1px solid rgba(255,255,255,0.1);">
-                <p style="margin:0;font-weight:600;">👤 {user.get('name', st.session_state.current_user)}</p>
-                <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {user.get('balance', 0)} ETB</p>
-                <p style="margin:5px 0;font-size:0.85rem;">⭐ {st.session_state.current_role.title()}</p>
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:0.8rem;border-radius:10px;color:white;border:1px solid rgba(255,255,255,0.1);">
+                <p style="margin:0;font-weight:600;font-size:0.9rem;">👤 {user.get('name', st.session_state.current_user)}</p>
+                <p style="margin:4px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {user.get('balance', 0)} ETB</p>
+                <p style="margin:4px 0;font-size:0.7rem;color:#888;">⭐ {st.session_state.current_role.title()}</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1189,18 +1107,18 @@ def main():
                 logout_user()
                 st.rerun()
         else:
-            st.markdown("👋 Welcome to Derash Bingo!")
-            if st.button("🔐 Login / Register", use_container_width=True):
+            st.markdown("👋 Welcome!")
+            if st.button("🔐 Login", use_container_width=True):
                 st.rerun()
     
     if not st.session_state.logged_in:
         st.markdown("""
-        <div style="text-align:center;padding:2rem 0;">
-            <div style="font-size:5rem;">🎰</div>
-            <h1 style="font-size:3rem;color:#8B0000;">ደራሽ ቢንጎ</h1>
-            <p style="color:#5F6368;">Derash Bingo - Premium Gaming Experience</p>
-            <p>💰 10 ETB per card | Prize: 8 ETB per card</p>
-            <p style="color:#888;font-size:0.8rem;">👑 Admin: admin / admin123</p>
+        <div style="text-align:center;padding:1rem 0;">
+            <div style="font-size:4rem;">🎰</div>
+            <h1 style="font-size:2.5rem;color:#8B0000;">ቤተሰብ ቢንጎ</h1>
+            <p style="color:#aaa;">Beteseb Bingo - Premium Gaming</p>
+            <p style="font-size:0.8rem;">💰 10 ETB/card | Prize: 8 ETB/card</p>
+            <p style="color:#666;font-size:0.7rem;">👑 Admin: admin / admin123</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1208,9 +1126,9 @@ def main():
         
         with tab1:
             with st.form("login_form"):
-                username = st.text_input("👤 Username", placeholder="Enter username")
-                password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
-                submitted = st.form_submit_button("🎰 Login to Play")
+                username = st.text_input("Username", placeholder="Enter username")
+                password = st.text_input("Password", type="password", placeholder="Enter password")
+                submitted = st.form_submit_button("🎰 Login")
                 if submitted:
                     if username and password:
                         load_all_data()
@@ -1224,12 +1142,12 @@ def main():
         
         with tab2:
             with st.form("register_form"):
-                full_name = st.text_input("👤 Full Name", placeholder="Your full name")
-                username = st.text_input("👤 Username", placeholder="Choose a username")
-                phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
-                password = st.text_input("🔑 Password", type="password", placeholder="Create password (min 6 chars)")
-                confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
-                submitted = st.form_submit_button("📝 Register & Play")
+                full_name = st.text_input("Full Name", placeholder="Your full name")
+                username = st.text_input("Username", placeholder="Choose a username")
+                phone = st.text_input("Phone", placeholder="09XXXXXXXX")
+                password = st.text_input("Password", type="password", placeholder="Create password (min 6 chars)")
+                confirm = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
+                submitted = st.form_submit_button("📝 Register")
                 if submitted:
                     if not full_name or not username or not password:
                         st.error("❌ Please fill all required fields")
@@ -1250,7 +1168,7 @@ def main():
         return
     
     # ===================================================================
-    # ADMIN PANEL - ONLY SHOWS FOR ADMIN
+    # ADMIN PANEL
     # ===================================================================
     
     if st.session_state.current_role == "admin":
@@ -1258,37 +1176,33 @@ def main():
         st.markdown("---")
     
     # ===================================================================
-    # GAME LOBBY - SHOWS FOR ALL USERS
+    # GAME LOBBY - MOBILE OPTIMIZED
     # ===================================================================
     
     st.markdown("""
     <div class="main-header">
-        <h1>🎰 ደራሽ ቢንጎ</h1>
-        <p>እንኳን ወደ ደራሽ ቢንጎ በደህና መጡ! 🎉</p>
+        <h1>🎰 ቤተሰብ ቢንጎ</h1>
+        <p>Beteseb Bingo</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Check for game over state to show winners
+    # Check for game over state
     if st.session_state.game_over and st.session_state.winners_list:
         game = get_current_game()
         if game:
-            st.markdown("""
-            <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:15px 0;">
-                <div style="font-size:3rem;color:#FFD700;">🎉 BINGO! 🎉</div>
-                <div style="font-size:2rem;color:#FFD700;margin:10px 0;">🎉 እንኳን ደስ አለዎት! 🎉</div>
-                <div style="font-size:1.5rem;color:white;">{len(st.session_state.winners_list)} Player(s) Won!</div>
-                <div style="font-size:1.5rem;color:#00C9B7;">Total Prize: {game.get('pot', 0)} ETB</div>
+            winners = game.get("winners", [])
+            st.markdown(f"""
+            <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:3px solid #FFD700;margin:10px 0;">
+                <div style="font-size:2.5rem;color:#FFD700;">🎉 BINGO! 🎉</div>
+                <div style="font-size:1.2rem;color:#FFD700;">{len(winners)} Players Won!</div>
+                <div style="font-size:1rem;color:#00C9B7;">💰 {game.get('pot', 0)} ETB Prize</div>
             </div>
             """, unsafe_allow_html=True)
             
-            for winner in st.session_state.winners_list:
-                if 'card_data' in winner:
-                    display_bingo_card_format(
-                        winner['card_data'], 
-                        st.session_state.called_numbers, 
-                        winner['card_id'], 
-                        is_winning=True
-                    )
+            for winner in winners:
+                card_data = get_card_data(winner['card_id'])
+                if card_data:
+                    display_compact_bingo_card(card_data, st.session_state.called_numbers, winner['card_id'], is_winning=True)
             
             st.balloons()
             st.snow()
@@ -1301,32 +1215,28 @@ def main():
     # Get current game
     current_game = get_current_game()
     
-    # Auto-start new game if none exists
     if not current_game:
-        st.info("No active game. Creating a new game...")
+        st.info("Creating new game...")
         game = create_new_game()
         if game:
             st.rerun()
         return
     
-    # Check if game is finished but no game_over flag
     if current_game.get("status") == "finished" and not st.session_state.game_over:
         st.session_state.game_over = True
         winners = current_game.get("winners", [])
         if winners:
-            st.markdown("""
-            <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:15px 0;">
-                <div style="font-size:3rem;color:#FFD700;">🎉 BINGO! 🎉</div>
-                <div style="font-size:2rem;color:#FFD700;margin:10px 0;">🎉 እንኳን ደስ አለዎት! 🎉</div>
-                <div style="font-size:1.5rem;color:white;">{len(winners)} Player(s) Won!</div>
-                <div style="font-size:1.5rem;color:#00C9B7;">Total Prize: {current_game.get('pot', 0)} ETB</div>
+            st.markdown(f"""
+            <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:3px solid #FFD700;margin:10px 0;">
+                <div style="font-size:2.5rem;color:#FFD700;">🎉 BINGO! 🎉</div>
+                <div style="font-size:1.2rem;color:#FFD700;">{len(winners)} Players Won!</div>
             </div>
             """, unsafe_allow_html=True)
             
             for winner in winners:
                 card_data = get_card_data(winner['card_id'])
                 if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, winner['card_id'], is_winning=True)
+                    display_compact_bingo_card(card_data, st.session_state.called_numbers, winner['card_id'], is_winning=True)
             
             st.balloons()
             st.snow()
@@ -1343,81 +1253,39 @@ def main():
     
     st.session_state.called_numbers = called
     
-    # Game stats
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        status_display = "🟢 Live" if status == "running" else "⏳ Waiting" if status == "waiting" else "🏁 Finished"
-        st.metric("🎮 Status", status_display)
-    with col2:
-        st.metric("💰 Prize Pool", f"{pot} ETB")
-    with col3:
-        st.metric("🎯 Numbers", f"{len(called)}/75")
-    with col4:
-        players = get_total_players(game_id)
-        st.metric("👥 Players", players)
+    # Mobile header
+    display_mobile_header()
     
     # ===================================================================
-    # WAITING PHASE - Card Selection with Countdown
+    # WAITING PHASE - Card Selection
     # ===================================================================
     
     if status == "waiting":
-        # Display countdown timer (no auto-rerun)
-        display_countdown_timer()
+        display_small_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
-        st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
+        st.info(f"💰 Balance: {user.get('balance', 0)} ETB | Select up to 2 cards")
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         
-        # ALWAYS display the card board for ALL players
-        st.markdown("### 🎯 Select Your Cards")
-        display_all_cards_grid()
-        
-        # Show selected cards clearly
-        if st.session_state.selected_temp_cards:
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #FFD700;border-radius:15px;padding:15px;margin:10px 0;">
-                <h4 style="color:#FFD700;margin:0 0 10px 0;">📋 Your Selected Cards ({len(st.session_state.selected_temp_cards)}/2)</h4>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            for cid in st.session_state.selected_temp_cards:
-                card_data = get_card_data(cid)
-                if card_data:
-                    display_bingo_card_format(card_data, [], cid)
-            
-            total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info(f"💰 Total cost: {total_cost} ETB")
-            with col2:
-                st.info(f"💳 Balance: {user.get('balance', 0)} ETB")
-            
-            if st.button("✅ JOIN GAME NOW", type="primary", use_container_width=True):
-                if len(st.session_state.selected_temp_cards) > 0:
-                    success, msg = join_game(game_id, st.session_state.current_user, st.session_state.selected_temp_cards)
-                    if success:
-                        st.success(msg)
-                        st.balloons()
-                        st.rerun()
-                    else:
-                        st.error(msg)
-                else:
-                    st.warning("Please select at least one card!")
-        
         if user_cards:
-            st.success(f"✅ You already have {len(user_cards)} card(s) in this game!")
-            st.markdown("### 📋 Your Cards in Game")
+            st.success(f"✅ You have {len(user_cards)} card(s)")
             for card_id in user_cards:
                 card_data = get_card_data(card_id)
                 if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
-            st.info("⏳ Waiting for the game to start...")
+                    display_compact_bingo_card(card_data, st.session_state.called_numbers, card_id)
+            st.info("⏳ Waiting for game to start...")
         else:
-            if not st.session_state.selected_temp_cards:
-                st.info("👆 Click on any card above to select (max 2), then click 'JOIN GAME NOW'")
+            # Show card selection
+            display_all_cards_grid_mobile()
+            
+            # Show selected cards
+            if st.session_state.selected_temp_cards:
+                display_compact_selected_cards()
+            else:
+                st.info("👆 Tap a card above to select (max 2)")
         
-        # Check if countdown ended and game should start
+        # Check if countdown ended
         remaining = get_remaining_time()
         if remaining <= 0:
             if get_total_players(game_id) > 0:
@@ -1426,80 +1294,83 @@ def main():
                 save_local_games(st.session_state.games)
                 st.rerun()
             else:
-                st.warning("No players joined. Creating a new game...")
+                st.warning("No players. Creating new game...")
                 create_new_game()
                 st.rerun()
     
     # ===================================================================
-    # RUNNING PHASE - Game in progress
+    # RUNNING PHASE - Auto calling
     # ===================================================================
     
     elif status == "running":
-        display_bingo_board()
+        # Auto-call numbers
+        current_time = time.time()
         
         if st.session_state.auto_play and not st.session_state.game_over:
             if len(st.session_state.called_numbers) < 75:
-                num = call_next_number()
-                if num:
-                    current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
-                    save_local_games(st.session_state.games)
-                    
-                    st.markdown(f"""
-                    <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:2px solid #4CAF50;margin:10px 0;">
-                        <div style="font-size:2rem;color:#4CAF50;">🎯 Last Called: <strong>{num}</strong></div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    winners = check_all_winners(game_id)
-                    if winners:
-                        success, msg = declare_winners(game_id)
-                        if success:
-                            st.rerun()
-                    time.sleep(1)
-                    st.rerun()
-            else:
-                winners = check_all_winners(game_id)
-                if winners:
-                    success, msg = declare_winners(game_id)
-                    if success:
-                        st.rerun()
-                else:
-                    current_game["status"] = "finished"
-                    save_local_games(st.session_state.games)
-                    st.session_state.game_over = True
-                    st.rerun()
-        
-        user_cards = get_user_cards(game_id, st.session_state.current_user)
-        if user_cards:
-            st.markdown("### 📋 Your Cards")
-            for card_id in user_cards:
-                card_data = get_card_data(card_id)
-                if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
-        else:
-            st.info("You haven't joined this game. Wait for the next round!")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🎯 Draw Number", type="primary", use_container_width=True):
-                if len(st.session_state.called_numbers) < 75:
+                if current_time - st.session_state.last_call_time >= AUTO_CALL_DELAY:
                     num = call_next_number()
                     if num:
                         current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
                         save_local_games(st.session_state.games)
-                        st.success(f"🎯 Number {num} called!")
                         
+                        # Show last called number
+                        st.markdown(f"""
+                        <div style="text-align:center;padding:8px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:8px;border:2px solid #4CAF50;margin:4px 0;">
+                            <span style="font-size:1.5rem;color:#4CAF50;font-weight:bold;">🎯 {num}</span>
+                            <span style="color:#888;font-size:0.7rem;margin-left:8px;">called</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Check winners
                         winners = check_all_winners(game_id)
                         if winners:
                             success, msg = declare_winners(game_id)
                             if success:
                                 st.rerun()
                         st.rerun()
-                else:
-                    st.warning("All numbers called!")
+        
+        # Display the bingo board
+        display_bingo_board()
+        
+        # Show last called
+        if st.session_state.called_numbers:
+            last_num = st.session_state.called_numbers[-1]
+            st.markdown(f"""
+            <div style="text-align:center;padding:8px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:8px;border:2px solid #4CAF50;margin:4px 0;">
+                <span style="font-size:1.2rem;color:#4CAF50;font-weight:bold;">Last: {last_num}</span>
+                <span style="color:#888;font-size:0.7rem;margin-left:8px;">🎯 {len(st.session_state.called_numbers)}/75</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Show user cards
+        user_cards = get_user_cards(game_id, st.session_state.current_user)
+        if user_cards:
+            with st.expander("📋 My Cards", expanded=False):
+                for card_id in user_cards:
+                    card_data = get_card_data(card_id)
+                    if card_data:
+                        display_compact_bingo_card(card_data, st.session_state.called_numbers, card_id)
+        
+        # Controls
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🎯 Draw", type="primary", use_container_width=True):
+                if len(st.session_state.called_numbers) < 75:
+                    num = call_next_number()
+                    if num:
+                        current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
+                        save_local_games(st.session_state.games)
+                        st.success(f"🎯 {num} called!")
+                        winners = check_all_winners(game_id)
+                        if winners:
+                            success, msg = declare_winners(game_id)
+                            if success:
+                                st.rerun()
+                        st.rerun()
         
         with col2:
-            auto_label = "⏸️ Stop Auto" if st.session_state.auto_play else "▶️ Auto-Play"
+            auto_label = "⏸️ Stop" if st.session_state.auto_play else "▶️ Auto"
             if st.button(auto_label, use_container_width=True):
                 st.session_state.auto_play = not st.session_state.auto_play
                 st.rerun()
@@ -1513,19 +1384,18 @@ def main():
         
         winners = current_game.get("winners", [])
         if winners:
-            st.markdown("""
-            <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:15px 0;">
-                <div style="font-size:3rem;color:#FFD700;">🎉 BINGO! 🎉</div>
-                <div style="font-size:2rem;color:#FFD700;margin:10px 0;">🎉 እንኳን ደስ አለዎት! 🎉</div>
-                <div style="font-size:1.5rem;color:white;">{len(winners)} Player(s) Won!</div>
-                <div style="font-size:1.5rem;color:#00C9B7;">Total Prize: {current_game.get('pot', 0)} ETB</div>
+            st.markdown(f"""
+            <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:3px solid #FFD700;margin:10px 0;">
+                <div style="font-size:2.5rem;color:#FFD700;">🎉 BINGO! 🎉</div>
+                <div style="font-size:1.2rem;color:#FFD700;">{len(winners)} Players Won!</div>
+                <div style="font-size:1rem;color:#00C9B7;">💰 {current_game.get('pot', 0)} ETB</div>
             </div>
             """, unsafe_allow_html=True)
             
             for winner in winners:
                 card_data = get_card_data(winner['card_id'])
                 if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, winner['card_id'], is_winning=True)
+                    display_compact_bingo_card(card_data, st.session_state.called_numbers, winner['card_id'], is_winning=True)
             
             st.balloons()
             st.snow()
