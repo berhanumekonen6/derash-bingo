@@ -162,11 +162,11 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY BINGO BOARD 1-75
+# DISPLAY BINGO BOARD 1-75 (VERTICAL FORMAT)
 # ===================================================================
 
 def display_bingo_board():
-    """Display BINGO board 1-75 with B, I, N, G, O columns"""
+    """Display BINGO board 1-75 with letters vertically on the left"""
     
     st.markdown("""
     <style>
@@ -187,18 +187,32 @@ def display_bingo_board():
             letter-spacing: 8px;
             font-family: Arial, sans-serif;
         }
-        .bingo-board-grid {
+        .bingo-board-row {
             display: grid;
-            grid-template-columns: repeat(15, 1fr);
+            grid-template-columns: 40px repeat(15, 1fr);
             gap: 3px;
             max-width: 100%;
-            margin: 0 auto;
+            margin: 0 auto 3px auto;
+        }
+        .bingo-letter {
+            background: #2E7D32;
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 4px 0;
+            border-radius: 4px;
+            border: 1px solid #1B5E20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
         }
         .bingo-number {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
-            padding: 6px 0;
+            padding: 4px 0;
             text-align: center;
             font-size: 0.7rem;
             font-weight: 600;
@@ -209,21 +223,6 @@ def display_bingo_board():
             transform: scale(1.05);
             background: rgba(46,125,50,0.3);
             border-color: #FFD700;
-        }
-        .bingo-header-row {
-            display: grid;
-            grid-template-columns: repeat(15, 1fr);
-            gap: 3px;
-            max-width: 100%;
-            margin: 0 auto 8px auto;
-        }
-        .bingo-header-letter {
-            text-align: center;
-            font-size: 1rem;
-            font-weight: 900;
-            font-family: Arial, sans-serif;
-            color: #FFD700;
-            letter-spacing: 2px;
         }
         .bingo-board-stats {
             text-align: center;
@@ -239,37 +238,40 @@ def display_bingo_board():
             color: #FFD700;
             font-weight: bold;
         }
-        .bingo-column-label {
+        .bingo-range-label {
             text-align: center;
-            color: #FFD700;
-            font-size: 0.65rem;
-            font-weight: bold;
-            margin-top: 2px;
+            color: #88ff88;
+            font-size: 0.6rem;
             opacity: 0.7;
+            padding: 2px 0;
         }
         @media (max-width: 768px) {
             .bingo-number {
-                padding: 4px 0;
+                padding: 3px 0;
                 font-size: 0.55rem;
             }
             .bingo-board-title {
                 font-size: 1.2rem;
                 letter-spacing: 4px;
             }
-            .bingo-header-letter {
-                font-size: 0.8rem;
+            .bingo-board-row {
+                grid-template-columns: 30px repeat(15, 1fr);
+            }
+            .bingo-letter {
+                font-size: 0.7rem;
             }
         }
         @media (max-width: 480px) {
             .bingo-number {
-                padding: 3px 0;
+                padding: 2px 0;
                 font-size: 0.45rem;
             }
-            .bingo-board-grid {
+            .bingo-board-row {
+                grid-template-columns: 25px repeat(15, 1fr);
                 gap: 2px;
             }
-            .bingo-header-row {
-                gap: 2px;
+            .bingo-letter {
+                font-size: 0.6rem;
             }
         }
     </style>
@@ -287,27 +289,24 @@ def display_bingo_board():
     html = '<div class="bingo-board-container">'
     html += '<div class="bingo-board-title">🎯 B I N G O</div>'
     
-    # Header row with letters
-    html += '<div class="bingo-header-row">'
-    for col_name in ['B']*3 + ['I']*3 + ['N']*3 + ['G']*3 + ['O']*3:
-        html += f'<div class="bingo-header-letter">{col_name}</div>'
-    html += '</div>'
+    # Row labels and ranges
+    row_labels = ['B', 'I', 'N', 'G', 'O']
+    ranges = ['1-15', '16-30', '31-45', '46-60', '61-75']
     
-    # Numbers grid
-    html += '<div class="bingo-board-grid">'
-    
-    for row in range(15):
+    # Display each row with letter on the left
+    for row_idx, (letter, range_text) in enumerate(zip(row_labels, ranges)):
+        html += f'<div class="bingo-board-row">'
+        html += f'<div class="bingo-letter">{letter}</div>'
+        
+        # Get the numbers for this row (each column has 15 numbers)
         for col_name in ['B', 'I', 'N', 'G', 'O']:
-            number = columns[col_name][row]
+            number = columns[col_name][row_idx]
             html += f'<div class="bingo-number">{number}</div>'
-    
-    html += '</div>'
-    
-    # Column labels
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:5px;">'
-    for col_name in ['B (1-15)', 'I (16-30)', 'N (31-45)', 'G (46-60)', 'O (61-75)']:
-        html += f'<div class="bingo-column-label">{col_name}</div>'
-    html += '</div>'
+        
+        html += '</div>'
+        
+        # Add range label after each row
+        html += f'<div class="bingo-range-label">{letter}: {range_text}</div>'
     
     html += f'''
     <div class="bingo-board-stats">
@@ -418,7 +417,7 @@ st.markdown("""
 st.markdown('<div class="header-title">Fork</div>', unsafe_allow_html=True)
 st.markdown('<div class="header-subtitle">BINGO Board & Cards 1 - 201</div>', unsafe_allow_html=True)
 
-# Display BINGO Board 1-75
+# Display BINGO Board 1-75 (Vertical format)
 display_bingo_board()
 
 # Divider
