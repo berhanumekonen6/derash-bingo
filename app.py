@@ -75,8 +75,9 @@ st.markdown('<div class="bingo-grid">', unsafe_allow_html=True)
 for i in range(1, 202):
     # Check if number is clicked
     is_clicked = i in st.session_state.clicked_numbers
+    selected_class = "selected" if is_clicked else ""
     
-    # Create clickable button
+    # Create clickable div with onclick using Streamlit button
     if st.button(
         str(i),
         key=f"card_{i}",
