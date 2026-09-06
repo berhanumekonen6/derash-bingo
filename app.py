@@ -314,7 +314,7 @@ def display_bingo_card(card_id):
     </style>
     """, unsafe_allow_html=True)
     
-    # Card wrapper
+        # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
     html += f'<div class="bingo-card-title">Card #{card_id}</div>'
     
@@ -326,9 +326,12 @@ def display_bingo_card(card_id):
         html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
     html += '</tr></thead><tbody>'
     
+    # Row labels - B, I, N, G, O instead of 1, 2, 3, 4, 5
+    row_labels = ['B', 'I', 'N', 'G', 'O']
+    
     for row_idx in range(5):
         html += '<tr>'
-        html += f'<td class="row-label">{row_idx + 1}</td>'
+        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:8px 6px;">{row_labels[row_idx]}</td>'
         
         for col_idx in range(5):
             value = cells[row_idx][col_idx]
