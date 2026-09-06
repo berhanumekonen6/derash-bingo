@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS & COUNTDOWN TIMER
+# WITH ALL 201 CARDS & PROPER SELECTION
 # ===================================================================
 
 import streamlit as st
@@ -228,7 +228,7 @@ PRIZE_PER_CARD = 8
 SELECTION_TIME = 60
 
 # ===================================================================
-# LOCAL FILE STORAGE
+# LOCAL FILE STORAGE & AUTHENTICATION FUNCTIONS
 # ===================================================================
 
 def get_local_users_file():
@@ -295,10 +295,6 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
     if "games" in st.session_state and st.session_state.games:
         save_local_games(st.session_state.games)
-
-# ===================================================================
-# AUTHENTICATION
-# ===================================================================
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -663,7 +659,6 @@ def join_game(game_id, user_id, card_ids):
 # ===================================================================
 
 def display_countdown_timer():
-    """Display countdown timer that counts down to 0:00"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
@@ -733,13 +728,11 @@ def display_countdown_timer():
     """
     st.markdown(html, unsafe_allow_html=True)
     
-    # Auto-refresh for live countdown
     if remaining > 0:
         time.sleep(0.5)
         st.rerun()
 
 def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=False):
-    """Display a bingo card in attractive format"""
     if not card_data:
         return
     
@@ -751,7 +744,7 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
         'O': '#FF9800'
     }
     
-    st.markdown(f"""
+    html = f"""
     <style>
         .card-wrapper-{card_id} {{
             background: linear-gradient(135deg, #1a1a2e, #16213e);
@@ -774,7 +767,6 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
             margin-bottom: 8px;
             padding: 4px;
             border-radius: 8px;
-            {'background: rgba(255,215,0,0.1)' if is_winning else ''};
         }}
         .card-table-{card_id} {{
             width: 100%;
@@ -785,6 +777,7 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
             text-align: center;
             font-weight: bold;
             font-size: 0.8rem;
+            color: white;
         }}
         .card-table-{card_id} td {{
             padding: 6px 2px;
@@ -818,7 +811,8 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
             100% {{ transform: scale(1); }}
         }}
     </style>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(html, unsafe_allow_html=True)
     
     html = f'<div class="card-wrapper-{card_id}">'
     
@@ -852,7 +846,6 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
     st.markdown(html, unsafe_allow_html=True)
 
 def display_bingo_board():
-    """Display the BINGO board with numbers 1-75"""
     st.markdown("""
     <style>
         .bingo-board-container {
@@ -955,124 +948,13 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ATTRACTIVE CARDS
+# DISPLAY ATTRACTIVE CARDS USING STREAMLIT BUTTONS
 # ===================================================================
 
 def display_attractive_cards():
-    """Display all 201 cards in attractive green rectangular format"""
-    st.markdown("""
-    <style>
-        .cards-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 8px;
-            max-height: 550px;
-            overflow-y: auto;
-            padding: 15px;
-            background: linear-gradient(135deg, #0f0f1a, #1a1a2e);
-            border-radius: 15px;
-            border: 2px solid #4CAF50;
-            margin: 10px 0;
-            box-shadow: 0 0 30px rgba(76, 175, 80, 0.1);
-        }
-        .cards-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        .cards-container::-webkit-scrollbar-track {
-            background: #1a1a2e;
-            border-radius: 10px;
-        }
-        .cards-container::-webkit-scrollbar-thumb {
-            background: #4CAF50;
-            border-radius: 10px;
-        }
-        .card-item {
-            background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            padding: 10px 4px;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
-        }
-        .card-item:hover {
-            transform: scale(1.08);
-            border-color: #FFD700;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
-            background: linear-gradient(135deg, #2a5a3e, #3a7a4e);
-        }
-        .card-item.taken {
-            opacity: 0.5;
-            border-color: #ff4444;
-            cursor: not-allowed;
-            background: linear-gradient(135deg, #3a2a2a, #5a3a3a);
-            box-shadow: none;
-        }
-        .card-item.selected {
-            border-color: #FFD700;
-            background: linear-gradient(135deg, #3a5a2a, #4a7a3a);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-            transform: scale(1.05);
-        }
-        .card-item .card-id {
-            font-size: 16px;
-            font-weight: bold;
-            color: #FFD700;
-        }
-        .card-item .card-status {
-            font-size: 9px;
-            color: #aaa;
-            margin-top: 2px;
-        }
-        .card-item.taken .card-status {
-            color: #ff4444;
-        }
-        .card-item.selected .card-status {
-            color: #FFD700;
-        }
-        .card-item .card-price {
-            font-size: 10px;
-            color: #8f8;
-            margin-top: 2px;
-        }
-        .card-item.taken .card-price {
-            color: #ff6666;
-        }
-        .pagination-info {
-            text-align: center;
-            color: #FFD700;
-            font-size: 1rem;
-            margin: 5px 0;
-        }
-        .pagination-btn {
-            background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            color: white;
-            padding: 8px 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .pagination-btn:hover {
-            border-color: #FFD700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
-        }
-        .pagination-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    """Display all 201 cards in attractive green rectangular format using Streamlit buttons"""
+    st.markdown("### 🎯 BINGO Card Board")
+    st.markdown("*Click on any available card to select it (max 2 cards)*")
     
     current_game = get_current_game()
     if not current_game:
@@ -1104,7 +986,7 @@ def display_attractive_cards():
             st.session_state.board_page -= 1
             st.rerun()
     with col2:
-        st.markdown(f"<div class='pagination-info'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center;color:#FFD700;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
     with col3:
         if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
             st.session_state.board_page += 1
@@ -1115,55 +997,38 @@ def display_attractive_cards():
     end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
     page_cards = BINGO_CARDS[start_idx:end_idx]
     
-    # Build cards HTML
-    html = '<div class="cards-container">'
-    for card in page_cards:
+    # Display cards in a grid using Streamlit columns
+    cols_per_row = 10
+    cols = st.columns(cols_per_row)
+    
+    for i, card in enumerate(page_cards):
         card_id = card["id"]
         is_taken = card_id in taken_cards
         is_selected = card_id in st.session_state.selected_temp_cards
         
-        if is_taken:
-            status = "🔒 Taken"
-            cls = "taken"
-        elif is_selected:
-            status = "✅ Selected"
-            cls = "selected"
-        else:
-            status = f"{CARD_PRICE} ETB"
-            cls = ""
-        
-        # Create clickable card using button
-        html += f'''
-        <div class="card-item {cls}" onclick="document.getElementById('select_{card_id}').click();">
-            <div class="card-id">#{card_id}</div>
-            <div class="card-price">{status}</div>
-            <button id="select_{card_id}" style="display:none;" onclick="window.location.href='?select={card_id}'"></button>
-        </div>
-        '''
-    
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
-    
-    # Handle card selection via URL parameter
-    query_params = st.query_params
-    if 'select' in query_params:
-        try:
-            card_id = int(query_params['select'])
-            if card_id not in taken_cards:
-                if card_id in st.session_state.selected_temp_cards:
-                    st.session_state.selected_temp_cards.remove(card_id)
-                else:
+        with cols[i % cols_per_row]:
+            if is_taken:
+                st.markdown(f"""
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
+                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                    <div style="font-size:8px;color:#888;">Taken</div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif is_selected:
+                if st.button(f"✅ #{card_id}", key=f"card_{card_id}", use_container_width=True):
+                    if card_id in st.session_state.selected_temp_cards:
+                        st.session_state.selected_temp_cards.remove(card_id)
+                        st.rerun()
+            else:
+                if st.button(f"🎯 #{card_id}", key=f"card_{card_id}", use_container_width=True):
                     if len(st.session_state.selected_temp_cards) < 2:
                         if user.get('balance', 0) >= CARD_PRICE:
                             st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
                         else:
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
-            st.query_params.clear()
-            st.rerun()
-        except:
-            pass
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1495,7 +1360,7 @@ def main():
     # ===================================================================
     
     if status == "waiting":
-        # Display countdown timer (always counting down)
+        # Display countdown timer
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1511,7 +1376,7 @@ def main():
                     display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
-            # Display attractive cards
+            # Display attractive cards using Streamlit buttons
             display_attractive_cards()
             
             # Show selected cards preview
@@ -1553,10 +1418,8 @@ def main():
     # ===================================================================
     
     elif status == "running":
-        # Display BINGO Board (1-75)
         display_bingo_board()
         
-        # Auto-play
         if st.session_state.auto_play and not st.session_state.game_over:
             if len(st.session_state.called_numbers) < 75:
                 num = call_next_number()
@@ -1564,7 +1427,6 @@ def main():
                     current_game["called_numbers"] = json.dumps(st.session_state.called_numbers)
                     save_local_games(st.session_state.games)
                     
-                    # Show last called number
                     st.markdown(f"""
                     <div style="text-align:center;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:15px;border:2px solid #4CAF50;margin:10px 0;">
                         <div style="font-size:2rem;color:#4CAF50;">🎯 Last Called: <strong>{num}</strong></div>
@@ -1590,7 +1452,6 @@ def main():
                     st.session_state.game_over = True
                     st.rerun()
         
-        # Show user's cards
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         if user_cards:
             st.markdown("### 📋 Your Cards")
@@ -1601,7 +1462,6 @@ def main():
         else:
             st.info("You haven't joined this game. Wait for the next round!")
         
-        # Controls
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🎯 Draw Number", type="primary", use_container_width=True):
