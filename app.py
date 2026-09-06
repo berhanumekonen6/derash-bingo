@@ -345,7 +345,7 @@ def display_bingo_card(card_id):
     
     st.markdown(html, unsafe_allow_html=True)
 
-st.markdown("# Fork")
+st.markdown("")
 st.markdown("## Cards 1 - 201")
 
 # Numbers in a grid
