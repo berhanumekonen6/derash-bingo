@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - SELECTABLE DURING COUNTDOWN
+# WITH ALL 201 CARDS - SELECTABLE ANYTIME
 # ===================================================================
 
 import streamlit as st
@@ -265,6 +265,8 @@ def init_session_state():
         st.session_state.game_started = False
     if "game_id" not in st.session_state:
         st.session_state.game_id = None
+    if "game_start_time" not in st.session_state:
+        st.session_state.game_start_time = None
 
 # ===================================================================
 # GAME FUNCTIONS
@@ -280,7 +282,7 @@ def get_card_data(card_id):
 def get_remaining_time():
     if st.session_state.game_phase == "running":
         return 0
-    if not hasattr(st.session_state, 'game_start_time'):
+    if st.session_state.game_start_time is None:
         return SELECTION_TIME
     elapsed = (datetime.now() - st.session_state.game_start_time).total_seconds()
     remaining = max(0, SELECTION_TIME - elapsed)
@@ -733,12 +735,17 @@ def display_bingo_board():
     
     st.markdown(html, unsafe_allow_html=True)
 
+# ===================================================================
+# DISPLAY CARDS GRID - ALWAYS SELECTABLE
+# ===================================================================
+
 def display_cards_grid():
-    """Display all 201 cards with proper selection - clickable during countdown"""
+    """Display all 201 cards - ALWAYS CLICKABLE when in waiting phase"""
     st.markdown("### 🎯 Select Your Cards")
     st.markdown("*Click on any available card to select/deselect it (max 2 cards)*")
     
     taken_cards = get_taken_cards()
+    user = st.session_state.user_db.get(st.session_state.current_user, {})
     
     # Legend
     col1, col2, col3, col4 = st.columns(4)
@@ -776,8 +783,6 @@ def display_cards_grid():
     cols_per_row = 10
     cols = st.columns(cols_per_row)
     
-    user = st.session_state.user_db.get(st.session_state.current_user, {})
-    
     for i, card in enumerate(page_cards):
         card_id = card["id"]
         is_taken = card_id in taken_cards
@@ -791,12 +796,13 @@ def display_cards_grid():
                 </div>
                 """, unsafe_allow_html=True)
             elif is_selected:
+                # SELECTED - Click to deselect
                 if st.button(f"✅ #{card_id}", key=f"card_sel_{card_id}", use_container_width=True):
                     if card_id in st.session_state.selected_temp_cards:
                         st.session_state.selected_temp_cards.remove(card_id)
                         st.rerun()
             else:
-                # Only allow selection during waiting phase
+                # AVAILABLE - Click to select (ONLY during waiting phase)
                 if st.session_state.game_phase == "waiting":
                     if st.button(f"#{card_id}", key=f"card_{card_id}", use_container_width=True):
                         if len(st.session_state.selected_temp_cards) < 2:
@@ -808,6 +814,7 @@ def display_cards_grid():
                         else:
                             st.warning("⚠️ Max 2 cards!")
                 else:
+                    # Game is running - show as disabled
                     st.markdown(f"""
                     <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.5;">
                         <div style="color:#888;font-size:10px;font-weight:bold;">#{card_id}</div>
@@ -959,7 +966,7 @@ def main():
     
     if st.session_state.game_phase == "waiting":
         # Start timer if not started
-        if not hasattr(st.session_state, 'game_start_time'):
+        if st.session_state.game_start_time is None:
             st.session_state.game_start_time = datetime.now()
             st.session_state.game_id = f"BB{random.randint(1000, 9999)}{random.choice('ABCDEF')}{random.randint(10, 99)}"
         
@@ -969,7 +976,7 @@ def main():
         user = st.session_state.user_db.get(st.session_state.current_user, {})
         st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
-        # Display cards grid
+        # Display cards grid - ALWAYS SELECTABLE during waiting
         display_cards_grid()
         
         # Show selected cards
