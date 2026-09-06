@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS IN SCROLLABLE GRID
+# WITH ALL 201 CARDS - FINAL FIXED VERSION
 # ===================================================================
 
 import streamlit as st
@@ -841,11 +841,11 @@ def display_winners_celebration(winners, game):
     st.snow()
 
 # ===================================================================
-# DISPLAY ALL 201 CARDS IN SCROLLABLE GRID - LIKE PHP VERSION
+# DISPLAY ALL 201 CARDS - SIMPLE VERSION USING STREAMLIT BUTTONS
 # ===================================================================
 
-def display_all_cards_scrollable():
-    """Display all 201 cards in a scrollable grid - Like the PHP version"""
+def display_all_cards_simple():
+    """Display all 201 cards using simple Streamlit components"""
     st.markdown("### 🎯 BINGO Card Board - All 201 Cards")
     st.markdown("*Scroll down to see all cards. Click on any available card to select it (max 2 cards)*")
     
@@ -870,129 +870,62 @@ def display_all_cards_scrollable():
     with col4:
         st.markdown(f"📊 **{len(st.session_state.selected_temp_cards)}/2** cards selected")
     
-    # Display ALL cards in a grid with scrolling - using CSS grid like PHP
-    st.markdown("""
-    <style>
-    .cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 8px;
-        max-height: 500px;
-        overflow-y: auto;
-        padding: 10px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 15px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    .cards-grid::-webkit-scrollbar {
-        width: 8px;
-    }
-    .cards-grid::-webkit-scrollbar-track {
-        background: #1a1a2e;
-        border-radius: 10px;
-    }
-    .cards-grid::-webkit-scrollbar-thumb {
-        background: #FFD700;
-        border-radius: 10px;
-    }
-    .card-item {
-        background: linear-gradient(135deg, #1a1a3e, #2a2a5e);
-        border: 2px solid #444;
-        border-radius: 8px;
-        padding: 8px 4px;
-        text-align: center;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.3s;
-        min-height: 50px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    .card-item:hover:not(.taken) {
-        transform: scale(1.05);
-        border-color: #FFD700;
-        box-shadow: 0 0 15px rgba(255,215,0,0.3);
-    }
-    .card-item.taken {
-        opacity: 0.5;
-        border-color: #ff4444;
-        cursor: not-allowed;
-    }
-    .card-item.selected {
-        border-color: #4CAF50;
-        background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
-    }
-    .card-item .card-price {
-        font-size: 8px;
-        color: #888;
-        margin-top: 2px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Pagination
+    cards_per_page = 50
+    total_pages = (len(BINGO_CARDS) + cards_per_page - 1) // cards_per_page
     
-    # Create the grid
-    html = '<div class="cards-grid">'
-    for card in BINGO_CARDS:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅️ Previous", disabled=st.session_state.board_page == 0):
+            st.session_state.board_page -= 1
+            st.rerun()
+    with col2:
+        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+    with col3:
+        if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
+            st.session_state.board_page += 1
+            st.rerun()
+    
+    # Get cards for current page
+    start_idx = st.session_state.board_page * cards_per_page
+    end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
+    page_cards = BINGO_CARDS[start_idx:end_idx]
+    
+    # Display cards in a grid
+    cols_per_row = 8
+    cols = st.columns(cols_per_row)
+    
+    for i, card in enumerate(page_cards):
         card_id = card["id"]
         is_taken = card_id in taken_cards
         is_selected = card_id in st.session_state.selected_temp_cards
         
-        # Determine card status
-        if is_taken:
-            status_class = "taken"
-            status_icon = "🔒"
-            status_text = "Taken"
-        elif is_selected:
-            status_class = "selected"
-            status_icon = "✅"
-            status_text = "Selected"
-        else:
-            status_class = ""
-            status_icon = "🎯"
-            status_text = f"{CARD_PRICE} ETB"
-        
-        # Create card item
-        html += f"""
-        <div class="card-item {status_class}" onclick="window.streamlit.selectCard({card_id})" 
-             data-card-id="{card_id}" data-taken="{str(is_taken).lower()}" data-selected="{str(is_selected).lower()}">
-            <div>{status_icon} #{card_id}</div>
-            <div class="card-price">{status_text}</div>
-        </div>
-        """
-    
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
-    
-    # JavaScript to handle card clicks
-    st.markdown("""
-    <script>
-    // Handle card clicks
-    window.selectCard = function(cardId) {
-        // This will be handled by Streamlit's rerun mechanism
-        // We need to set the selected card in session state
-        const currentSelected = JSON.parse(sessionStorage.getItem('selected_temp_cards') || '[]');
-        if (currentSelected.includes(cardId)) {
-            // Deselect
-            const newSelected = currentSelected.filter(id => id !== cardId);
-            sessionStorage.setItem('selected_temp_cards', JSON.stringify(newSelected));
-        } else {
-            if (currentSelected.length < 2) {
-                currentSelected.push(cardId);
-                sessionStorage.setItem('selected_temp_cards', JSON.stringify(currentSelected));
-            } else {
-                alert('⚠️ Max 2 cards!');
-                return;
-            }
-        }
-        // Trigger Streamlit rerun
-        window.location.reload();
-    };
-    </script>
-    """, unsafe_allow_html=True)
+        with cols[i % cols_per_row]:
+            if is_taken:
+                # Taken card - locked
+                st.markdown(f"""
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
+                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                    <div style="font-size:8px;color:#888;">Taken</div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif is_selected:
+                # Selected card - click to deselect
+                if st.button(f"✅ #{card_id}", key=f"card_{card_id}", use_container_width=True):
+                    if card_id in st.session_state.selected_temp_cards:
+                        st.session_state.selected_temp_cards.remove(card_id)
+                        st.rerun()
+            else:
+                # Available card - click to select
+                if st.button(f"🎯 #{card_id}", key=f"card_{card_id}", use_container_width=True):
+                    if len(st.session_state.selected_temp_cards) < 2:
+                        if user.get('balance', 0) >= CARD_PRICE:
+                            st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                    else:
+                        st.warning("⚠️ Max 2 cards!")
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1127,27 +1060,6 @@ def main():
         }
         .stAlert {
             margin: 10px 0;
-        }
-        /* Scrollable container for cards */
-        .scrollable-container {
-            max-height: 600px;
-            overflow-y: auto;
-            padding: 10px;
-            background: linear-gradient(135deg, #0f0f1a, #1a1a2e);
-            border-radius: 15px;
-            border: 1px solid #333;
-            margin: 10px 0;
-        }
-        .scrollable-container::-webkit-scrollbar {
-            width: 10px;
-        }
-        .scrollable-container::-webkit-scrollbar-track {
-            background: #1a1a2e;
-            border-radius: 10px;
-        }
-        .scrollable-container::-webkit-scrollbar-thumb {
-            background: #FFD700;
-            border-radius: 10px;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1321,7 +1233,7 @@ def main():
             st.rerun()
     
     # ===================================================================
-    # WAITING PHASE - Card Selection with ALL Cards Scrollable
+    # WAITING PHASE - Card Selection with ALL Cards
     # ===================================================================
     
     if status == "waiting":
@@ -1340,10 +1252,8 @@ def main():
                     display_bingo_card(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
-            # Display ALL 201 cards in a scrollable container using the grid method
-            st.markdown('<div class="scrollable-container">', unsafe_allow_html=True)
-            display_all_cards_scrollable()
-            st.markdown('</div>', unsafe_allow_html=True)
+            # Display ALL 201 cards
+            display_all_cards_simple()
             
             # Show selected cards preview
             if st.session_state.selected_temp_cards:
