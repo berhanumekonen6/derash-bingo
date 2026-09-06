@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH COUNTDOWN TIMER & ATTRACTIVE CARD DISPLAY
+# WITH ALL 201 CARDS & COUNTDOWN TIMER
 # ===================================================================
 
 import streamlit as st
@@ -663,7 +663,7 @@ def join_game(game_id, user_id, card_ids):
 # ===================================================================
 
 def display_countdown_timer():
-    """Display countdown timer that always counts down until 0:00"""
+    """Display countdown timer that counts down to 0:00"""
     remaining = get_remaining_time()
     time_str = get_time_display()
     
@@ -954,6 +954,10 @@ def display_bingo_board():
     
     st.markdown(html, unsafe_allow_html=True)
 
+# ===================================================================
+# DISPLAY ATTRACTIVE CARDS
+# ===================================================================
+
 def display_attractive_cards():
     """Display all 201 cards in attractive green rectangular format"""
     st.markdown("""
@@ -986,14 +990,14 @@ def display_attractive_cards():
             background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
             border: 2px solid #4CAF50;
             border-radius: 10px;
-            padding: 8px 4px;
+            padding: 10px 4px;
             text-align: center;
             color: white;
             font-weight: bold;
             font-size: 14px;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 55px;
+            min-height: 60px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1043,6 +1047,30 @@ def display_attractive_cards():
         .card-item.taken .card-price {
             color: #ff6666;
         }
+        .pagination-info {
+            text-align: center;
+            color: #FFD700;
+            font-size: 1rem;
+            margin: 5px 0;
+        }
+        .pagination-btn {
+            background: linear-gradient(135deg, #1a4a2a, #2a6a3e);
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            color: white;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .pagination-btn:hover {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
     """, unsafe_allow_html=True)
     
@@ -1076,7 +1104,7 @@ def display_attractive_cards():
             st.session_state.board_page -= 1
             st.rerun()
     with col2:
-        st.markdown(f"<div style='text-align:center;color:#FFD700;'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='pagination-info'>Page {st.session_state.board_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
     with col3:
         if st.button("Next ➡️", disabled=st.session_state.board_page >= total_pages - 1):
             st.session_state.board_page += 1
@@ -1104,11 +1132,12 @@ def display_attractive_cards():
             status = f"{CARD_PRICE} ETB"
             cls = ""
         
+        # Create clickable card using button
         html += f'''
-        <div class="card-item {cls}" onclick="window.location.href='?select={card_id}'" 
-             data-card-id="{card_id}">
+        <div class="card-item {cls}" onclick="document.getElementById('select_{card_id}').click();">
             <div class="card-id">#{card_id}</div>
             <div class="card-price">{status}</div>
+            <button id="select_{card_id}" style="display:none;" onclick="window.location.href='?select={card_id}'"></button>
         </div>
         '''
     
@@ -1116,7 +1145,6 @@ def display_attractive_cards():
     st.markdown(html, unsafe_allow_html=True)
     
     # Handle card selection via URL parameter
-    import urllib.parse
     query_params = st.query_params
     if 'select' in query_params:
         try:
@@ -1132,7 +1160,6 @@ def display_attractive_cards():
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
-            # Clear the query parameter
             st.query_params.clear()
             st.rerun()
         except:
