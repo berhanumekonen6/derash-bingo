@@ -9,24 +9,6 @@ st.set_page_config(
 # Custom CSS for green bingo theme
 st.markdown("""
 <style>
-    .header {
-        text-align: center;
-        padding: 20px;
-        background: linear-gradient(135deg, #1a472a, #2d6a4f);
-        border-radius: 10px;
-        margin-bottom: 20px;
-        color: white;
-    }
-    .header h1 {
-        color: #ffd700;
-        margin: 0;
-        font-size: 2.5em;
-    }
-    .header p {
-        color: #a8d5ba;
-        margin: 5px 0 0 0;
-        font-size: 1.2em;
-    }
     .bingo-grid {
         display: grid;
         grid-template-columns: repeat(10, 1fr);
@@ -54,14 +36,6 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         border-color: #ffd700;
     }
-    .footer {
-        text-align: center;
-        color: #2d6a4f;
-        padding: 20px;
-        margin-top: 20px;
-        border-top: 2px solid #2d6a4f;
-        font-weight: bold;
-    }
     @media (max-width: 768px) {
         .bingo-grid {
             grid-template-columns: repeat(5, 1fr);
@@ -83,13 +57,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown("""
-<div class="header">
-    <h1>🎯 ደራሽ ቢንጎ</h1>
-    <p>Cards 1 - 201</p>
-</div>
-""", unsafe_allow_html=True)
+# Exactly as in your image - "Fork" header
+st.markdown("# Fork")
+st.markdown("## Cards 1 - 201")
 
 # Create grid of numbered boxes
 st.markdown('<div class="bingo-grid">', unsafe_allow_html=True)
@@ -98,10 +68,3 @@ for i in range(1, 202):
     st.markdown(f'<div class="number-box">{i}</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
-
-# Footer
-st.markdown("""
-<div class="footer">
-    Total: 201 Cards | ደራሽ ቢንጎ
-</div>
-""", unsafe_allow_html=True)
