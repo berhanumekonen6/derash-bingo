@@ -23,6 +23,8 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_update_time' not in st.session_state:
     st.session_state.last_update_time = time.time()
+if 'next_call_time' not in st.session_state:
+    st.session_state.next_call_time = time.time() + 2.0
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -556,23 +558,21 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Auto-call logic
+# Auto-call logic - using a simpler approach
 if st.session_state.is_auto_calling:
     # Check if all numbers have been called
     if len(st.session_state.called_numbers) >= 75:
         st.session_state.is_auto_calling = False
         st.success("🎉 All numbers have been called! Auto-call stopped.")
     else:
-        # Check if 2 seconds have passed since last update
+        # Check if it's time for the next call
         current_time = time.time()
-        if current_time - st.session_state.last_update_time >= 2.0:
+        if current_time >= st.session_state.next_call_time:
+            # Call a number
             if call_random_number():
-                st.session_state.last_update_time = current_time
+                # Set next call time to 2 seconds from now
+                st.session_state.next_call_time = time.time() + 2.0
                 st.rerun()
-        else:
-            # Auto-refresh to check time
-            time.sleep(0.1)
-            st.rerun()
 
 # Display Master Board at top
 display_master_board()
@@ -593,8 +593,7 @@ with col2:
         if not st.session_state.is_auto_calling and not all_called:
             if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
                 st.session_state.is_auto_calling = True
-                st.session_state.last_update_time = time.time()
-                call_random_number()
+                st.session_state.next_call_time = time.time()  # Call immediately
                 st.rerun()
     
     with control_col2:
@@ -617,6 +616,7 @@ with col2:
             st.session_state.last_called_number = None
             st.session_state.is_auto_calling = False
             st.session_state.auto_called_count = 0
+            st.session_state.next_call_time = time.time() + 2.0
             st.rerun()
     
     # Status display
@@ -624,6 +624,9 @@ with col2:
         st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
         progress = len(st.session_state.called_numbers) / 75
         st.progress(progress)
+        # Show countdown
+        time_left = max(0, st.session_state.next_call_time - time.time())
+        st.caption(f"Next call in: {time_left:.1f} seconds")
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
         st.progress(1.0)
