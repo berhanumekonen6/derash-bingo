@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - FIXED SELECTION
+# WITH ALL 201 CARDS - FIXED DISPLAY & SELECTION
 # ===================================================================
 
 import streamlit as st
@@ -731,11 +731,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY CARDS GRID - FIXED SELECTION
+# DISPLAY CARDS GRID - FIXED WITH ALL CARDS SHOWING
 # ===================================================================
 
 def display_cards_grid():
-    """Display all 201 cards - FIXED with proper selection using session state"""
+    """Display all 201 cards - ALL CARDS VISIBLE with proper selection"""
     st.markdown("### 🎯 Select Your Cards")
     st.markdown("*Click on any available card to select/deselect it (max 2 cards)*")
     
@@ -785,21 +785,30 @@ def display_cards_grid():
         
         with cols[i % cols_per_row]:
             if is_taken:
-                st.markdown(f"""
-                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.6;">
-                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
-                    <div style="font-size:7px;color:#888;">Taken</div>
-                </div>
-                """, unsafe_allow_html=True)
+                # Card is taken - show as disabled
+                st.button(
+                    f"🔒 #{card_id}",
+                    key=f"card_taken_{card_id}",
+                    disabled=True,
+                    use_container_width=True
+                )
             elif is_selected:
-                # SELECTED - Click to deselect
-                if st.button(f"✅ #{card_id}", key=f"card_sel_{card_id}", use_container_width=True):
+                # Card is selected - click to deselect
+                if st.button(
+                    f"✅ #{card_id}",
+                    key=f"card_sel_{card_id}",
+                    use_container_width=True
+                ):
                     if card_id in st.session_state.selected_temp_cards:
                         st.session_state.selected_temp_cards.remove(card_id)
                         st.rerun()
             else:
-                # AVAILABLE - Click to select
-                if st.button(f"#{card_id}", key=f"card_{card_id}", use_container_width=True):
+                # Card is available - click to select
+                if st.button(
+                    f"#{card_id}",
+                    key=f"card_{card_id}",
+                    use_container_width=True
+                ):
                     if len(st.session_state.selected_temp_cards) < 2:
                         if user.get('balance', 0) >= CARD_PRICE:
                             st.session_state.selected_temp_cards.append(card_id)
@@ -964,7 +973,7 @@ def main():
         user = st.session_state.user_db.get(st.session_state.current_user, {})
         st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
-        # Display cards grid - CLICKABLE during waiting
+        # Display cards grid - ALL CARDS VISIBLE
         display_cards_grid()
         
         # Show selected cards
