@@ -827,7 +827,7 @@ def display_cards_grid():
 
 def main():
     st.set_page_config(
-        page_title="🎰 Derash Bingo",
+        page_title="🎰 ደራሽ ቢንጎ",
         page_icon="🎰",
         layout="wide",
         initial_sidebar_state="collapsed"
@@ -869,7 +869,7 @@ def main():
     if not st.session_state.logged_in:
         st.markdown("""
         <div class="main-header">
-            <h1>🎰 Derash Bingo</h1>
+            <h1>🎰 ደራሽ ቢንጎ</h1>
             <p>Premium BINGO Experience</p>
         </div>
         """, unsafe_allow_html=True)
@@ -912,7 +912,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("### 🎰 Derash Bingo")
+        st.markdown("### 🎰 ደራሽ ቢንጎ")
         st.markdown("---")
         user = st.session_state.user_db.get(st.session_state.current_user, {})
         st.markdown(f"""
@@ -930,7 +930,7 @@ def main():
     # Game Header
     st.markdown("""
     <div class="main-header">
-        <h1>🎰 Derash Bingo</h1>
+        <h1>🎰 ደራሽ ቢንጎ</h1>
         <p>እንኳን ወደ ደራሽ ቢንጎ በደህና መጡ! 🎉</p>
     </div>
     """, unsafe_allow_html=True)
