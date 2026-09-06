@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS & PROPER SELECTION
+# WITH ALL 201 CARDS - FINAL FIXED CODE
 # ===================================================================
 
 import streamlit as st
@@ -228,7 +228,7 @@ PRIZE_PER_CARD = 8
 SELECTION_TIME = 60
 
 # ===================================================================
-# LOCAL FILE STORAGE & AUTHENTICATION FUNCTIONS
+# LOCAL FILE STORAGE
 # ===================================================================
 
 def get_local_users_file():
@@ -295,6 +295,10 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
     if "games" in st.session_state and st.session_state.games:
         save_local_games(st.session_state.games)
+
+# ===================================================================
+# AUTHENTICATION
+# ===================================================================
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -948,11 +952,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ATTRACTIVE CARDS USING STREAMLIT BUTTONS
+# DISPLAY ALL 201 CARDS - ATTRACTIVE GRID FOR ALL PLAYERS
 # ===================================================================
 
-def display_attractive_cards():
-    """Display all 201 cards in attractive green rectangular format using Streamlit buttons"""
+def display_all_cards_grid():
+    """Display all 201 cards in an attractive grid - FOR ALL PLAYERS"""
     st.markdown("### 🎯 BINGO Card Board")
     st.markdown("*Click on any available card to select it (max 2 cards)*")
     
@@ -1029,6 +1033,10 @@ def display_attractive_cards():
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1249,7 +1257,7 @@ def main():
         return
     
     # ===================================================================
-    # ADMIN PANEL
+    # ADMIN PANEL - ONLY SHOWS FOR ADMIN
     # ===================================================================
     
     if st.session_state.current_role == "admin":
@@ -1257,7 +1265,7 @@ def main():
         st.markdown("---")
     
     # ===================================================================
-    # GAME LOBBY
+    # GAME LOBBY - SHOWS FOR ALL USERS
     # ===================================================================
     
     st.markdown("""
@@ -1356,7 +1364,7 @@ def main():
         st.metric("👥 Players", players)
     
     # ===================================================================
-    # WAITING PHASE - Card Selection with Countdown
+    # WAITING PHASE - Card Selection with Countdown (FOR ALL PLAYERS)
     # ===================================================================
     
     if status == "waiting":
@@ -1367,6 +1375,10 @@ def main():
         st.info(f"💰 Your balance: {user.get('balance', 0)} ETB | 📋 Select up to 2 cards ({CARD_PRICE} ETB each)")
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
+        
+        # ALWAYS display the card board for ALL players
+        display_all_cards_grid()
+        
         if user_cards:
             st.success(f"✅ You already have {len(user_cards)} card(s) in this game!")
             st.markdown("### 📋 Your Cards")
@@ -1376,10 +1388,7 @@ def main():
                     display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
             st.info("Waiting for the game to start...")
         else:
-            # Display attractive cards using Streamlit buttons
-            display_attractive_cards()
-            
-            # Show selected cards preview
+            # Show selected cards preview for players who haven't joined yet
             if st.session_state.selected_temp_cards:
                 st.markdown(f"### 📋 Selected: {len(st.session_state.selected_temp_cards)} cards")
                 for cid in st.session_state.selected_temp_cards:
@@ -1398,7 +1407,7 @@ def main():
                     else:
                         st.error(msg)
             else:
-                st.info("👆 Click on any green card above to select (max 2)")
+                st.info("👆 Click on any card above to select (max 2)")
         
         # Check if countdown ended and game should start
         remaining = get_remaining_time()
