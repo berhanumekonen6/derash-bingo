@@ -21,6 +21,8 @@ if 'is_auto_calling' not in st.session_state:
     st.session_state.is_auto_calling = False
 if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
+if 'last_update_time' not in st.session_state:
+    st.session_state.last_update_time = time.time()
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -508,17 +510,23 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Auto-call logic
+# Auto-call logic - using a placeholder approach
 if st.session_state.is_auto_calling:
     # Check if all numbers have been called
     if len(st.session_state.called_numbers) >= 75:
         st.session_state.is_auto_calling = False
         st.success("🎉 All numbers have been called! Auto-call stopped.")
     else:
-        # Call a number
-        if call_random_number():
-            # Force rerun after 2 seconds
-            time.sleep(2)
+        # Check if 2 seconds have passed since last update
+        current_time = time.time()
+        if current_time - st.session_state.last_update_time >= 2.0:
+            if call_random_number():
+                st.session_state.last_update_time = current_time
+                # Use rerun to update the display
+                st.rerun()
+        else:
+            # Auto-refresh to check time
+            time.sleep(0.1)
             st.rerun()
 
 # Display Master Board at top
@@ -540,6 +548,7 @@ with col2:
         if not st.session_state.is_auto_calling and not all_called:
             if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
                 st.session_state.is_auto_calling = True
+                st.session_state.last_update_time = time.time()
                 # Call first number immediately
                 call_random_number()
                 st.rerun()
@@ -569,10 +578,16 @@ with col2:
     # Status display
     if st.session_state.is_auto_calling:
         st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
+        # Add a progress bar
+        progress = len(st.session_state.called_numbers) / 75
+        st.progress(progress)
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
+        st.progress(1.0)
     elif st.session_state.last_called_number:
         st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
+        progress = len(st.session_state.called_numbers) / 75
+        st.progress(progress)
 
 # Cards selection section
 st.markdown("---")
