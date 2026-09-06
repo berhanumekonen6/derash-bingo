@@ -47,13 +47,7 @@ def display_bingo_board(board):
             font-weight: bold;
             min-width: 50px;
         }
-        .bingo-table .header {
-            background: #2E7D32;
-            color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        .bingo-table td:not(.row-label):not(.header) {
+        .bingo-table td:not(.row-label) {
             color: #1A237E;
             background: #FAFAFA;
         }
@@ -74,14 +68,7 @@ def display_bingo_board(board):
     html = '<div class="bingo-container">'
     html += '<table class="bingo-table">'
     
-    # Header row
-    html += '<tr>'
-    html += '<td class="header">#</td>'
-    for num in range(1, 16):
-        html += f'<td class="header">{num}</td>'
-    html += '</tr>'
-    
-    # Data rows
+    # Data rows only - no header
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<tr>'
         html += f'<td class="row-label">{letter}</td>'
