@@ -928,7 +928,6 @@ def display_bingo_board():
     called_numbers = st.session_state.called_numbers
     called_set = set(called_numbers)
     
-    # Define columns
     columns = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -937,17 +936,14 @@ def display_bingo_board():
         'O': list(range(61, 76))
     }
     
-    # Build the board
     html = '<div class="bingo-board-wrapper">'
     html += '<div class="bingo-board-title">🎯 B I N G O</div>'
     
-    # Header row with letters (15 columns)
     html += '<div class="bingo-header-row">'
     for col_name in ['B']*3 + ['I']*3 + ['N']*3 + ['G']*3 + ['O']*3:
         html += f'<div class="bingo-header-letter">{col_name}</div>'
     html += '</div>'
     
-    # Grid of numbers (15 columns x 15 rows)
     html += '<div class="bingo-board-grid">'
     
     for row in range(15):
@@ -959,7 +955,6 @@ def display_bingo_board():
     
     html += '</div>'
     
-    # Stats
     html += f'''
     <div class="bingo-stats">
         🎯 Called: <span>{len(called_numbers)}</span> / 75 
@@ -971,11 +966,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ALL 201 CARDS IN GRID FORMAT (LIKE THE IMAGE)
+# DISPLAY ALL 201 CARDS IN GRID FORMAT
 # ===================================================================
 
 def display_all_cards_grid():
-    """Display all 201 cards in a grid format exactly like the image"""
+    """Display all 201 cards in a grid format"""
     st.markdown("""
     <style>
         .cards-grid-container {
@@ -993,59 +988,6 @@ def display_all_cards_grid():
             font-weight: bold;
             margin-bottom: 20px;
             text-shadow: 0 0 20px rgba(76,175,80,0.2);
-        }
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 6px;
-            max-width: 100%;
-            margin: 0 auto;
-        }
-        .card-item {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 8px 4px;
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #ddd;
-            transition: all 0.3s;
-            cursor: pointer;
-            position: relative;
-        }
-        .card-item:hover {
-            transform: scale(1.08);
-            background: rgba(76,175,80,0.2);
-            border-color: #4CAF50;
-            box-shadow: 0 0 20px rgba(76,175,80,0.2);
-            z-index: 10;
-        }
-        .card-item.selected {
-            background: rgba(76,175,80,0.3);
-            border-color: #4CAF50;
-            color: #4CAF50;
-            box-shadow: 0 0 20px rgba(76,175,80,0.3);
-        }
-        .card-item.taken {
-            background: rgba(255,51,102,0.15);
-            border-color: #FF3366;
-            color: #FF3366;
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .card-item.taken:hover {
-            transform: none;
-            background: rgba(255,51,102,0.15);
-            box-shadow: none;
-        }
-        .card-item .card-number {
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-        .card-item .card-status {
-            font-size: 0.6rem;
-            opacity: 0.7;
         }
         .cards-legend {
             display: flex;
@@ -1073,36 +1015,6 @@ def display_all_cards_grid():
         .legend-dot.available { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); }
         .legend-dot.selected { background: #4CAF50; }
         .legend-dot.taken { background: #FF3366; opacity: 0.5; }
-        .cards-pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            margin-top: 20px;
-            padding: 10px;
-        }
-        .cards-pagination button {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #ddd;
-            padding: 8px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-        .cards-pagination button:hover:not(:disabled) {
-            background: rgba(76,175,80,0.3);
-            border-color: #4CAF50;
-        }
-        .cards-pagination button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .cards-pagination span {
-            color: #FFD700;
-            font-weight: bold;
-        }
         .cards-selection-info {
             text-align: center;
             padding: 12px;
@@ -1113,15 +1025,54 @@ def display_all_cards_grid():
             color: #FFD700;
             font-weight: 600;
         }
-        .card-item.clickable {
-            cursor: pointer;
+        .card-grid-btn {
+            width: 100% !important;
+            min-height: 40px !important;
+            padding: 4px 2px !important;
+            font-size: 0.7rem !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: #ddd !important;
+            transition: all 0.3s !important;
         }
-        .card-item.clickable:hover {
-            transform: scale(1.08);
-            background: rgba(76,175,80,0.2);
-            border-color: #4CAF50;
-            box-shadow: 0 0 20px rgba(76,175,80,0.2);
-            z-index: 10;
+        .card-grid-btn:hover {
+            transform: scale(1.08) !important;
+            background: rgba(76,175,80,0.2) !important;
+            border-color: #4CAF50 !important;
+            box-shadow: 0 0 20px rgba(76,175,80,0.2) !important;
+            z-index: 10 !important;
+        }
+        .card-grid-btn-selected {
+            background: rgba(76,175,80,0.3) !important;
+            border-color: #4CAF50 !important;
+            color: #4CAF50 !important;
+            box-shadow: 0 0 20px rgba(76,175,80,0.3) !important;
+        }
+        .card-grid-btn-taken {
+            background: rgba(255,51,102,0.15) !important;
+            border-color: #FF3366 !important;
+            color: #FF3366 !important;
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
+        .card-grid-btn-taken:hover {
+            transform: none !important;
+            background: rgba(255,51,102,0.15) !important;
+            box-shadow: none !important;
+        }
+        .card-grid-btn:disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
+        .cards-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+            padding: 10px;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1136,7 +1087,7 @@ def display_all_cards_grid():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     
     # Legend
-    html_legend = '''
+    html_legend = f'''
     <div class="cards-legend">
         <div class="cards-legend-item">
             <span class="legend-dot available"></span> Available
@@ -1148,7 +1099,7 @@ def display_all_cards_grid():
             <span class="legend-dot taken"></span> Taken
         </div>
         <div class="cards-legend-item">
-            📊 ''' + str(len(st.session_state.selected_temp_cards)) + '''/2 selected
+            📊 {len(st.session_state.selected_temp_cards)}/2 selected
         </div>
     </div>
     '''
@@ -1186,54 +1137,49 @@ def display_all_cards_grid():
     end_idx = min(start_idx + cards_per_page, len(BINGO_CARDS))
     page_cards = BINGO_CARDS[start_idx:end_idx]
     
-    # Build the grid
-    html_grid = '<div class="cards-grid-container">'
-    html_grid += '<div class="cards-grid-title">🎯 BINGO Card Board</div>'
-    html_grid += '<div class="cards-grid">'
+    # Display cards in a grid using columns
+    cols_per_row = 10
+    cols = st.columns(cols_per_row)
     
-    for card in page_cards:
+    for i, card in enumerate(page_cards):
         card_id = card["id"]
         is_taken = card_id in taken_cards
         is_selected = card_id in st.session_state.selected_temp_cards
         
-        if is_taken:
-            status_class = "taken"
-            status_text = "🔒"
-        elif is_selected:
-            status_class = "selected"
-            status_text = "✅"
-        else:
-            status_class = "clickable"
-            status_text = ""
-        
-        html_grid += f'''
-        <div class="card-item {status_class}" onclick="window.location.href='?select={card_id}'">
-            <div class="card-number">#{card_id}</div>
-            <div class="card-status">{status_text}</div>
-        </div>
-        '''
-    
-    html_grid += '</div>'
-    html_grid += '</div>'
-    
-    st.markdown(html_grid, unsafe_allow_html=True)
-    
-    # Handle card selection via query params
-    query_params = st.query_params
-    if "select" in query_params:
-        card_id = int(query_params["select"])
-        if card_id not in taken_cards:
-            if card_id in st.session_state.selected_temp_cards:
-                st.session_state.selected_temp_cards.remove(card_id)
-            elif len(st.session_state.selected_temp_cards) < 2:
-                if user.get('balance', 0) >= CARD_PRICE:
-                    st.session_state.selected_temp_cards.append(card_id)
-                else:
-                    st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+        with cols[i % cols_per_row]:
+            if is_taken:
+                st.button(
+                    f"🔒 #{card_id}",
+                    key=f"card_taken_{card_id}",
+                    disabled=True,
+                    use_container_width=True
+                )
+            elif is_selected:
+                if st.button(
+                    f"✅ #{card_id}",
+                    key=f"card_sel_{card_id}",
+                    use_container_width=True
+                ):
+                    st.session_state.selected_temp_cards.remove(card_id)
+                    st.rerun()
             else:
-                st.warning("⚠️ Max 2 cards!")
-        st.query_params.clear()
-        st.rerun()
+                if st.button(
+                    f"#{card_id}",
+                    key=f"card_avail_{card_id}",
+                    use_container_width=True
+                ):
+                    if len(st.session_state.selected_temp_cards) < 2:
+                        if user.get('balance', 0) >= CARD_PRICE:
+                            st.session_state.selected_temp_cards.append(card_id)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
+                    else:
+                        st.warning("⚠️ Max 2 cards!")
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
@@ -1565,7 +1511,7 @@ def main():
     # ===================================================================
     
     if status == "waiting":
-        # Display countdown timer (no auto-rerun)
+        # Display countdown timer
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1573,7 +1519,7 @@ def main():
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         
-        # ALWAYS display the card board for ALL players
+        # Display the card board
         display_all_cards_grid()
         
         # Show selected cards clearly
