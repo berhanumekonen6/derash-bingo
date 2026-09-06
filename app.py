@@ -349,7 +349,7 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the master BINGO board with B, I, N, G, O rows"""
+    """Display the master BINGO board with B, I, N, G, O rows - NO FREE CELL"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -391,11 +391,6 @@ def display_master_board():
             color: #1A237E;
             background: #FAFAFA;
         }
-        .master-table .free-space {
-            background: #FFEB3B;
-            color: #E53935;
-            font-size: 1.2rem;
-        }
         @media (max-width: 600px) {
             .master-table td {
                 padding: 4px 2px;
@@ -426,11 +421,8 @@ def display_master_board():
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<tr>'
         html += f'<td class="row-label">{letter}</td>'
-        for idx, num in enumerate(master_board[letter]):
-            if letter == 'N' and idx == 7:  # Center of N row
-                html += '<td class="free-space">★ FREE</td>'
-            else:
-                html += f'<td>{num}</td>'
+        for num in master_board[letter]:
+            html += f'<td>{num}</td>'
         html += '</tr>'
     
     html += '</table>'
