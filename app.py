@@ -24,7 +24,9 @@ if 'auto_called_count' not in st.session_state:
 if 'last_update_time' not in st.session_state:
     st.session_state.last_update_time = time.time()
 if 'next_call_time' not in st.session_state:
-    st.session_state.next_call_time = time.time() + 2.0
+    st.session_state.next_call_time = time.time() + 3.0
+if 'call_interval' not in st.session_state:
+    st.session_state.call_interval = 3.0
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -558,7 +560,7 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Auto-call logic - using a simpler approach
+# Auto-call logic - 3 second interval
 if st.session_state.is_auto_calling:
     # Check if all numbers have been called
     if len(st.session_state.called_numbers) >= 75:
@@ -570,8 +572,8 @@ if st.session_state.is_auto_calling:
         if current_time >= st.session_state.next_call_time:
             # Call a number
             if call_random_number():
-                # Set next call time to 2 seconds from now
-                st.session_state.next_call_time = time.time() + 2.0
+                # Set next call time to 3 seconds from now
+                st.session_state.next_call_time = time.time() + 3.0
                 st.rerun()
 
 # Display Master Board at top
@@ -616,7 +618,7 @@ with col2:
             st.session_state.last_called_number = None
             st.session_state.is_auto_calling = False
             st.session_state.auto_called_count = 0
-            st.session_state.next_call_time = time.time() + 2.0
+            st.session_state.next_call_time = time.time() + 3.0
             st.rerun()
     
     # Status display
@@ -626,7 +628,7 @@ with col2:
         st.progress(progress)
         # Show countdown
         time_left = max(0, st.session_state.next_call_time - time.time())
-        st.caption(f"Next call in: {time_left:.1f} seconds")
+        st.caption(f"⏱️ Next call in: {time_left:.1f} seconds")
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
         st.progress(1.0)
