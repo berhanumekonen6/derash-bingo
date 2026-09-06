@@ -27,7 +27,7 @@ BINGO_CARDS = [
     {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
     {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
     {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
-    # ... (all your 201 cards here)
+    # ... (all your 201 cards here - copy from your file)
     {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
 ]
 
@@ -162,11 +162,11 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY BINGO BOARD 1-75 (VERTICAL FORMAT)
+# DISPLAY BINGO BOARD (LIKE IMAGE FORMAT)
 # ===================================================================
 
 def display_bingo_board():
-    """Display BINGO board 1-75 with letters vertically on the left"""
+    """Display BINGO board in the format from the image - vertical columns"""
     
     st.markdown("""
     <style>
@@ -187,20 +187,20 @@ def display_bingo_board():
             letter-spacing: 8px;
             font-family: Arial, sans-serif;
         }
-        .bingo-board-row {
+        .bingo-board {
             display: grid;
-            grid-template-columns: 40px repeat(15, 1fr);
+            grid-template-columns: 50px repeat(15, 1fr);
             gap: 3px;
             max-width: 100%;
-            margin: 0 auto 3px auto;
+            margin: 0 auto;
         }
-        .bingo-letter {
+        .bingo-letter-header {
             background: #2E7D32;
             color: #FFD700;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 1.2rem;
             text-align: center;
-            padding: 4px 0;
+            padding: 8px 0;
             border-radius: 4px;
             border: 1px solid #1B5E20;
             display: flex;
@@ -208,21 +208,35 @@ def display_bingo_board():
             justify-content: center;
             font-family: Arial, sans-serif;
         }
-        .bingo-number {
+        .bingo-number-cell {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
-            padding: 4px 0;
+            padding: 6px 0;
             text-align: center;
             font-size: 0.7rem;
             font-weight: 600;
             color: #88ff88;
             transition: all 0.3s;
         }
-        .bingo-number:hover {
+        .bingo-number-cell:hover {
             transform: scale(1.05);
             background: rgba(46,125,50,0.3);
             border-color: #FFD700;
+        }
+        .bingo-letter-row {
+            background: #2E7D32;
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1rem;
+            text-align: center;
+            padding: 6px 0;
+            border-radius: 4px;
+            border: 1px solid #1B5E20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
         }
         .bingo-board-stats {
             text-align: center;
@@ -238,40 +252,42 @@ def display_bingo_board():
             color: #FFD700;
             font-weight: bold;
         }
-        .bingo-range-label {
-            text-align: center;
-            color: #88ff88;
-            font-size: 0.6rem;
-            opacity: 0.7;
-            padding: 2px 0;
-        }
         @media (max-width: 768px) {
-            .bingo-number {
-                padding: 3px 0;
+            .bingo-board {
+                grid-template-columns: 35px repeat(15, 1fr);
+                gap: 2px;
+            }
+            .bingo-number-cell {
+                padding: 4px 0;
                 font-size: 0.55rem;
             }
             .bingo-board-title {
                 font-size: 1.2rem;
                 letter-spacing: 4px;
             }
-            .bingo-board-row {
-                grid-template-columns: 30px repeat(15, 1fr);
+            .bingo-letter-header {
+                font-size: 0.9rem;
             }
-            .bingo-letter {
-                font-size: 0.7rem;
+            .bingo-letter-row {
+                font-size: 0.8rem;
             }
         }
         @media (max-width: 480px) {
-            .bingo-number {
-                padding: 2px 0;
-                font-size: 0.45rem;
-            }
-            .bingo-board-row {
-                grid-template-columns: 25px repeat(15, 1fr);
+            .bingo-board {
+                grid-template-columns: 28px repeat(15, 1fr);
                 gap: 2px;
             }
-            .bingo-letter {
-                font-size: 0.6rem;
+            .bingo-number-cell {
+                padding: 3px 0;
+                font-size: 0.45rem;
+            }
+            .bingo-letter-header {
+                font-size: 0.7rem;
+                padding: 4px 0;
+            }
+            .bingo-letter-row {
+                font-size: 0.65rem;
+                padding: 4px 0;
             }
         }
     </style>
@@ -289,25 +305,28 @@ def display_bingo_board():
     html = '<div class="bingo-board-container">'
     html += '<div class="bingo-board-title">🎯 B I N G O</div>'
     
-    # Row labels and ranges
-    row_labels = ['B', 'I', 'N', 'G', 'O']
-    ranges = ['1-15', '16-30', '31-45', '46-60', '61-75']
+    # Build the board - letters on the left, numbers in columns
+    html += '<div class="bingo-board">'
     
-    # Display each row with letter on the left
-    for row_idx, (letter, range_text) in enumerate(zip(row_labels, ranges)):
-        html += f'<div class="bingo-board-row">'
-        html += f'<div class="bingo-letter">{letter}</div>'
-        
-        # Get the numbers for this row (each column has 15 numbers)
-        for col_name in ['B', 'I', 'N', 'G', 'O']:
-            number = columns[col_name][row_idx]
-            html += f'<div class="bingo-number">{number}</div>'
-        
-        html += '</div>'
-        
-        # Add range label after each row
-        html += f'<div class="bingo-range-label">{letter}: {range_text}</div>'
+    # Header row with B, I, N, G, O letters on top
+    html += '<div class="bingo-letter-header"></div>'
+    for col in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<div class="bingo-letter-header">{col}</div>'
     
+    # Each row (15 rows for numbers 1-75)
+    for row in range(15):
+        # Letter on the left (B, I, N, G, O repeated)
+        letter = ['B', 'I', 'N', 'G', 'O'][row % 5]
+        html += f'<div class="bingo-letter-row">{letter}</div>'
+        
+        # Numbers for each column
+        for col in ['B', 'I', 'N', 'G', 'O']:
+            number = columns[col][row]
+            html += f'<div class="bingo-number-cell">{number}</div>'
+    
+    html += '</div>'
+    
+    # Stats
     html += f'''
     <div class="bingo-board-stats">
         📊 Total: <span>75</span> numbers | 
@@ -417,7 +436,7 @@ st.markdown("""
 st.markdown('<div class="header-title">Fork</div>', unsafe_allow_html=True)
 st.markdown('<div class="header-subtitle">BINGO Board & Cards 1 - 201</div>', unsafe_allow_html=True)
 
-# Display BINGO Board 1-75 (Vertical format)
+# Display BINGO Board
 display_bingo_board()
 
 # Divider
