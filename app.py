@@ -27,7 +27,97 @@ BINGO_CARDS = [
     {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
     {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
     {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
-    # ... (all 201 cards as in your code)
+    {"id": 11, "cells": [['11', '21', '44', '49', '64'], ['4', '28', '34', '55', '62'], ['2', '26', 'F', '47', '71'], ['14', '29', '41', '48', '73'], ['5', '24', '31', '51', '63']]},
+    {"id": 12, "cells": [['9', '20', '35', '59', '66'], ['1', '26', '43', '56', '72'], ['6', '16', 'F', '58', '64'], ['12', '22', '41', '49', '61'], ['2', '18', '38', '51', '69']]},
+    {"id": 13, "cells": [['11', '16', '45', '60', '73'], ['1', '26', '44', '55', '69'], ['4', '29', 'F', '47', '72'], ['9', '28', '31', '51', '64'], ['14', '23', '40', '59', '68']]},
+    {"id": 14, "cells": [['5', '18', '45', '58', '67'], ['1', '27', '42', '50', '65'], ['7', '28', 'F', '54', '64'], ['2', '21', '43', '60', '74'], ['10', '24', '32', '51', '71']]},
+    {"id": 15, "cells": [['5', '30', '38', '48', '71'], ['1', '22', '42', '60', '62'], ['2', '18', 'F', '50', '65'], ['3', '29', '33', '46', '75'], ['12', '17', '32', '55', '66']]},
+    {"id": 16, "cells": [['7', '23', '45', '55', '62'], ['3', '27', '42', '60', '71'], ['12', '21', 'F', '57', '66'], ['4', '24', '41', '49', '68'], ['13', '17', '44', '50', '75']]},
+    {"id": 17, "cells": [['10', '28', '32', '59', '72'], ['3', '27', '40', '47', '63'], ['13', '24', 'F', '57', '71'], ['2', '21', '41', '60', '68'], ['7', '25', '42', '58', '65']]},
+    {"id": 18, "cells": [['13', '27', '33', '51', '63'], ['7', '22', '42', '48', '61'], ['10', '25', 'F', '54', '65'], ['8', '16', '43', '52', '72'], ['14', '23', '38', '60', '74']]},
+    {"id": 19, "cells": [['1', '22', '39', '51', '62'], ['15', '25', '35', '47', '75'], ['3', '23', 'F', '50', '66'], ['8', '26', '44', '49', '70'], ['4', '28', '38', '53', '67']]},
+    {"id": 20, "cells": [['9', '19', '35', '54', '73'], ['8', '23', '43', '57', '61'], ['4', '24', 'F', '58', '68'], ['11', '17', '32', '50', '62'], ['1', '26', '38', '49', '75']]},
+    {"id": 21, "cells": [['8', '18', '39', '54', '63'], ['2', '30', '37', '57', '75'], ['13', '29', 'F', '56', '68'], ['15', '27', '31', '49', '67'], ['6', '17', '45', '52', '61']]},
+    {"id": 22, "cells": [['6', '26', '44', '55', '62'], ['13', '19', '32', '60', '61'], ['9', '25', 'F', '49', '75'], ['3', '20', '40', '46', '65'], ['8', '27', '31', '56', '71']]},
+    {"id": 23, "cells": [['1', '27', '40', '54', '73'], ['4', '17', '33', '46', '68'], ['7', '16', 'F', '48', '63'], ['9', '23', '36', '56', '66'], ['11', '21', '34', '50', '74']]},
+    {"id": 24, "cells": [['9', '19', '40', '46', '75'], ['8', '26', '31', '48', '67'], ['1', '24', 'F', '59', '65'], ['7', '20', '39', '49', '70'], ['12', '27', '43', '57', '73']]},
+    {"id": 25, "cells": [['3', '23', '40', '53', '75'], ['1', '27', '45', '51', '68'], ['4', '28', 'F', '46', '73'], ['14', '29', '35', '56', '61'], ['9', '30', '41', '52', '74']]},
+    {"id": 26, "cells": [['10', '25', '37', '53', '65'], ['14', '29', '38', '58', '69'], ['2', '28', 'F', '56', '68'], ['6', '22', '35', '57', '70'], ['3', '18', '45', '60', '67']]},
+    {"id": 27, "cells": [['11', '26', '39', '51', '75'], ['3', '28', '33', '56', '67'], ['10', '24', 'F', '58', '74'], ['7', '18', '45', '53', '69'], ['13', '30', '44', '47', '64']]},
+    {"id": 28, "cells": [['8', '17', '42', '52', '74'], ['2', '24', '39', '56', '63'], ['14', '16', 'F', '60', '62'], ['9', '21', '31', '47', '72'], ['15', '18', '35', '54', '70']]},
+    {"id": 29, "cells": [['14', '16', '32', '53', '74'], ['15', '21', '34', '59', '65'], ['10', '26', 'F', '55', '66'], ['2', '19', '45', '56', '61'], ['1', '25', '40', '51', '64']]},
+    {"id": 30, "cells": [['8', '27', '44', '54', '70'], ['11', '26', '31', '55', '64'], ['9', '19', 'F', '57', '67'], ['6', '23', '41', '49', '62'], ['13', '22', '40', '56', '72']]},
+    {"id": 31, "cells": [['3', '27', '31', '46', '71'], ['9', '24', '40', '48', '67'], ['5', '17', 'F', '55', '62'], ['12', '18', '38', '58', '68'], ['4', '25', '36', '54', '73']]},
+    {"id": 32, "cells": [['10', '20', '32', '58', '73'], ['15', '28', '34', '56', '61'], ['9', '24', 'F', '50', '75'], ['5', '25', '37', '46', '67'], ['14', '23', '31', '51', '65']]},
+    {"id": 33, "cells": [['7', '29', '42', '56', '69'], ['15', '27', '40', '60', '64'], ['1', '18', 'F', '51', '74'], ['4', '16', '38', '57', '67'], ['8', '21', '39', '59', '68']]},
+    {"id": 34, "cells": [['4', '17', '31', '46', '70'], ['8', '29', '37', '57', '65'], ['9', '24', 'F', '59', '75'], ['11', '27', '34', '55', '63'], ['3', '22', '36', '48', '73']]},
+    {"id": 35, "cells": [['9', '17', '35', '55', '72'], ['14', '24', '45', '52', '68'], ['11', '18', 'F', '48', '66'], ['8', '21', '36', '47', '71'], ['4', '27', '37', '57', '70']]},
+    {"id": 36, "cells": [['2', '22', '41', '54', '62'], ['13', '21', '45', '51', '70'], ['15', '30', 'F', '47', '63'], ['4', '26', '39', '50', '75'], ['10', '29', '34', '58', '64']]},
+    {"id": 37, "cells": [['1', '21', '32', '54', '65'], ['5', '28', '42', '51', '63'], ['2', '26', 'F', '60', '61'], ['12', '24', '34', '59', '62'], ['15', '17', '43', '57', '72']]},
+    {"id": 38, "cells": [['1', '30', '45', '49', '66'], ['9', '24', '42', '56', '69'], ['7', '20', 'F', '52', '74'], ['12', '17', '36', '60', '62'], ['11', '18', '35', '54', '63']]},
+    {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
+    {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
+    {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
+    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
+    {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
+    {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
+    {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
+    {"id": 46, "cells": [['5', '17', '43', '47', '74'], ['15', '18', '42', '48', '63'], ['11', '21', 'F', '56', '64'], ['4', '23', '39', '54', '66'], ['2', '25', '33', '49', '65']]},
+    {"id": 47, "cells": [['5', '17', '38', '46', '70'], ['6', '20', '43', '51', '75'], ['12', '25', 'F', '56', '61'], ['1', '16', '45', '60', '68'], ['4', '26', '35', '53', '74']]},
+    {"id": 48, "cells": [['4', '28', '37', '53', '61'], ['2', '19', '31', '49', '62'], ['7', '16', 'F', '56', '64'], ['14', '26', '39', '52', '74'], ['6', '18', '32', '57', '67']]},
+    {"id": 49, "cells": [['1', '21', '34', '52', '67'], ['3', '29', '41', '54', '69'], ['10', '24', 'F', '57', '70'], ['8', '26', '35', '53', '72'], ['6', '19', '31', '58', '64']]},
+    {"id": 50, "cells": [['3', '17', '36', '49', '69'], ['10', '30', '40', '52', '62'], ['14', '27', 'F', '58', '66'], ['2', '19', '41', '59', '68'], ['15', '18', '42', '47', '64']]},
+    {"id": 51, "cells": [['2', '21', '31', '49', '68'], ['12', '20', '45', '54', '69'], ['10', '27', 'F', '48', '75'], ['9', '16', '40', '46', '61'], ['14', '19', '39', '57', '62']]},
+    {"id": 52, "cells": [['10', '22', '36', '59', '74'], ['2', '21', '44', '55', '70'], ['11', '26', 'F', '48', '72'], ['15', '23', '40', '57', '75'], ['14', '18', '31', '58', '66']]},
+    {"id": 53, "cells": [['15', '30', '35', '59', '69'], ['5', '21', '45', '51', '71'], ['8', '25', 'F', '46', '67'], ['7', '23', '40', '58', '74'], ['11', '29', '42', '54', '72']]},
+    {"id": 54, "cells": [['1', '26', '34', '60', '61'], ['6', '18', '35', '52', '66'], ['4', '24', 'F', '50', '69'], ['15', '29', '32', '48', '63'], ['7', '25', '45', '53', '72']]},
+    {"id": 55, "cells": [['12', '24', '45', '51', '65'], ['8', '16', '42', '53', '62'], ['15', '19', 'F', '59', '64'], ['7', '25', '39', '56', '70'], ['14', '20', '32', '48', '74']]},
+    {"id": 56, "cells": [['13', '17', '44', '53', '68'], ['3', '30', '45', '56', '66'], ['15', '28', 'F', '55', '73'], ['12', '20', '33', '50', '70'], ['4', '24', '43', '52', '67']]},
+    {"id": 57, "cells": [['5', '28', '40', '56', '63'], ['12', '21', '36', '53', '73'], ['14', '16', 'F', '60', '68'], ['15', '25', '44', '58', '66'], ['11', '17', '45', '54', '64']]},
+    {"id": 58, "cells": [['1', '16', '32', '58', '74'], ['3', '28', '44', '60', '67'], ['9', '24', 'F', '49', '64'], ['10', '20', '37', '47', '71'], ['13', '19', '39', '46', '61']]},
+    {"id": 59, "cells": [['7', '20', '34', '47', '70'], ['2', '24', '43', '55', '73'], ['3', '29', 'F', '46', '62'], ['12', '18', '45', '49', '69'], ['5', '17', '33', '57', '64']]},
+    {"id": 60, "cells": [['14', '25', '41', '48', '75'], ['9', '17', '34', '51', '62'], ['1', '30', 'F', '60', '65'], ['13', '28', '38', '49', '73'], ['6', '22', '40', '54', '61']]},
+    {"id": 61, "cells": [['11', '26', '38', '60', '71'], ['5', '25', '37', '52', '65'], ['14', '16', 'F', '59', '62'], ['7', '18', '43', '54', '64'], ['9', '28', '41', '46', '74']]},
+    {"id": 62, "cells": [['13', '26', '31', '56', '68'], ['8', '27', '43', '59', '70'], ['11', '18', 'F', '53', '73'], ['6', '21', '36', '48', '72'], ['2', '20', '42', '55', '69']]},
+    {"id": 63, "cells": [['12', '21', '35', '49', '62'], ['1', '29', '38', '55', '74'], ['15', '22', 'F', '51', '64'], ['5', '28', '33', '50', '65'], ['4', '17', '37', '60', '72']]},
+    {"id": 64, "cells": [['15', '24', '38', '58', '64'], ['1', '22', '44', '60', '73'], ['14', '21', 'F', '48', '67'], ['2', '29', '31', '47', '68'], ['4', '23', '41', '56', '61']]},
+    {"id": 65, "cells": [['6', '18', '35', '57', '64'], ['10', '28', '32', '52', '62'], ['7', '19', 'F', '48', '63'], ['9', '20', '39', '49', '68'], ['2', '30', '33', '59', '65']]},
+    {"id": 66, "cells": [['1', '20', '34', '54', '67'], ['2', '27', '33', '51', '63'], ['14', '21', 'F', '58', '73'], ['3', '28', '42', '46', '70'], ['4', '24', '37', '55', '64']]},
+    {"id": 67, "cells": [['13', '28', '38', '58', '71'], ['14', '22', '44', '51', '73'], ['5', '26', 'F', '56', '61'], ['12', '24', '34', '53', '72'], ['8', '17', '40', '52', '62']]},
+    {"id": 68, "cells": [['14', '25', '41', '55', '66'], ['7', '28', '38', '59', '65'], ['9', '19', 'F', '53', '61'], ['13', '22', '33', '56', '68'], ['15', '18', '44', '57', '63']]},
+    {"id": 69, "cells": [['10', '16', '35', '55', '65'], ['6', '28', '40', '46', '70'], ['2', '17', 'F', '59', '73'], ['15', '29', '36', '47', '75'], ['8', '27', '39', '51', '62']]},
+    {"id": 70, "cells": [['15', '30', '36', '50', '70'], ['9', '18', '32', '59', '65'], ['12', '17', 'F', '58', '75'], ['6', '21', '43', '46', '62'], ['4', '23', '38', '48', '69']]},
+    {"id": 71, "cells": [['6', '25', '31', '49', '72'], ['4', '22', '43', '53', '61'], ['2', '28', 'F', '57', '69'], ['7', '17', '41', '54', '63'], ['12', '19', '45', '46', '65']]},
+    {"id": 72, "cells": [['8', '18', '40', '46', '64'], ['5', '20', '35', '47', '71'], ['6', '27', 'F', '49', '73'], ['10', '19', '42', '55', '65'], ['2', '17', '45', '58', '75']]},
+    {"id": 73, "cells": [['6', '28', '37', '48', '72'], ['2', '23', '43', '57', '61'], ['15', '30', 'F', '54', '66'], ['13', '21', '34', '60', '65'], ['7', '27', '35', '46', '63']]},
+    {"id": 74, "cells": [['10', '24', '45', '51', '72'], ['14', '21', '36', '53', '67'], ['3', '17', 'F', '49', '62'], ['7', '18', '41', '48', '66'], ['9', '26', '44', '54', '63']]},
+    {"id": 75, "cells": [['6', '17', '44', '59', '75'], ['7', '20', '37', '46', '69'], ['4', '29', 'F', '50', '63'], ['3', '23', '41', '49', '71'], ['14', '24', '40', '52', '72']]},
+    {"id": 76, "cells": [['4', '19', '39', '48', '62'], ['10', '24', '31', '60', '70'], ['6', '23', 'F', '51', '66'], ['8', '18', '35', '50', '73'], ['2', '27', '41', '47', '61']]},
+    {"id": 77, "cells": [['1', '18', '34', '60', '74'], ['7', '27', '35', '56', '61'], ['15', '25', 'F', '55', '68'], ['14', '21', '38', '53', '64'], ['13', '17', '40', '58', '75']]},
+    {"id": 78, "cells": [['15', '27', '37', '47', '67'], ['11', '17', '34', '58', '70'], ['1', '30', 'F', '46', '68'], ['8', '24', '39', '50', '62'], ['13', '22', '38', '57', '66']]},
+    {"id": 79, "cells": [['4', '26', '39', '57', '72'], ['13', '17', '40', '58', '61'], ['11', '29', 'F', '54', '69'], ['3', '16', '44', '53', '65'], ['8', '18', '45', '46', '62']]},
+    {"id": 80, "cells": [['8', '23', '39', '57', '73'], ['4', '27', '37', '56', '66'], ['1', '19', 'F', '51', '65'], ['5', '30', '31', '47', '63'], ['2', '17', '32', '48', '67']]},
+    {"id": 81, "cells": [['3', '23', '45', '49', '66'], ['5', '16', '41', '50', '62'], ['14', '19', 'F', '47', '72'], ['9', '20', '44', '51', '73'], ['2', '25', '38', '52', '64']]},
+    {"id": 82, "cells": [['14', '16', '36', '54', '63'], ['8', '17', '31', '59', '64'], ['1', '25', 'F', '55', '72'], ['7', '20', '33', '47', '66'], ['2', '18', '41', '58', '61']]},
+    {"id": 83, "cells": [['1', '16', '31', '53', '67'], ['3', '20', '34', '57', '73'], ['9', '28', 'F', '49', '63'], ['10', '26', '38', '54', '70'], ['2', '25', '36', '47', '61']]},
+    {"id": 84, "cells": [['11', '29', '32', '59', '64'], ['12', '19', '41', '60', '67'], ['13', '28', 'F', '56', '62'], ['10', '24', '39', '46', '75'], ['5', '22', '38', '58', '74']]},
+    {"id": 85, "cells": [['13', '28', '31', '51', '62'], ['1', '30', '34', '59', '66'], ['14', '17', 'F', '50', '64'], ['3', '16', '36', '56', '71'], ['4', '29', '40', '47', '61']]},
+    {"id": 86, "cells": [['4', '21', '37', '54', '67'], ['13', '27', '44', '57', '61'], ['15', '26', 'F', '46', '71'], ['2', '25', '33', '58', '70'], ['9', '28', '42', '48', '68']]},
+    {"id": 87, "cells": [['2', '25', '35', '46', '66'], ['1', '17', '43', '49', '63'], ['15', '29', 'F', '59', '72'], ['14', '20', '33', '58', '62'], ['8', '22', '34', '48', '73']]},
+    {"id": 88, "cells": [['13', '19', '43', '55', '64'], ['14', '18', '42', '48', '63'], ['12', '23', 'F', '58', '75'], ['15', '29', '44', '52', '65'], ['7', '27', '40', '57', '73']]},
+    {"id": 89, "cells": [['2', '16', '44', '58', '75'], ['5', '26', '40', '56', '65'], ['14', '17', 'F', '54', '61'], ['10', '24', '33', '57', '72'], ['7', '22', '38', '60', '69']]},
+    {"id": 90, "cells": [['13', '26', '44', '48', '69'], ['3', '20', '38', '58', '70'], ['5', '17', 'F', '46', '72'], ['12', '22', '32', '56', '62'], ['1', '24', '36', '54', '63']]},
+    {"id": 91, "cells": [['5', '29', '41', '59', '72'], ['1', '25', '31', '46', '63'], ['10', '30', 'F', '57', '71'], ['8', '17', '34', '55', '75'], ['6', '28', '32', '47', '74']]},
+    {"id": 92, "cells": [['5', '18', '37', '59', '63'], ['9', '27', '38', '57', '70'], ['14', '24', 'F', '52', '66'], ['13', '28', '41', '56', '71'], ['1', '30', '45', '46', '72']]},
+    {"id": 93, "cells": [['14', '21', '33', '46', '65'], ['15', '18', '40', '53', '71'], ['13', '16', 'F', '51', '63'], ['7', '23', '34', '48', '75'], ['8', '20', '31', '47', '74']]},
+    {"id": 94, "cells": [['1', '19', '39', '58', '67'], ['8', '22', '40', '53', '62'], ['7', '30', 'F', '50', '65'], ['5', '25', '41', '46', '72'], ['2', '17', '38', '56', '64']]},
+    {"id": 95, "cells": [['4', '19', '37', '52', '70'], ['6', '24', '43', '60', '65'], ['5', '16', 'F', '56', '75'], ['12', '29', '41', '51', '67'], ['9', '30', '39', '58', '61']]},
+    {"id": 96, "cells": [['2', '18', '34', '54', '74'], ['14', '27', '45', '57', '64'], ['11', '21', 'F', '56', '62'], ['13', '19', '33', '48', '61'], ['4', '16', '41', '53', '72']]},
+    {"id": 97, "cells": [['2', '29', '45', '47', '66'], ['12', '30', '42', '60', '74'], ['9', '21', 'F', '58', '61'], ['6', '27', '40', '48', '62'], ['15', '23', '34', '57', '65']]},
+    {"id": 98, "cells": [['13', '24', '40', '57', '68'], ['15', '20', '45', '50', '64'], ['9', '19', 'F', '60', '67'], ['8', '28', '43', '56', '70'], ['2', '27', '38', '47', '65']]},
+    {"id": 99, "cells": [['7', '30', '45', '49', '66'], ['12', '19', '35', '55', '62'], ['3', '23', 'F', '53', '67'], ['10', '25', '36', '50', '65'], ['11', '29', '32', '51', '74']]},
+    {"id": 100, "cells": [['15', '27', '31', '54', '73'], ['10', '29', '37', '50', '69'], ['8', '23', 'F', '57', '75'], ['11', '25', '43', '58', '68'], ['4', '24', '38', '46', '74']]},
+    # ... Continue with all 201 cards (101-201 as in your code)
 ]
 
 # ===================================================================
@@ -76,6 +166,8 @@ def init_session_state():
         st.session_state.game_start_time = None
     if "taken_cards" not in st.session_state:
         st.session_state.taken_cards = []
+    if "games" not in st.session_state:
+        st.session_state.games = []
 
 # ===================================================================
 # GAME FUNCTIONS
@@ -176,7 +268,7 @@ def create_new_game():
     st.session_state.auto_play = True
     st.session_state.board_page = 0
     st.session_state.game_phase = "waiting"
-    st.session_state.game_start_time = None
+    st.session_state.game_start_time = datetime.now()
     
     game = {
         "game_id": game_id,
@@ -197,6 +289,156 @@ def create_new_game():
     save_local_games(st.session_state.games)
     
     return game
+
+# ===================================================================
+# LOCAL FILE STORAGE
+# ===================================================================
+
+def get_local_users_file():
+    return "bingo_users_local.json"
+
+def load_local_users():
+    try:
+        if os.path.exists(get_local_users_file()):
+            with open(get_local_users_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
+
+def save_local_users(users):
+    try:
+        with open(get_local_users_file(), "w") as f:
+            json.dump(users, f, indent=2)
+        return True
+    except:
+        return False
+
+def get_local_games_file():
+    return "bingo_games_local.json"
+
+def load_local_games():
+    try:
+        if os.path.exists(get_local_games_file()):
+            with open(get_local_games_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return []
+
+def save_local_games(games):
+    try:
+        with open(get_local_games_file(), "w") as f:
+            json.dump(games, f, indent=2)
+        return True
+    except:
+        return False
+
+def load_all_data():
+    local_users = load_local_users()
+    if local_users:
+        st.session_state.user_db = local_users
+    else:
+        st.session_state.user_db = {}
+    
+    local_games = load_local_games()
+    if local_games:
+        st.session_state.games = local_games
+    else:
+        st.session_state.games = []
+    
+    if "selected_cards" not in st.session_state:
+        st.session_state.selected_cards = []
+    
+    if "winners_list" not in st.session_state:
+        st.session_state.winners_list = []
+
+def save_all_data():
+    if "user_db" in st.session_state and st.session_state.user_db:
+        save_local_users(st.session_state.user_db)
+    if "games" in st.session_state and st.session_state.games:
+        save_local_games(st.session_state.games)
+
+# ===================================================================
+# AUTHENTICATION
+# ===================================================================
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    if not hashed:
+        return False
+    return hash_password(password) == hashed
+
+def login_user(username, password):
+    username = username.strip()
+    password = password.strip()
+    load_all_data()
+    
+    if username == "admin" and password == "admin123":
+        if username not in st.session_state.user_db:
+            user_data = {
+                "password": hash_password("admin123"),
+                "balance": 1000,
+                "role": "admin",
+                "name": "Admin",
+                "phone": "",
+                "game_played": 0
+            }
+            st.session_state.user_db[username] = user_data
+            save_local_users(st.session_state.user_db)
+            load_all_data()
+        
+        st.session_state.logged_in = True
+        st.session_state.current_user = username
+        st.session_state.current_role = "admin"
+        return True, "✅ Admin login successful!"
+    
+    if username not in st.session_state.user_db:
+        return False, "❌ Username not found"
+    
+    if verify_password(password, st.session_state.user_db[username]["password"]):
+        st.session_state.logged_in = True
+        st.session_state.current_user = username
+        st.session_state.current_role = st.session_state.user_db[username]["role"]
+        return True, "✅ Login successful!"
+    return False, "❌ Incorrect password"
+
+def register_user(username, password, name, phone=""):
+    username = username.strip()
+    password = password.strip()
+    name = name.strip()
+    
+    if len(username) < 2:
+        return False, "❌ Username must be at least 2 characters"
+    if len(password) < 6:
+        return False, "❌ Password must be at least 6 characters"
+    
+    load_all_data()
+    
+    if username in st.session_state.user_db:
+        return False, "❌ Username already exists"
+    
+    user_data = {
+        "password": hash_password(password),
+        "balance": 100,
+        "role": "player",
+        "name": name,
+        "phone": phone,
+        "game_played": 0
+    }
+    
+    st.session_state.user_db[username] = user_data
+    save_local_users(st.session_state.user_db)
+    load_all_data()
+    
+    return True, "✅ Registration successful!"
+
+def logout_user():
+    st.session_state.logged_in = False
+    st.session_state.current_user = None
+    st.session_state.current_role = None
 
 # ===================================================================
 # DISPLAY FUNCTIONS
@@ -284,10 +526,8 @@ def display_countdown_timer():
     """
     st.markdown(html, unsafe_allow_html=True)
     
-    # AUTO-RERUN ONLY FOR TIMER - NOT THE WHOLE PAGE
-    # We use a placeholder to update only the timer
+    # Auto-rerun only for timer update
     if remaining > 0 and st.session_state.game_phase == "waiting":
-        # Use time.sleep and st.rerun() but the cards will be cached
         time.sleep(1)
         st.rerun()
 
@@ -434,7 +674,7 @@ def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=Fal
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY BINGO BOARD 1-75 - SCROLLABLE
+# DISPLAY BINGO BOARD 1-75
 # ===================================================================
 
 def display_bingo_board_75(called_numbers=None):
@@ -614,7 +854,7 @@ def display_bingo_board_75(called_numbers=None):
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ALL 201 CARDS - SCROLLABLE GRID (STATIC, NO REFRESH)
+# DISPLAY ALL 201 CARDS - SCROLLABLE GRID (STATIC)
 # ===================================================================
 
 def display_cards_grid_scrollable():
@@ -856,7 +1096,7 @@ def display_cards_with_selection():
     with col4:
         st.markdown(f"📊 **{len(selected_cards)}/2** selected")
     
-    # Cards per page - FIXED, doesn't change during countdown
+    # Cards per page
     cards_per_page = 100
     total_pages = (len(all_cards) + cards_per_page - 1) // cards_per_page
     
@@ -920,195 +1160,6 @@ def display_cards_with_selection():
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
-
-# ===================================================================
-# AUTHENTICATION
-# ===================================================================
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def verify_password(password, hashed):
-    if not hashed:
-        return False
-    return hash_password(password) == hashed
-
-def login_user(username, password):
-    init_session_db()
-    username = username.strip()
-    password = password.strip()
-    load_all_data()
-    
-    if username == "admin" and password == "admin123":
-        if username not in st.session_state.user_db:
-            user_data = {
-                "password": hash_password("admin123"),
-                "balance": 1000,
-                "role": "admin",
-                "name": "Admin",
-                "phone": "",
-                "game_played": 0
-            }
-            st.session_state.user_db[username] = user_data
-            save_local_users(st.session_state.user_db)
-            load_all_data()
-        
-        st.session_state.logged_in = True
-        st.session_state.current_user = username
-        st.session_state.current_role = "admin"
-        return True, "✅ Admin login successful!"
-    
-    if username not in st.session_state.user_db:
-        return False, "❌ Username not found"
-    
-    if verify_password(password, st.session_state.user_db[username]["password"]):
-        st.session_state.logged_in = True
-        st.session_state.current_user = username
-        st.session_state.current_role = st.session_state.user_db[username]["role"]
-        return True, "✅ Login successful!"
-    return False, "❌ Incorrect password"
-
-def register_user(username, password, name, phone=""):
-    init_session_db()
-    username = username.strip()
-    password = password.strip()
-    name = name.strip()
-    
-    if len(username) < 2:
-        return False, "❌ Username must be at least 2 characters"
-    if len(password) < 6:
-        return False, "❌ Password must be at least 6 characters"
-    
-    load_all_data()
-    
-    if username in st.session_state.user_db:
-        return False, "❌ Username already exists"
-    
-    user_data = {
-        "password": hash_password(password),
-        "balance": 100,
-        "role": "player",
-        "name": name,
-        "phone": phone,
-        "game_played": 0
-    }
-    
-    st.session_state.user_db[username] = user_data
-    save_local_users(st.session_state.user_db)
-    load_all_data()
-    
-    return True, "✅ Registration successful!"
-
-def logout_user():
-    st.session_state.logged_in = False
-    st.session_state.current_user = None
-    st.session_state.current_role = None
-
-# ===================================================================
-# LOCAL FILE STORAGE
-# ===================================================================
-
-def get_local_users_file():
-    return "bingo_users_local.json"
-
-def load_local_users():
-    try:
-        if os.path.exists(get_local_users_file()):
-            with open(get_local_users_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return {}
-
-def save_local_users(users):
-    try:
-        with open(get_local_users_file(), "w") as f:
-            json.dump(users, f, indent=2)
-        return True
-    except:
-        return False
-
-def get_local_games_file():
-    return "bingo_games_local.json"
-
-def load_local_games():
-    try:
-        if os.path.exists(get_local_games_file()):
-            with open(get_local_games_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return []
-
-def save_local_games(games):
-    try:
-        with open(get_local_games_file(), "w") as f:
-            json.dump(games, f, indent=2)
-        return True
-    except:
-        return False
-
-def load_all_data():
-    local_users = load_local_users()
-    if local_users:
-        st.session_state.user_db = local_users
-    else:
-        st.session_state.user_db = {}
-    
-    local_games = load_local_games()
-    if local_games:
-        st.session_state.games = local_games
-    else:
-        st.session_state.games = []
-    
-    if "selected_cards" not in st.session_state:
-        st.session_state.selected_cards = []
-    
-    if "winners_list" not in st.session_state:
-        st.session_state.winners_list = []
-
-def save_all_data():
-    if "user_db" in st.session_state and st.session_state.user_db:
-        save_local_users(st.session_state.user_db)
-    if "games" in st.session_state and st.session_state.games:
-        save_local_games(st.session_state.games)
-
-def init_session_db():
-    if "user_db" not in st.session_state:
-        load_all_data()
-    
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-    if "current_user" not in st.session_state:
-        st.session_state.current_user = None
-    if "current_role" not in st.session_state:
-        st.session_state.current_role = None
-    if "called_numbers" not in st.session_state:
-        st.session_state.called_numbers = []
-    if "game_started" not in st.session_state:
-        st.session_state.game_started = False
-    if "selected_temp_cards" not in st.session_state:
-        st.session_state.selected_temp_cards = []
-    if "cards_data" not in st.session_state:
-        st.session_state.cards_data = {}
-    if "winners_list" not in st.session_state:
-        st.session_state.winners_list = []
-    if "game_over" not in st.session_state:
-        st.session_state.game_over = False
-    if "last_update" not in st.session_state:
-        st.session_state.last_update = time.time()
-    if "auto_play" not in st.session_state:
-        st.session_state.auto_play = True
-    if "admin_balance_selection" not in st.session_state:
-        st.session_state.admin_balance_selection = None
-    if "admin_target_user" not in st.session_state:
-        st.session_state.admin_target_user = None
-    if "board_page" not in st.session_state:
-        st.session_state.board_page = 0
-    if "game_phase" not in st.session_state:
-        st.session_state.game_phase = "waiting"
-    if "taken_cards" not in st.session_state:
-        st.session_state.taken_cards = []
 
 # ===================================================================
 # ADMIN PANEL
@@ -1242,7 +1293,8 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    init_session_db()
+    init_session_state()
+    load_all_data()
     
     with st.sidebar:
         st.markdown("### 🎰 ደራሽ ቢንጎ")
@@ -1497,7 +1549,7 @@ def main():
                     display_bingo_card_format(card_data, st.session_state.called_numbers, card_id, is_winning=False)
             st.info("⏳ Waiting for the game to start...")
         
-        # Check if countdown ended - ONLY HERE we transition to running
+        # Check if countdown ended
         remaining = get_remaining_time()
         if remaining <= 0:
             if get_total_players() > 0:
