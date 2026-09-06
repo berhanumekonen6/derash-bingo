@@ -6,6 +6,10 @@ st.set_page_config(
     layout="wide"
 )
 
+# Initialize session state for clicked numbers
+if 'clicked_numbers' not in st.session_state:
+    st.session_state.clicked_numbers = set()
+
 st.markdown("# Fork")
 st.markdown("## Cards 1 - 201")
 
@@ -14,17 +18,21 @@ cols = st.columns(10)
 for i in range(1, 202):
     col_idx = (i - 1) % 10
     with cols[col_idx]:
-        st.markdown(f"""
-        <div style="
-            border: 2px solid #2d6a4f;
-            border-radius: 5px;
-            padding: 10px;
-            text-align: center;
-            margin: 2px;
-            font-weight: bold;
-            background-color: #2d6a4f;
-            color: white;
-        ">
-            {i}
-        </div>
-        """, unsafe_allow_html=True)
+        # Check if number is clicked
+        is_clicked = i in st.session_state.clicked_numbers
+        bg_color = "#ffd700" if is_clicked else "#2d6a4f"
+        text_color = "#1a1a2e" if is_clicked else "white"
+        border_color = "#ffd700" if is_clicked else "#2d6a4f"
+        
+        # Create clickable button
+        if st.button(
+            str(i),
+            key=f"num_{i}",
+            use_container_width=True,
+            type="secondary" if is_clicked else "primary"
+        ):
+            if i in st.session_state.clicked_numbers:
+                st.session_state.clicked_numbers.remove(i)
+            else:
+                st.session_state.clicked_numbers.add(i)
+            st.rerun()
