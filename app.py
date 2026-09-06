@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - LIVE COUNTDOWN TIMER
+# WITH ALL 201 CARDS - LIVE COUNTDOWN TIMER - CARD STYLE FIXED
 # ===================================================================
 
 import streamlit as st
@@ -663,8 +663,165 @@ def join_game(game_id, user_id, card_ids):
     return True, f"✅ Joined with {len(card_ids)} card(s)!"
 
 # ===================================================================
-# UI COMPONENTS
+# DISPLAY FUNCTIONS - FIXED CARD STYLE
 # ===================================================================
+
+def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=False):
+    """
+    Display a BINGO card in the exact format like the image:
+    - Green header with B, I, N, G, O
+    - White cells with numbers
+    - ★ for free space (F) with yellow background
+    - Row numbers on the left
+    - "ЧСТА ФТС:4" at the bottom
+    """
+    if not card_data:
+        return
+    
+    # Build the HTML table
+    html = f"""
+    <style>
+        .bingo-card-wrapper-{card_id} {{
+            background: white;
+            border-radius: 15px;
+            padding: 20px 15px 15px 15px;
+            margin: 10px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 3px solid {'#FFD700' if is_winning else '#2E7D32'};
+        }}
+        .bingo-card-title-{card_id} {{
+            text-align: center;
+            color: #1B5E20;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-family: Arial, sans-serif;
+        }}
+        .bingo-card-table-{card_id} {{
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+        }}
+        .bingo-card-table-{card_id} th {{
+            background: #2E7D32;
+            color: white;
+            padding: 10px 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #1B5E20;
+        }}
+        .bingo-card-table-{card_id} td {{
+            border: 2px solid #333333;
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: white;
+            min-width: 55px;
+            height: 55px;
+        }}
+        .bingo-card-table-{card_id} .row-number {{
+            background: #E8F5E9;
+            color: #333333;
+            font-weight: bold;
+            font-size: 0.9rem;
+            min-width: 35px;
+        }}
+        .bingo-card-table-{card_id} .free-space {{
+            background: #FFEB3B;
+            color: #E53935;
+            font-size: 2rem;
+        }}
+        .bingo-card-table-{card_id} .number-cell {{
+            color: #1A237E;
+        }}
+        .bingo-card-table-{card_id} .called-cell {{
+            background: #4CAF50 !important;
+            color: white !important;
+            border-radius: 50%;
+        }}
+        .bingo-card-footer-{card_id} {{
+            text-align: center;
+            color: #333333;
+            font-size: 0.95rem;
+            font-weight: bold;
+            margin-top: 10px;
+            font-family: Arial, sans-serif;
+            letter-spacing: 1px;
+        }}
+        @media (max-width: 600px) {{
+            .bingo-card-wrapper-{card_id} {{
+                padding: 12px 8px 10px 8px;
+            }}
+            .bingo-card-table-{card_id} td {{
+                padding: 6px 2px;
+                font-size: 0.9rem;
+                min-width: 38px;
+                height: 40px;
+            }}
+            .bingo-card-table-{card_id} th {{
+                padding: 6px 2px;
+                font-size: 0.9rem;
+            }}
+            .bingo-card-table-{card_id} .free-space {{
+                font-size: 1.5rem;
+            }}
+            .bingo-card-title-{card_id} {{
+                font-size: 1rem;
+            }}
+        }}
+    </style>
+    """
+    
+    # Start building the card
+    html += f'<div class="bingo-card-wrapper-{card_id}">'
+    html += f'<div class="bingo-card-title-{card_id}">'
+    if is_winning:
+        html += '🏆 WINNER! '
+    html += f'BINGO CARD #{card_id}</div>'
+    
+    html += f'<table class="bingo-card-table-{card_id}">'
+    html += '<thead><tr>'
+    html += '<th style="background:#2E7D32;color:white;border:2px solid #1B5E20;"></th>'
+    for col in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<th style="background:#2E7D32;color:white;border:2px solid #1B5E20;">{col}</th>'
+    html += '</tr></thead><tbody>'
+    
+    # Row numbers (1-5) and card data
+    for row_idx in range(5):
+        html += '<tr>'
+        # Row number
+        html += f'<td class="row-number">{row_idx + 1}</td>'
+        
+        for col_idx in range(5):
+            value = card_data[row_idx][col_idx] if row_idx < len(card_data) and col_idx < len(card_data[row_idx]) else ''
+            
+            # Check if called
+            is_called = False
+            if value and value != 'F':
+                try:
+                    is_called = int(value) in called_numbers if called_numbers else False
+                except:
+                    pass
+            
+            # Special handling for free space
+            if value == 'F':
+                html += '<td class="free-space">★</td>'
+            elif is_called:
+                html += f'<td class="called-cell">{value}</td>'
+            else:
+                html += f'<td class="number-cell">{value}</td>'
+        html += '</tr>'
+    
+    html += '</tbody></table>'
+    html += f'<div class="bingo-card-footer-{card_id}">ЧСТА ФТС:4</div>'
+    html += '</div>'
+    
+    st.markdown(html, unsafe_allow_html=True)
 
 def display_countdown_timer():
     """Display timer with LIVE countdown that updates every second"""
@@ -750,118 +907,9 @@ def display_countdown_timer():
         time.sleep(1)
         st.rerun()
 
-def display_bingo_card_format(card_data, called_numbers, card_id, is_winning=False):
-    if not card_data:
-        return
-    
-    col_colors = {
-        'B': '#FF3366',
-        'I': '#00C9B7',
-        'N': '#9C27B0',
-        'G': '#4CAF50',
-        'O': '#FF9800'
-    }
-    
-    html = f"""
-    <style>
-        .card-wrapper-{card_id} {{
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border: 3px solid {'#FFD700' if is_winning else '#4CAF50'};
-            border-radius: 15px;
-            padding: 12px;
-            margin: 8px 0;
-            box-shadow: {'0 0 30px rgba(255,215,0,0.4)' if is_winning else '0 5px 20px rgba(0,0,0,0.3)'};
-            transition: all 0.3s;
-        }}
-        .card-wrapper-{card_id}:hover {{
-            transform: scale(1.02);
-            box-shadow: 0 0 30px rgba(76, 175, 80, 0.2);
-        }}
-        .card-header-{card_id} {{
-            text-align: center;
-            color: {'#FFD700' if is_winning else '#4CAF50'};
-            font-size: 1rem;
-            font-weight: bold;
-            margin-bottom: 8px;
-            padding: 4px;
-            border-radius: 8px;
-        }}
-        .card-table-{card_id} {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        .card-table-{card_id} th {{
-            padding: 4px 2px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.8rem;
-            color: white;
-        }}
-        .card-table-{card_id} td {{
-            padding: 6px 2px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px;
-            background: rgba(255,255,255,0.05);
-            color: white;
-            transition: all 0.3s;
-        }}
-        .card-table-{card_id} td.called {{
-            background: #4CAF50;
-            color: white;
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
-        }}
-        .card-table-{card_id} td.free {{
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #000;
-            font-weight: bold;
-        }}
-        .card-table-{card_id} td.winner {{
-            background: linear-gradient(135deg, #FFD700, #FF6B00) !important;
-            color: white !important;
-            animation: pulse 1s infinite;
-        }}
-        @keyframes pulse {{
-            0% {{ transform: scale(1); }}
-            50% {{ transform: scale(1.1); box-shadow: 0 0 20px rgba(255,215,0,0.5); }}
-            100% {{ transform: scale(1); }}
-        }}
-    </style>
-    """
-    st.markdown(html, unsafe_allow_html=True)
-    
-    html = f'<div class="card-wrapper-{card_id}">'
-    
-    if is_winning:
-        html += f'<div class="card-header-{card_id}">🏆 WINNER! Card #{card_id}</div>'
-    else:
-        html += f'<div class="card-header-{card_id}">🎯 Card #{card_id}</div>'
-    
-    html += '<table class="card-table-{card_id}"><tr>'
-    for col_name in ['B', 'I', 'N', 'G', 'O']:
-        color = col_colors[col_name]
-        html += f'<th style="color:{color};">{col_name}</th>'
-    html += '</tr>'
-    
-    for row in range(5):
-        html += '<tr>'
-        for col in range(5):
-            value = card_data[row][col]
-            is_free = value == 'F'
-            is_called = not is_free and int(value) in called_numbers if called_numbers else False
-            
-            if is_free:
-                html += '<td class="free">⭐</td>'
-            elif is_called:
-                html += f'<td class="called">{value}</td>'
-            else:
-                html += f'<td>{value}</td>'
-        html += '</tr>'
-    
-    html += '</table></div>'
-    st.markdown(html, unsafe_allow_html=True)
+# ===================================================================
+# DISPLAY BINGO BOARD (1-75) - GREEN THEME
+# ===================================================================
 
 def display_bingo_board():
     """Display BINGO board with green theme"""
@@ -971,7 +1019,7 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ALL 201 CARDS WITH PROPER SELECTION
+# DISPLAY ALL 201 CARDS GRID
 # ===================================================================
 
 def display_all_cards_grid():
@@ -1272,7 +1320,7 @@ def main():
         return
     
     # ===================================================================
-    # ADMIN PANEL - ONLY SHOWS FOR ADMIN
+    # ADMIN PANEL
     # ===================================================================
     
     if st.session_state.current_role == "admin":
@@ -1280,7 +1328,7 @@ def main():
         st.markdown("---")
     
     # ===================================================================
-    # GAME LOBBY - SHOWS FOR ALL USERS
+    # GAME LOBBY
     # ===================================================================
     
     st.markdown("""
@@ -1290,7 +1338,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Check for game over state to show winners
+    # Check for game over state
     if st.session_state.game_over and st.session_state.winners_list:
         game = get_current_game()
         if game:
@@ -1323,7 +1371,6 @@ def main():
     # Get current game
     current_game = get_current_game()
     
-    # Auto-start new game if none exists
     if not current_game:
         st.info("No active game. Creating a new game...")
         game = create_new_game()
@@ -1331,7 +1378,6 @@ def main():
             st.rerun()
         return
     
-    # Check if game is finished but no game_over flag
     if current_game.get("status") == "finished" and not st.session_state.game_over:
         st.session_state.game_over = True
         winners = current_game.get("winners", [])
@@ -1383,7 +1429,7 @@ def main():
     # ===================================================================
     
     if status == "waiting":
-        # Display LIVE countdown timer (auto-updates every second)
+        # Display LIVE countdown timer
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1391,22 +1437,21 @@ def main():
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         
-        # ALWAYS display the card board for ALL players
+        # Display card board
         st.markdown("### 🎯 Select Your Cards")
         display_all_cards_grid()
         
-        # Show selected cards clearly
+        # Show selected cards
         if st.session_state.selected_temp_cards:
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #FFD700;border-radius:15px;padding:15px;margin:10px 0;">
-                <h4 style="color:#FFD700;margin:0 0 10px 0;">📋 Your Selected Cards ({len(st.session_state.selected_temp_cards)}/2)</h4>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("### 📋 Your Selected Cards")
             
-            for cid in st.session_state.selected_temp_cards:
-                card_data = get_card_data(cid)
-                if card_data:
-                    display_bingo_card_format(card_data, [], cid)
+            cols = st.columns(min(len(st.session_state.selected_temp_cards), 2))
+            for idx, cid in enumerate(st.session_state.selected_temp_cards):
+                with cols[idx % 2]:
+                    card_data = get_card_data(cid)
+                    if card_data:
+                        # Show selected card in the same format
+                        display_bingo_card_format(card_data, [], cid, is_winning=False)
             
             total_cost = len(st.session_state.selected_temp_cards) * CARD_PRICE
             col1, col2 = st.columns(2)
@@ -1433,13 +1478,13 @@ def main():
             for card_id in user_cards:
                 card_data = get_card_data(card_id)
                 if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
+                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id, is_winning=False)
             st.info("⏳ Waiting for the game to start...")
         else:
             if not st.session_state.selected_temp_cards:
                 st.info("👆 Click on any card above to select (max 2), then click 'JOIN GAME NOW'")
         
-        # Check if countdown ended and game should start
+        # Check if countdown ended
         remaining = get_remaining_time()
         if remaining <= 0:
             if get_total_players(game_id) > 0:
@@ -1498,7 +1543,7 @@ def main():
             for card_id in user_cards:
                 card_data = get_card_data(card_id)
                 if card_data:
-                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id)
+                    display_bingo_card_format(card_data, st.session_state.called_numbers, card_id, is_winning=False)
         else:
             st.info("You haven't joined this game. Wait for the next round!")
         
