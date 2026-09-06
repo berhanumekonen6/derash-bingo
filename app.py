@@ -349,7 +349,7 @@ def display_bingo_card(card_id):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the master BINGO board with B, I, N, G, O rows - NO FREE CELL"""
+    """Display the BINGO board with B, I, N, G, O rows - NO FREE CELL"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -415,7 +415,7 @@ def display_master_board():
     }
     
     html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯 Master BINGO Board</div>'
+    html += '<div class="master-board-title">🎯BINGO Board</div>'
     html += '<table class="master-table">'
     
     for letter in ['B', 'I', 'N', 'G', 'O']:
