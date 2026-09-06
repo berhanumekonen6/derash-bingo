@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - FIXED SELECTION
+# WITH ALL 201 CARDS - FIXED SELECTION & EARLY DISPLAY
 # ===================================================================
 
 import streamlit as st
@@ -1360,11 +1360,12 @@ def main():
         st.metric("👥 Players", players)
     
     # ===================================================================
-    # WAITING PHASE - Card Selection with Countdown (FOR ALL PLAYERS)
+    # CARD DISPLAY - ALWAYS SHOW EARLY FOR PLAYERS
     # ===================================================================
     
+    # ALWAYS display the card board for ALL players when game is in waiting or running state
     if status == "waiting":
-        # Display countdown timer
+        # Display countdown timer prominently at the top
         display_countdown_timer()
         
         user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1372,7 +1373,7 @@ def main():
         
         user_cards = get_user_cards(game_id, st.session_state.current_user)
         
-        # ALWAYS display the card board for ALL players
+        # Display the card board - THIS IS THE CRITICAL PART - SHOW EARLY
         display_all_cards_grid()
         
         if user_cards:
