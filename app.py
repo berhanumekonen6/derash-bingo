@@ -1,6 +1,6 @@
 # ===================================================================
 # ደራሽ ቢንጎ (Derash Bingo) - COMPLETE WORKING VERSION
-# WITH ALL 201 CARDS - FINAL FIXED CODE
+# WITH ALL 201 CARDS - FIXED SELECTION
 # ===================================================================
 
 import streamlit as st
@@ -952,11 +952,11 @@ def display_bingo_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# DISPLAY ALL 201 CARDS - ATTRACTIVE GRID FOR ALL PLAYERS
+# DISPLAY ALL 201 CARDS WITH PROPER SELECTION
 # ===================================================================
 
 def display_all_cards_grid():
-    """Display all 201 cards in an attractive grid - FOR ALL PLAYERS"""
+    """Display all 201 cards with proper selection"""
     st.markdown("### 🎯 BINGO Card Board")
     st.markdown("*Click on any available card to select it (max 2 cards)*")
     
@@ -1013,13 +1013,13 @@ def display_all_cards_grid():
         with cols[i % cols_per_row]:
             if is_taken:
                 st.markdown(f"""
-                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:4px;margin:2px;text-align:center;opacity:0.6;">
-                    <div style="color:#ff4444;font-size:10px;font-weight:bold;">🔒 #{card_id}</div>
+                <div style="background:#2a2a3e;border:2px solid #ff4444;border-radius:8px;padding:8px 4px;margin:2px;text-align:center;opacity:0.6;">
+                    <div style="color:#ff4444;font-size:11px;font-weight:bold;">🔒 #{card_id}</div>
                     <div style="font-size:8px;color:#888;">Taken</div>
                 </div>
                 """, unsafe_allow_html=True)
             elif is_selected:
-                if st.button(f"✅ #{card_id}", key=f"card_{card_id}", use_container_width=True):
+                if st.button(f"✅ #{card_id}", key=f"card_sel_{card_id}", use_container_width=True):
                     if card_id in st.session_state.selected_temp_cards:
                         st.session_state.selected_temp_cards.remove(card_id)
                         st.rerun()
@@ -1033,10 +1033,6 @@ def display_all_cards_grid():
                             st.error(f"❌ Insufficient balance! Need {CARD_PRICE} ETB")
                     else:
                         st.warning("⚠️ Max 2 cards!")
-
-# ===================================================================
-# ADMIN PANEL
-# ===================================================================
 
 def admin_panel():
     """Admin panel for managing user balances"""
