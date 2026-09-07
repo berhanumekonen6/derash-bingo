@@ -607,7 +607,7 @@ def init_session_state():
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
-        st.session_state.columns_per_row = 10
+        st.session_state.columns_per_row = 4  # DEFAULT VALUE SET TO 4
 
 init_session_state()
 
@@ -1418,12 +1418,12 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # Column selection dropdown - ADDED THIS
+    # Column selection dropdown - DEFAULT SET TO 4
     col_options = [2, 3, 4, 5, 6, 8, 10]
     st.session_state.columns_per_row = st.selectbox(
         "📊 Cards per row:",
         options=col_options,
-        index=col_options.index(st.session_state.columns_per_row) if st.session_state.columns_per_row in col_options else 5,
+        index=col_options.index(4),  # DEFAULT INDEX SET TO 4
         help="Select how many cards to display per row"
     )
     
