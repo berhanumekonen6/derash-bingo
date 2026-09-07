@@ -26,6 +26,16 @@ if 'last_call_time' not in st.session_state:
 if 'game_started' not in st.session_state:
     st.session_state.game_started = False
 
+# Timer session state variables
+if 'timer_started' not in st.session_state:
+    st.session_state.timer_started = False
+if 'timer_start_time' not in st.session_state:
+    st.session_state.timer_start_time = None
+if 'timer_remaining' not in st.session_state:
+    st.session_state.timer_remaining = 60  # 60 seconds = 1:00
+if 'timer_running' not in st.session_state:
+    st.session_state.timer_running = False
+
 # Check if we need to auto-call
 if st.session_state.is_auto_calling:
     if len(st.session_state.called_numbers) < 75:
@@ -590,10 +600,80 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Timer control and display
+timer_col1, timer_col2, timer_col3 = st.columns([1, 2, 1])
+with timer_col2:
+    st.markdown("### ⏱️ Card Selection Timer")
+    
+    # Timer display with large format
+    if st.session_state.timer_running:
+        # Calculate remaining time
+        elapsed = time.time() - st.session_state.timer_start_time
+        remaining = max(0, 60 - elapsed)
+        minutes = int(remaining // 60)
+        seconds = int(remaining % 60)
+        time_str = f"{minutes:01d}:{seconds:02d}"
+        
+        # Show timer with color coding
+        if remaining <= 10:
+            color = "#E53935"
+        elif remaining <= 30:
+            color = "#FF9800"
+        else:
+            color = "#2E7D32"
+            
+        st.markdown(f"""
+        <div style="text-align:center;padding:15px;background:#f8f9fa;border-radius:10px;border:2px solid {color};margin-bottom:10px;">
+            <div style="font-size:3rem;font-weight:bold;color:{color};font-family:monospace;">
+                {time_str}
+            </div>
+            <div style="font-size:0.9rem;color:#666;">⏳ Time Remaining</div>
+            <div style="font-size:0.8rem;color:#999;margin-top:5px;">Max 2 cards allowed</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Progress bar
+        progress = 1 - (remaining / 60)
+        st.progress(progress)
+        
+        # Check if time is up
+        if remaining <= 0:
+            st.session_state.timer_running = False
+            st.session_state.timer_started = False
+            st.rerun()
+    else:
+        # Timer not running - show start button
+        col_start1, col_start2, col_start3 = st.columns([1, 2, 1])
+        with col_start2:
+            if st.button("▶️ Start 1-Minute Timer", use_container_width=True, type="primary"):
+                st.session_state.timer_started = True
+                st.session_state.timer_running = True
+                st.session_state.timer_start_time = time.time()
+                st.rerun()
+            
+            st.caption("⏱️ Select up to 2 cards within 1 minute")
+
+# Check if timer is running and enforce card limit
+if st.session_state.timer_running:
+    # Check if more than 2 cards are selected
+    if len(st.session_state.clicked_numbers) > 2:
+        # Remove excess cards (keep only first 2)
+        excess = list(st.session_state.clicked_numbers)[2:]
+        for card_id in excess:
+            st.session_state.clicked_numbers.remove(card_id)
+            if st.session_state.selected_card == card_id:
+                st.session_state.selected_card = None
+        # If selected_card was removed, set to first available
+        if st.session_state.selected_card is None and len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        st.warning("⚠️ Maximum 2 cards allowed! Excess cards have been removed.")
+        st.rerun()
+
 # Check if a card is selected
 if not st.session_state.selected_card:
     # Show card selection only
     st.markdown("## 📋 Select Your Card (1 - 201)")
+    st.caption(f"📌 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
     
     # Numbers in a grid - Mobile optimized
     cols = st.columns(8)
@@ -601,30 +681,51 @@ if not st.session_state.selected_card:
         col_idx = (i - 1) % 8
         with cols[col_idx]:
             is_clicked = i in st.session_state.clicked_numbers
+            is_disabled = len(st.session_state.clicked_numbers) >= 2 and not is_clicked
             
+            if is_clicked:
+                btn_type = "secondary"
+            elif is_disabled and st.session_state.timer_running:
+                btn_type = "secondary"
+            else:
+                btn_type = "primary"
+            
+            # Handle card selection with timer limit
             if st.button(
                 str(i),
                 key=f"num_{i}",
                 use_container_width=True,
-                type="secondary" if is_clicked else "primary"
+                type=btn_type,
+                disabled=is_disabled and st.session_state.timer_running
             ):
                 if i in st.session_state.clicked_numbers:
                     st.session_state.clicked_numbers.remove(i)
-                    st.session_state.selected_card = None
+                    if st.session_state.selected_card == i:
+                        st.session_state.selected_card = None
                 else:
-                    st.session_state.clicked_numbers.add(i)
-                    st.session_state.selected_card = i
+                    # Only add if within limit or timer not running
+                    if len(st.session_state.clicked_numbers) < 2 or not st.session_state.timer_running:
+                        st.session_state.clicked_numbers.add(i)
+                        st.session_state.selected_card = i
                 st.rerun()
     
-    st.info("👆 Click a card number above to select it and start playing!")
+    # Show disabled message
+    if len(st.session_state.clicked_numbers) >= 2 and st.session_state.timer_running:
+        st.warning("⚠️ Maximum 2 cards reached! Timer is running.")
+    else:
+        st.info("👆 Click a card number above to select it (max 2 cards in 1 minute)!")
     
 else:
     # Show the game with BINGO Board and Selected Card
+    card_display = st.session_state.selected_card
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
-        🎯 Playing with Card #{st.session_state.selected_card}
+        🎯 Playing with Card #{card_display}
         <span style="margin-left:15px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
             {len(st.session_state.called_numbers)}/75 Called
+        </span>
+        <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+            Cards: {len(st.session_state.clicked_numbers)}/2
         </span>
         <button onclick="window.location.reload()" style="margin-left:15px;background:rgba(255,255,255,0.2);border:1px solid white;color:white;padding:5px 15px;border-radius:5px;cursor:pointer;">
             🔄 Change Card
@@ -639,7 +740,7 @@ else:
         display_master_board()
     
     with card_col:
-        display_selected_card(st.session_state.selected_card)
+        display_selected_card(card_display)
     
     # Call Number Section
     st.markdown("---")
@@ -691,6 +792,8 @@ else:
                 st.session_state.is_auto_calling = False
                 st.session_state.auto_called_count = 0
                 st.session_state.last_call_time = time.time()
+                st.session_state.timer_running = False
+                st.session_state.timer_started = False
                 st.rerun()
         
         # Status display
@@ -727,7 +830,7 @@ else:
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)}/75 numbers
+    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 cards | Called: {len(st.session_state.called_numbers)}/75 numbers
     {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
