@@ -1727,7 +1727,7 @@ else:
         st.balloons()
         st.snow()
         
-        st.markdown("### 📋 Your Cards")
+        st.markdown("### 📋 Your Cards (🎉የእርስዎ ካርቴላ)")
         for card_id in all_player_cards:
             is_winner = False
             winning_pattern_name = None
