@@ -1734,7 +1734,7 @@ else:
             display_master_board()
         
         with cards_col:
-            st.markdown("### 📋 Your Cards")
+            st.markdown("### 📋🍀የእርስዎ ካርቴላ/ዎች")
             for card_id in all_player_cards:
                 display_selected_card(card_id, list(st.session_state.called_numbers), False)
         
