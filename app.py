@@ -25,8 +25,6 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
-if 'auto_call_trigger' not in st.session_state:
-    st.session_state.auto_call_trigger = False
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -675,8 +673,11 @@ if st.session_state.selected_card:
     st.markdown("### 📋 Selected Card")
     display_bingo_card(st.session_state.selected_card)
 
-# Auto-call trigger - only called when auto-call is active and time has passed
+# ===================================================================
+# AUTO-CALL ENGINE - This runs continuously
+# ===================================================================
 if st.session_state.is_auto_calling:
+    # Check if we need to call a number
     current_time = time.time()
     if current_time - st.session_state.last_call_time >= 3.0:
         available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
@@ -686,4 +687,8 @@ if st.session_state.is_auto_calling:
             st.session_state.last_called_number = called_num
             st.session_state.auto_called_count += 1
             st.session_state.last_call_time = current_time
-            st.rerun()
+            # Use JavaScript to refresh the page after a short delay
+            st.markdown(
+                f'<meta http-equiv="refresh" content="0.1">',
+                unsafe_allow_html=True
+            )
