@@ -252,6 +252,155 @@ def get_card_numbers(card_id):
                 numbers.add(int(cell))
     return numbers
 
+def display_transposed_master_board():
+    """Display the BINGO board in transposed position (rows become columns)"""
+    st.markdown("""
+    <style>
+        .master-board-container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .master-board-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1B5E20;
+            margin-bottom: 15px;
+        }
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .master-table td {
+            border: 1px solid #333;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: bold;
+            min-width: 35px;
+        }
+        .master-table .col-label {
+            background: #2E7D32;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-width: 40px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
+        }
+        .circle-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #E8F5E9;
+            color: #1A237E;
+            font-weight: bold;
+            font-size: 0.85rem;
+            border: 2px solid #2E7D32;
+            transition: all 0.3s ease;
+        }
+        .circle-number.called {
+            background: #FF9800;
+            color: white;
+            border-color: #E65100;
+            transform: scale(1.1);
+        }
+        .circle-number.last-called {
+            background: #E53935;
+            color: white;
+            border-color: #B71C1C;
+            transform: scale(1.2);
+            animation: pulse 0.5s ease-in-out;
+            box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 600px) {
+            .master-table td {
+                padding: 4px 2px;
+                font-size: 0.7rem;
+                min-width: 20px;
+            }
+            .circle-number {
+                width: 25px;
+                height: 25px;
+                font-size: 0.7rem;
+            }
+            .master-table .col-label {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Transposed data - each row is a number, columns are B, I, N, G, O
+    # Numbers 1-75, each with their letter
+    transposed_data = {
+        'B': list(range(1, 16)),
+        'I': list(range(16, 31)),
+        'N': list(range(31, 46)),
+        'G': list(range(46, 61)),
+        'O': list(range(61, 76))
+    }
+    
+    html = '<div class="master-board-container">'
+    html += '<div class="master-board-title">🎯 BINGO Board (Transposed)</div>'
+    
+    if st.session_state.last_called_number:
+        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
+    
+    html += '<table class="master-table">'
+    
+    # Header row with B, I, N, G, O labels
+    html += '<tr>'
+    html += '<td></td>'
+    for letter in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<td><div class="col-label">{letter}</div></td>'
+    html += '</tr>'
+    
+    # Transpose: For each row index (1-15), show the number from each column
+    for row_idx in range(15):
+        html += '<tr>'
+        # Row number (1-15 for B, 16-30 for I, etc.)
+        html += f'<td style="font-weight:bold;color:#2E7D32;font-size:0.8rem;">{row_idx + 1}</td>'
+        
+        for letter in ['B', 'I', 'N', 'G', 'O']:
+            num = transposed_data[letter][row_idx]
+            is_called = num in st.session_state.called_numbers
+            is_last = num == st.session_state.last_called_number
+            
+            if is_last:
+                html += f'<td><div class="circle-number last-called">{num}</div></td>'
+            elif is_called:
+                html += f'<td><div class="circle-number called">{num}</div></td>'
+            else:
+                html += f'<td><div class="circle-number">{num}</div></td>'
+        html += '</tr>'
+    
+    html += '</table>'
+    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
+    html += '</div>'
+    
+    st.markdown(html, unsafe_allow_html=True)
+
 def display_bingo_card(card_id):
     """Display a BINGO card - highlight called numbers that exist on the card"""
     card = get_card(card_id)
@@ -397,168 +546,25 @@ def display_bingo_card(card_id):
     
     st.markdown(html, unsafe_allow_html=True)
 
-def display_master_board():
-    """Display the BINGO board with all letters and numbers in circles"""
-    st.markdown("""
-    <style>
-        .master-board-container {
-            max-width: 950px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .master-board-title {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: bold;
-            color: #1B5E20;
-            margin-bottom: 15px;
-        }
-        .master-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .master-table td {
-            border: 1px solid #333;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 0.95rem;
-            font-weight: bold;
-            min-width: 35px;
-        }
-        .master-table .row-label {
-            background: #2E7D32;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 50px;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: auto;
-        }
-        .circle-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            background: #E8F5E9;
-            color: #1A237E;
-            font-weight: bold;
-            font-size: 0.9rem;
-            border: 2px solid #2E7D32;
-            transition: all 0.3s ease;
-        }
-        .circle-number.called {
-            background: #FF9800;
-            color: white;
-            border-color: #E65100;
-            transform: scale(1.1);
-        }
-        .circle-number.last-called {
-            background: #E53935;
-            color: white;
-            border-color: #B71C1C;
-            transform: scale(1.2);
-            animation: pulse 0.5s ease-in-out;
-            box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
-        }
-        .circle-letter {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #2E7D32;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            border: 3px solid #1B5E20;
-            margin: auto;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-        @media (max-width: 600px) {
-            .master-table td {
-                padding: 4px 2px;
-                font-size: 0.7rem;
-                min-width: 20px;
-            }
-            .circle-number {
-                width: 28px;
-                height: 28px;
-                font-size: 0.7rem;
-            }
-            .circle-letter {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
-            }
-            .master-table .row-label {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
-            }
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    master_board = {
-        'B': list(range(1, 16)),
-        'I': list(range(16, 31)),
-        'N': list(range(31, 46)),
-        'G': list(range(46, 61)),
-        'O': list(range(61, 76))
-    }
-    
-    html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯 BINGO Board</div>'
-    
-    if st.session_state.last_called_number:
-        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
-    
-    html += '<table class="master-table">'
-    
-    for letter in ['B', 'I', 'N', 'G', 'O']:
-        html += '<tr>'
-        html += f'<td><div class="circle-letter">{letter}</div></td>'
-        for num in master_board[letter]:
-            is_called = num in st.session_state.called_numbers
-            is_last = num == st.session_state.last_called_number
-            
-            if is_last:
-                html += f'<td><div class="circle-number last-called">{num}</div></td>'
-            elif is_called:
-                html += f'<td><div class="circle-number called">{num}</div></td>'
-            else:
-                html += f'<td><div class="circle-number">{num}</div></td>'
-        html += '</tr>'
-    
-    html += '</table>'
-    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
-    html += '</div>'
-    
-    st.markdown(html, unsafe_allow_html=True)
-
 # ===================================================================
 # MAIN APP
 # ===================================================================
 
-display_master_board()
+# Create two columns for side-by-side layout
+col_left, col_right = st.columns([2, 1])
+
+with col_left:
+    display_transposed_master_board()
+
+with col_right:
+    if st.session_state.selected_card:
+        display_bingo_card(st.session_state.selected_card)
+    else:
+        st.info("👈 Select a card from below to display it here")
 
 st.markdown("---")
+
+# Call Number Section
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("### 🎲 Number Calling")
@@ -668,16 +674,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if st.session_state.selected_card:
-    st.markdown("---")
-    st.markdown("### 📋 Selected Card")
-    display_bingo_card(st.session_state.selected_card)
-
 # ===================================================================
-# AUTO-CALL ENGINE - This runs continuously
+# AUTO-CALL ENGINE
 # ===================================================================
 if st.session_state.is_auto_calling:
-    # Check if we need to call a number
     current_time = time.time()
     if current_time - st.session_state.last_call_time >= 3.0:
         available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
@@ -687,7 +687,6 @@ if st.session_state.is_auto_calling:
             st.session_state.last_called_number = called_num
             st.session_state.auto_called_count += 1
             st.session_state.last_call_time = current_time
-            # Use JavaScript to refresh the page after a short delay
             st.markdown(
                 f'<meta http-equiv="refresh" content="0.1">',
                 unsafe_allow_html=True
