@@ -13,14 +13,14 @@ st.set_page_config(
 )
 
 # ===================================================================
-# CUSTOM CSS FOR LIGHT BACKGROUND AND STYLING
+# CUSTOM CSS FOR GREEN BACKGROUND AND STYLING
 # ===================================================================
 
 st.markdown("""
 <style>
-    /* Light Background */
+    /* Green Gradient Background */
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa, #e8edf5, #dce3ef);
+        background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50);
         background-size: 400% 400%;
         animation: gradientBG 15s ease infinite;
     }
@@ -30,67 +30,69 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
     
-    /* Main content background */
+    /* Main content background - glass effect */
     .main-content {
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.12);
         backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 25px;
         margin: 10px 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     /* Glass morphism effect */
     .glass-container {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border-radius: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         padding: 20px;
         margin: 10px 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     }
     
     /* Motivational quotes */
     .motivation-box {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 165, 0, 0.05));
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.06));
         border-left: 4px solid #FFD700;
         padding: 12px 18px;
         border-radius: 10px;
         margin: 10px 0;
         backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.6);
+        background: rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 215, 0, 0.1);
     }
     .motivation-box .quote {
         font-size: 1rem;
-        color: #1a1a2e;
+        color: #FFD700;
         font-style: italic;
         font-family: 'Noto Sans Ethiopic', Arial, sans-serif;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
     }
     .motivation-box .author {
-        color: rgba(0,0,0,0.5);
+        color: rgba(255, 255, 255, 0.5);
         font-size: 0.8rem;
         margin-top: 3px;
     }
     
-    /* Card selection grid - using HTML/CSS grid */
+    /* Card selection grid */
     .cards-grid-container {
         max-height: 450px;
         overflow-y: auto;
         padding: 5px;
         margin: 5px 0;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.15);
         border-radius: 10px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
     }
     .cards-grid-container::-webkit-scrollbar {
         width: 4px;
     }
     .cards-grid-container::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.05);
+        background: rgba(255,255,255,0.05);
         border-radius: 10px;
     }
     .cards-grid-container::-webkit-scrollbar-thumb {
@@ -107,7 +109,7 @@ st.markdown("""
         margin: 0 auto !important;
     }
     
-    /* Force 10 columns on mobile too */
+    /* Mobile responsive */
     @media (max-width: 768px) {
         .cards-grid {
             grid-template-columns: repeat(10, 1fr) !important;
@@ -177,7 +179,7 @@ st.markdown("""
         }
     }
     
-    /* Card buttons */
+    /* Card buttons - Green theme */
     .card-btn {
         width: 100% !important;
         padding: 2px 1px !important;
@@ -195,45 +197,46 @@ st.markdown("""
         font-weight: bold !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
-        background: #ffffff !important;
-        color: #1a1a2e !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #FFFFFF !important;
         overflow: hidden !important;
         white-space: nowrap !important;
         text-overflow: ellipsis !important;
         position: relative !important;
         user-select: none !important;
         -webkit-tap-highlight-color: transparent !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
     .card-btn:hover {
         transform: scale(1.05);
         border-color: #FFD700 !important;
-        background: #fffde7 !important;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.15) !important;
+        background: rgba(255, 215, 0, 0.15) !important;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.15) !important;
     }
     .card-btn:active {
         transform: scale(0.95);
     }
     .card-btn.selected {
         border-color: #FFD700 !important;
-        background: #fff8e1 !important;
-        color: #1a1a2e !important;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2) !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        color: #FFD700 !important;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.2) !important;
     }
     .card-btn.selected .tick-mark {
         display: inline !important;
     }
     .card-btn.taken {
         border-color: rgba(255, 0, 0, 0.2) !important;
-        background: #f5f5f5 !important;
-        color: #999 !important;
+        background: rgba(255, 0, 0, 0.1) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
         cursor: not-allowed !important;
-        opacity: 0.5 !important;
+        opacity: 0.6 !important;
     }
     .card-btn.taken:hover {
         transform: none !important;
         border-color: rgba(255, 0, 0, 0.2) !important;
-        background: #f5f5f5 !important;
+        background: rgba(255, 0, 0, 0.1) !important;
         box-shadow: none !important;
     }
     .card-btn .tick-mark {
@@ -254,7 +257,7 @@ st.markdown("""
         opacity: 0.6;
         margin-top: 1px;
         line-height: 1;
-        color: #666;
+        color: rgba(255, 255, 255, 0.6);
     }
     
     /* Fix for mobile columns - override Streamlit */
@@ -274,7 +277,7 @@ st.markdown("""
         width: 6px;
     }
     ::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.05);
+        background: rgba(255,255,255,0.05);
         border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb {
@@ -282,15 +285,28 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Text colors for light theme */
+    /* Text colors for green theme */
     h1, h2, h3, h4, p, label, .stMarkdown {
-        color: #1a1a2e !important;
+        color: #FFFFFF !important;
     }
     
     .stInfo, .stSuccess, .stWarning, .stError {
-        background: rgba(255, 255, 255, 0.8) !important;
-        color: #1a1a2e !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .stInfo {
+        border-left: 4px solid #2196F3 !important;
+    }
+    .stSuccess {
+        border-left: 4px solid #4CAF50 !important;
+    }
+    .stWarning {
+        border-left: 4px solid #FF9800 !important;
+    }
+    .stError {
+        border-left: 4px solid #F44336 !important;
     }
     
     /* Winner celebration */
@@ -304,25 +320,26 @@ st.markdown("""
     
     /* Sidebar styling */
     .css-1d391kg, .css-1adrfps {
-        background: rgba(255, 255, 255, 0.9) !important;
+        background: rgba(0, 0, 0, 0.3) !important;
         backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(0, 0, 0, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
     /* Timer display */
     .header-timer-container {
-        background: rgba(255, 255, 255, 0.8) !important;
-        border: 2px solid rgba(0, 0, 0, 0.1) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid rgba(255, 215, 0, 0.2) !important;
         border-radius: 15px;
         padding: 10px 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     .timer-display {
-        color: #1a1a2e !important;
+        color: #FFD700 !important;
         font-weight: bold;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
     }
     .timer-label {
-        color: #666 !important;
+        color: rgba(255, 255, 255, 0.7) !important;
     }
     
     /* Responsive */
@@ -334,7 +351,7 @@ st.markdown("""
         }
         .logo-text h1 {
             font-size: 1.5rem !important;
-            color: #1a1a2e !important;
+            color: #FFFFFF !important;
         }
         .header-timer-container {
             width: 100% !important;
@@ -347,109 +364,168 @@ st.markdown("""
     
     /* Card display in game */
     .card-container {
-        background: rgba(255, 255, 255, 0.9) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 15px !important;
         padding: 15px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
     }
     
     /* BINGO Board */
     .board-container {
-        background: rgba(255, 255, 255, 0.9) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 15px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
     }
     .board-title {
-        color: #1a1a2e !important;
+        color: #FFD700 !important;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
     }
     .board-number {
-        color: #1a1a2e !important;
-        background: rgba(0, 0, 0, 0.03) !important;
-        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        color: #FFFFFF !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
     .board-number.called {
-        background: rgba(255, 152, 0, 0.2) !important;
-        color: #E65100 !important;
+        background: rgba(255, 152, 0, 0.25) !important;
+        color: #FFD700 !important;
         border-color: #FF9800 !important;
+        box-shadow: 0 0 15px rgba(255, 152, 0, 0.15);
     }
     .board-number.last-called {
-        background: rgba(229, 57, 53, 0.15) !important;
-        color: #C62828 !important;
+        background: rgba(229, 57, 53, 0.2) !important;
+        color: #FF6B6B !important;
         border-color: #E53935 !important;
+        box-shadow: 0 0 20px rgba(229, 57, 53, 0.2);
+    }
+    .board-stats {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    .board-stats strong {
+        color: #FFD700 !important;
     }
     
     /* Called numbers */
     .called-numbers-container {
-        background: rgba(255, 255, 255, 0.8) !important;
-        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        background: rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 15px !important;
         padding: 15px !important;
     }
     .called-numbers-header {
-        color: #1a1a2e !important;
+        color: #FFD700 !important;
+    }
+    .called-number {
+        background: rgba(255, 215, 0, 0.15) !important;
+        color: #FFD700 !important;
+        border: 1px solid rgba(255, 215, 0, 0.1);
+    }
+    .called-number.latest {
+        background: rgba(255, 215, 0, 0.3) !important;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
     }
     
     /* Game status */
     .game-status {
-        background: rgba(255, 255, 255, 0.8) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
         border-left: 4px solid #FFD700 !important;
         border-radius: 12px !important;
         padding: 15px !important;
         margin-top: 15px !important;
     }
     .status-message {
-        color: #1a1a2e !important;
+        color: rgba(255, 255, 255, 0.9) !important;
     }
     
     /* Game state indicator */
     .game-state-indicator {
-        background: rgba(255, 255, 255, 0.8) !important;
-        border: 2px solid rgba(0, 0, 0, 0.1) !important;
-        color: #1a1a2e !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid rgba(255, 255, 255, 0.1) !important;
+        color: #FFFFFF !important;
         border-radius: 10px !important;
         padding: 10px 20px !important;
         text-align: center !important;
         font-weight: bold !important;
     }
-    .game-state-waiting { border-color: #FF9800 !important; color: #E65100 !important; }
-    .game-state-running { border-color: #4CAF50 !important; color: #2E7D32 !important; }
-    .game-state-finished { border-color: #FFD700 !important; color: #F57F17 !important; }
+    .game-state-waiting { border-color: #FF9800 !important; color: #FFB74D !important; }
+    .game-state-running { border-color: #4CAF50 !important; color: #81C784 !important; }
+    .game-state-finished { border-color: #FFD700 !important; color: #FFD700 !important; }
     
     /* Stat boxes */
     .stat-box {
-        background: rgba(255, 255, 255, 0.8) !important;
-        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        background: rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 12px !important;
         padding: 10px 20px !important;
     }
     .stat-value {
-        color: #1a1a2e !important;
+        color: #FFD700 !important;
         font-weight: bold !important;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
     }
     .stat-label {
-        color: #666 !important;
+        color: rgba(255, 255, 255, 0.6) !important;
     }
     
     /* Buttons */
-    .btn-primary {
+    .stButton > button {
         background: linear-gradient(135deg, #FFD700, #FFA500) !important;
         color: #1a1a2e !important;
+        font-weight: bold !important;
         border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
     }
-    .btn-success {
-        background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
-        color: white !important;
-        border: none !important;
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
+    }
+    
+    /* Sidebar user info */
+    .user-info {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    .user-details h3 {
+        color: #FFFFFF !important;
+    }
+    .user-balance {
+        color: #FFD700 !important;
     }
     
     /* Winner celebration text */
     .winner-name {
-        color: #1a1a2e !important;
+        color: #FFFFFF !important;
     }
     .winner-prize {
-        color: #2E7D32 !important;
+        color: #FFD700 !important;
+    }
+    
+    /* Logo text */
+    .logo-text h1 {
+        -webkit-text-fill-color: #FFFFFF !important;
+        background: none !important;
+        color: #FFFFFF !important;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+    }
+    .logo-text p {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    
+    /* Selected cards preview */
+    .selected-cards-preview {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 215, 0, 0.15) !important;
+    }
+    
+    /* Game controls */
+    .game-controls .btn {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #1a1a2e !important;
+        font-weight: bold !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -756,8 +832,8 @@ def admin_panel():
     """Admin panel for managing user balances"""
     st.markdown("""
     <div class="glass-container">
-        <h3 style="color:#1a1a2e;text-align:center;">🔧 Admin Panel</h3>
-        <p style="color:#666;text-align:center;">Manage user balances, view all users.</p>
+        <h3 style="color:#FFD700;text-align:center;">🔧 Admin Panel</h3>
+        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances, view all users.</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -780,12 +856,12 @@ def admin_panel():
         
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,165,0,0.05));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.15);margin-bottom:15px;">
-            <p style="margin:0;font-weight:600;color:#1a1a2e;">👤 {name}</p>
-            <p style="margin:5px 0;color:#666;font-size:0.85rem;">📱 <strong style="color:#E65100;">{phone if phone else 'Not provided'}</strong></p>
-            <p style="margin:5px 0;color:#666;font-size:0.85rem;">👤 Username: <strong style="color:#E65100;">{selected_user}</strong></p>
-            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#2E7D32;">💰 Current Balance: {current_balance} ETB</p>
-            <p style="margin:5px 0;color:#666;font-size:0.85rem;">🎮 Games Played: {game_played}</p>
-            <p style="margin:5px 0;color:#666;font-size:0.85rem;">🏆 Wins: {wins}</p>
+            <p style="margin:0;font-weight:600;color:#FFD700;">👤 {name}</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 <strong style="color:#FFD700;">{phone if phone else 'Not provided'}</strong></p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">👤 Username: <strong style="color:#FFD700;">{selected_user}</strong></p>
+            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 Current Balance: {current_balance} ETB</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games Played: {game_played}</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🏆 Wins: {wins}</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -972,19 +1048,19 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     
     cells = card["cells"]
     
-    border_color = '#FFD700' if is_winner else 'rgba(0,0,0,0.1)'
-    title_color = '#1a1a2e' if is_winner else '#1a1a2e'
+    border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
+    title_color = '#FFD700' if is_winner else '#FFFFFF'
     
     html = f"""
-    <div style="background:rgba(255,255,255,0.9);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.05);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;">🎯 Card #{card_id}</div>
+    <div style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">🎯 Card #{card_id}</div>
         <table style="width:100%;border-collapse:collapse;">
             <tr>
-                <td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.1);color:#1a1a2e;font-weight:bold;font-size:0.75rem;">B</td>
-                <td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.1);color:#1a1a2e;font-weight:bold;font-size:0.75rem;">I</td>
-                <td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.1);color:#1a1a2e;font-weight:bold;font-size:0.75rem;">N</td>
-                <td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.1);color:#1a1a2e;font-weight:bold;font-size:0.75rem;">G</td>
-                <td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.1);color:#1a1a2e;font-weight:bold;font-size:0.75rem;">O</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">O</td>
             </tr>
     """
     
@@ -994,19 +1070,19 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
             value = cells[row_idx][col_idx]
             
             if value == 'F':
-                html += f'<td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,215,0,0.15);color:#E65100;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
             else:
                 num = int(value)
                 is_called = num in called_numbers
                 style = ''
                 if is_called and is_winner:
-                    style = 'background:rgba(255,215,0,0.2);color:#1a1a2e;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
+                    style = 'background:rgba(255,215,0,0.2);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
                 elif is_called:
-                    style = 'background:rgba(255,152,0,0.15);color:#E65100;border-color:#FF9800;transform:scale(1.05);'
+                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;transform:scale(1.05);'
                 else:
-                    style = 'background:rgba(255,255,255,0.5);color:#1a1a2e;border-color:rgba(0,0,0,0.06);'
+                    style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
                 
-                html += f'<td style="border:1px solid rgba(0,0,0,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;{style}font-weight:bold;font-size:0.8rem;border:2px solid;">{value}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;{style}font-weight:bold;font-size:0.8rem;border:2px solid;">{value}</div></td>'
         html += '</tr>'
     
     html += '</table>'
@@ -1014,9 +1090,9 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#E65100;font-size:0.8rem;margin-top:4px;">🏆 WINNER! ({winning_pattern}) 🏆</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:4px;">🏆 WINNER! ({winning_pattern}) 🏆</div>'
     else:
-        html += f'<div style="text-align:center;color:#666;font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -1039,25 +1115,26 @@ def display_master_board():
             max-width: 950px;
             margin: 0 auto;
             padding: 20px;
-            background: rgba(255,255,255,0.9);
+            background: rgba(0,0,0,0.2);
             border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             margin-bottom: 20px;
-            border: 1px solid rgba(0,0,0,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
         }
         .board-title {
             text-align: center;
             font-size: 1.8rem;
             font-weight: bold;
-            color: #1a1a2e;
+            color: #FFD700;
             margin-bottom: 12px;
+            text-shadow: 0 0 30px rgba(255,215,0,0.1);
         }
         .board-table {
             width: 100%;
             border-collapse: collapse;
         }
         .board-table td {
-            border: 1px solid rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.08);
             padding: 6px 4px;
             text-align: center;
             font-size: 0.85rem;
@@ -1065,13 +1142,13 @@ def display_master_board():
             min-width: 30px;
         }
         .board-table .header-cell {
-            background: linear-gradient(135deg, rgba(46,125,50,0.15), rgba(27,94,32,0.08));
-            color: #1a1a2e;
+            background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1));
+            color: #FFD700;
             font-size: 1.5rem;
             font-weight: 900;
             padding: 10px 4px;
             text-align: center;
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,215,0,0.1);
             letter-spacing: 3px;
         }
         .board-number {
@@ -1081,25 +1158,27 @@ def display_master_board():
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.5);
-            color: #1a1a2e;
+            background: rgba(255,255,255,0.05);
+            color: #FFFFFF;
             font-weight: bold;
             font-size: 0.8rem;
-            border: 1px solid rgba(0,0,0,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
             transition: all 0.3s ease;
         }
         .board-number.called {
-            background: rgba(255, 152, 0, 0.15);
-            color: #E65100;
+            background: rgba(255, 152, 0, 0.2);
+            color: #FFD700;
             border-color: #FF9800;
             transform: scale(1.08);
+            box-shadow: 0 0 15px rgba(255,152,0,0.15);
         }
         .board-number.last-called {
-            background: rgba(229, 57, 53, 0.12);
-            color: #C62828;
+            background: rgba(229, 57, 53, 0.2);
+            color: #FF6B6B;
             border-color: #E53935;
             transform: scale(1.15);
             animation: lastPulse 0.5s ease-in-out;
+            box-shadow: 0 0 20px rgba(229,57,53,0.2);
         }
         @keyframes lastPulse {
             0% { transform: scale(1); }
@@ -1110,13 +1189,13 @@ def display_master_board():
             text-align: center;
             margin-top: 12px;
             font-size: 0.9rem;
-            color: #666;
+            color: rgba(255,255,255,0.5);
             padding: 8px;
-            background: rgba(0,0,0,0.02);
+            background: rgba(0,0,0,0.15);
             border-radius: 8px;
         }
         .board-stats strong {
-            color: #1a1a2e;
+            color: #FFD700;
         }
         @media (max-width: 600px) {
             .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
@@ -1131,7 +1210,7 @@ def display_master_board():
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#C62828;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.1);color:#C62828;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
+        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
@@ -1175,10 +1254,10 @@ st.markdown(f"""
 # Header
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
-    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s ease-in-out infinite;letter-spacing:6px;margin:0;">
+    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s ease-in-out infinite;letter-spacing:6px;margin:0;text-shadow:0 0 40px rgba(255,215,0,0.1);">
         🎯 ደራሽ ቢንጎ
     </h1>
-    <p style="color:#666;font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
+    <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
         Derash BINGO - 201 Cards
     </p>
 </div>
@@ -1252,10 +1331,10 @@ balance = user.get("balance", 0)
 
 st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
-    <p style="margin:0;font-weight:600;color:#1a1a2e;">👤 {user.get('name', st.session_state.current_user)}</p>
-    <p style="margin:3px 0;color:#666;font-size:0.7rem;">📱 {user.get('phone', 'No phone')}</p>
-    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#2E7D32;">💰 {balance} ETB</p>
-    <p style="margin:3px 0;color:#666;font-size:0.7rem;">⭐ {st.session_state.current_role.title()} | 🏆 {user.get('wins', 0)} wins</p>
+    <p style="margin:0;font-weight:600;color:#FFD700;">👤 {user.get('name', st.session_state.current_user)}</p>
+    <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">📱 {user.get('phone', 'No phone')}</p>
+    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance} ETB</p>
+    <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">⭐ {st.session_state.current_role.title()} | 🏆 {user.get('wins', 0)} wins</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1322,7 +1401,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 st.rerun()
 
 # ===================================================================
-# CARD SELECTION - USING HTML BUTTONS INSTEAD OF st.columns
+# CARD SELECTION - USING HTML BUTTONS
 # ===================================================================
 
 def render_card_selection():
@@ -1341,17 +1420,17 @@ def render_card_selection():
         color = "#FFD700"
     
     st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(255,255,255,0.5);padding:8px 15px;border-radius:12px;border:1px solid rgba(0,0,0,0.05);">
-        <span style="display:inline-block;padding:8px 20px;background:rgba(255,255,255,0.5);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
             ⏱️ {time_str}
         </span>
         <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
             Select Card
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,255,255,0.5);border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:0.8rem;color:#666;">
+        <span style="display:inline-block;padding:6px 15px;background:rgba(0,0,0,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
             Selected: {len(st.session_state.clicked_numbers)}/2
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.05);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#E65100;">
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
             💰 {balance} ETB
         </span>
     </div>
@@ -1371,7 +1450,7 @@ def render_card_selection():
         is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
         
         if is_taken:
-            html += f'<div class="card-btn taken" style="border-color:rgba(255,0,0,0.2);background:#f5f5f5;color:#999;cursor:not-allowed;opacity:0.5;">{i}<span class="tick-mark">🔒</span></div>'
+            html += f'<div class="card-btn taken" style="border-color:rgba(255,0,0,0.2);background:rgba(255,0,0,0.1);color:rgba(255,255,255,0.3);cursor:not-allowed;opacity:0.6;">{i}<span class="tick-mark">🔒</span></div>'
         elif is_clicked:
             html += f'<div class="card-btn selected" onclick="deselectCard({i})" style="cursor:pointer;"><span class="tick-mark">✓</span>{i}</div>'
         else:
@@ -1480,10 +1559,10 @@ else:
             <div style="font-size:3.5rem;color:#FFD700;">🎉</div>
             <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;">🎉 ቢንጎ! 🎉</div>
             <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;">🎊 እንኳን ደስ አለዎት! 🎊</div>
-            <div style="font-size:1.2rem;color:#1a1a2e;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
-            <div style="font-size:1rem;color:#2E7D32;">💰 Prize per winner: {prize_per_winner} ETB</div>
-            <div style="font-size:0.9rem;color:#666;">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
-            <div style="font-size:1rem;color:#E65100;margin-top:5px;">🏅 {winning_pattern}</div>
+            <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
+            <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner} ETB</div>
+            <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
+            <div style="font-size:1rem;color:#FFD700;margin-top:5px;">🏅 {winning_pattern}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1522,12 +1601,12 @@ else:
             st.rerun()
     else:
         st.markdown(f"""
-        <div style="background:rgba(46,125,50,0.05);border:1px solid rgba(0,0,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:#1a1a2e;">
+        <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(all_player_cards)} Card(s)
-            <span style="margin-left:12px;background:rgba(255,215,0,0.05);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
+            <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
                 {len(st.session_state.called_numbers)}/75 Called
             </span>
-            <span style="margin-left:8px;background:rgba(255,215,0,0.05);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
+            <span style="margin-left:8px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
                 🎯 Auto-calls: {st.session_state.auto_called_count}
             </span>
         </div>
@@ -1551,7 +1630,7 @@ else:
 
 st.markdown("---")
 st.markdown(f"""
-<div style="text-align:center;color:#999;font-size:0.75rem;padding:15px;border-top:1px solid rgba(0,0,0,0.05);">
+<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;border-top:1px solid rgba(255,255,255,0.05);">
     🎯 Derash BINGO | 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
 </div>
 """, unsafe_allow_html=True)
