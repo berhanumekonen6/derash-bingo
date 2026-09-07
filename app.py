@@ -653,12 +653,12 @@ PRIZE_PER_CARD = 8
 # ===================================================================
 
 MOTIVATIONAL_QUOTES = [
-    {"am": "የቢንጎ ጨዋታ ዕድል እና ተስፋ ነው! 🎯", "en": "BINGO is a game of luck and hope!", "author": "ደራሽ ቢንጎ"},
-    {"am": "እያንዳንዱ ቁጥር ወደ ድል አንድ እርምጃ ነው! 💪", "en": "Every number is a step closer to victory!", "author": "ደራሽ ቢንጎ"},
-    {"am": "ቢንጎ! ማለት ድል ማለት ነው! 🏆", "en": "BINGO means victory!", "author": "ደራሽ ቢንጎ"},
-    {"am": "በትዕግስት እና በእምነት ያሸንፉ! 🌟", "en": "Win with patience and faith!", "author": "ደራሽ ቢንጎ"},
-    {"am": "ዕድላችሁ ይምራላችሁ! 🍀", "en": "May luck be on your side!", "author": "ደራሽ ቢንጎ"},
-    {"am": "አንድ ቁጥር ሕይወትን ይለውጣል! ✨", "en": "One number can change everything!", "author": "ደራሽ ቢንጎ"},
+    {"am": "በቢንጎ ጨዋታ እየተዝናኑ ያሸንፉ! 🎯", "en": "Have fun and win at BINGO!", "author": "ደራሽ ቢንጎ"},
+    {"am": "አሁንኑ እድልዎን ይሞክሩ! 💪", "en": "Try your luck right now!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ቢንጎ! ማለት እድለኛ ማለት ነው! 🏆", "en": "BINGO! means you are lucky!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ያሸንፉ ይሸለሙ! 🌟", "en": "Win and celebrate!", "author": "ደራሽ ቢንጎ"},
+    {"am": "መልካም ዕድል ይሁንልዎ! 🍀", "en": "Good luck to you!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ማን ያዉቃል አንድ ቁጥር ሕይወትን ይለውጣል! ✨", "en": "Who knows, one number can change your life!", "author": "ደራሽ ቢንጎ"},
 ]
 
 def get_random_quote():
@@ -1536,7 +1536,7 @@ st.markdown("""
         🎯 ደራሽ ቢንጎ
     </h1>
     <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
-        Derash BINGO - 201 Cards
+        Derash BINGO 
     </p>
 </div>
 """, unsafe_allow_html=True)
