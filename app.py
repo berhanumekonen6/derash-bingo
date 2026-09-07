@@ -328,6 +328,7 @@ def display_bingo_card(card_id):
             background: #4CAF50 !important;
             color: white !important;
             border-radius: 4px;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
         }}
         .bingo-footer {{
             text-align: center;
@@ -355,7 +356,7 @@ def display_bingo_card(card_id):
     
     # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
-    html += f'<div class="bingo-card-title">Card #{card_id}</div>'
+    html += f'<div class="bingo-card-title">🎯 Card #{card_id}</div>'
     
     # Table
     html += '<table class="bingo-table">'
