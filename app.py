@@ -211,78 +211,16 @@ st.markdown("""
     /* FIX: Make Streamlit columns wrap on mobile devices */
     /* ============================================================= */
     
-    @media (max-width: 992px) {
-        /* Make Streamlit columns wrap on tablets */
-        .row-widget.stColumns {
-            flex-wrap: wrap !important;
-        }
-        .row-widget.stColumns > div {
-            flex: 0 0 auto !important;
-            width: auto !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            padding: 3px !important;
-        }
-        /* Force 5 columns on tablets */
-        .row-widget.stColumns > div {
-            flex-basis: 20% !important;
-            max-width: 20% !important;
-        }
+    /* Remove the fixed column forcing - we'll let the user choose */
+    .row-widget.stColumns {
+        flex-wrap: wrap !important;
     }
-
-    @media (max-width: 768px) {
-        /* Force 4 columns on phones */
-        .row-widget.stColumns > div {
-            flex-basis: 25% !important;
-            max-width: 25% !important;
-        }
-        .card-btn {
-            font-size: 0.85rem !important;
-            min-height: 40px !important;
-            height: 40px !important;
-        }
-    }
-
-    @media (max-width: 480px) {
-        /* Force 3 columns on small phones */
-        .row-widget.stColumns > div {
-            flex-basis: 33.33% !important;
-            max-width: 33.33% !important;
-        }
-        .card-btn {
-            font-size: 0.75rem !important;
-            min-height: 36px !important;
-            height: 36px !important;
-            padding: 3px 2px !important;
-        }
-    }
-
-    @media (max-width: 360px) {
-        /* Force 2 columns on very small phones */
-        .row-widget.stColumns > div {
-            flex-basis: 50% !important;
-            max-width: 50% !important;
-        }
-        .card-btn {
-            font-size: 0.7rem !important;
-            min-height: 32px !important;
-            height: 32px !important;
-            padding: 2px 1px !important;
-        }
-    }
-
-    /* Landscape mode for phones */
-    @media (orientation: landscape) and (max-height: 500px) {
-        .row-widget.stColumns > div {
-            flex-basis: 12.5% !important;
-            max-width: 12.5% !important;
-        }
-        .card-btn {
-            font-size: 0.65rem !important;
-            min-height: 28px !important;
-            height: 28px !important;
-            padding: 2px 1px !important;
-        }
+    .row-widget.stColumns > div {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 3px !important;
     }
     
     /* Scrollbar */
@@ -668,6 +606,8 @@ def init_session_state():
         st.session_state.sound_played = False
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
+    if 'columns_per_row' not in st.session_state:
+        st.session_state.columns_per_row = 10
 
 init_session_state()
 
@@ -1478,6 +1418,15 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
+    # Column selection dropdown - ADDED THIS
+    col_options = [2, 3, 4, 5, 6, 8, 10]
+    st.session_state.columns_per_row = st.selectbox(
+        "📊 Cards per row:",
+        options=col_options,
+        index=col_options.index(st.session_state.columns_per_row) if st.session_state.columns_per_row in col_options else 5,
+        help="Select how many cards to display per row"
+    )
+    
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
         <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
@@ -1500,11 +1449,12 @@ def render_card_selection():
     elif st.session_state.card_selection_time <= 30:
         st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
     
-    # Create grid using 10 columns
-    cols = st.columns(10)
+    # Create grid using selected number of columns
+    cols_per_row = st.session_state.columns_per_row
+    cols = st.columns(cols_per_row)
     
     for i in range(1, 202):
-        col_idx = (i - 1) % 10
+        col_idx = (i - 1) % cols_per_row
         with cols[col_idx]:
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
