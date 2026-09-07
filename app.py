@@ -499,11 +499,14 @@ def get_card_data(card_id):
     return None
 
 # ===================================================================
-# GAME FUNCTIONS
+# ENHANCED WINNER DETECTION
 # ===================================================================
 
 def check_winning_pattern(card_data, called_numbers):
-    """Check if a card has a winning pattern"""
+    """
+    Check if a card has a winning pattern.
+    Checks: rows, columns, diagonals, and corners (larger and smaller)
+    """
     if not called_numbers or not card_data:
         return None
     
@@ -514,25 +517,64 @@ def check_winning_pattern(card_data, called_numbers):
             return True
         return int(value) in called_set
     
+    winning_cells = []
+    winning_type = None
+    
     # Check rows
     for row in range(5):
         if all(is_marked(card_data[row][col]) for col in range(5)):
-            return {'type': 'row', 'index': row + 1}
+            winning_cells = [card_data[row][col] for col in range(5)]
+            winning_type = f"Row {row + 1}"
+            return {'type': winning_type, 'cells': winning_cells}
     
     # Check columns
     for col in range(5):
         if all(is_marked(card_data[row][col]) for row in range(5)):
             letters = ['B', 'I', 'N', 'G', 'O']
-            return {'type': 'column', 'letter': letters[col]}
+            winning_cells = [card_data[row][col] for row in range(5)]
+            winning_type = f"Column {letters[col]}"
+            return {'type': winning_type, 'cells': winning_cells}
     
     # Check diagonals
     if all(is_marked(card_data[i][i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'main'}
+        winning_cells = [card_data[i][i] for i in range(5)]
+        winning_type = "Diagonal Main"
+        return {'type': winning_type, 'cells': winning_cells}
     
     if all(is_marked(card_data[i][4 - i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'anti'}
+        winning_cells = [card_data[i][4 - i] for i in range(5)]
+        winning_type = "Diagonal Anti"
+        return {'type': winning_type, 'cells': winning_cells}
+    
+    # Check larger four corners of the 5x5 grid
+    large_corners = [
+        card_data[0][0],   # top-left
+        card_data[0][4],   # top-right
+        card_data[4][0],   # bottom-left
+        card_data[4][4]    # bottom-right
+    ]
+    if all(is_marked(cell) for cell in large_corners):
+        winning_cells = large_corners
+        winning_type = "Large Corners"
+        return {'type': winning_type, 'cells': winning_cells}
+    
+    # Check smaller four corners around center cell 'F'
+    small_corners = [
+        card_data[1][1],   # top-left of smaller square
+        card_data[1][3],   # top-right
+        card_data[3][1],   # bottom-left
+        card_data[3][3]    # bottom-right
+    ]
+    if all(is_marked(cell) for cell in small_corners):
+        winning_cells = small_corners
+        winning_type = "Small Corners"
+        return {'type': winning_type, 'cells': winning_cells}
     
     return None
+
+# ===================================================================
+# GAME FUNCTIONS
+# ===================================================================
 
 def check_for_winners():
     """Check all selected cards for winning patterns and distribute prizes"""
@@ -569,7 +611,6 @@ def distribute_prizes(winners):
         return
     
     # Calculate total prize: number of cards selected by winner × 8 ETB
-    # If multiple winners, they share the prize equally
     total_prize = 0
     for winner in winners:
         # Count how many cards this player has
@@ -578,7 +619,7 @@ def distribute_prizes(winners):
         total_prize += card_count * PRIZE_PER_CARD
     
     # If multiple winners, split equally
-    prize_per_winner = total_prize // len(winners)
+    prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
     for winner in winners:
         username = winner.get("username")
@@ -595,7 +636,7 @@ def distribute_prizes(winners):
 # DISPLAY FUNCTIONS
 # ===================================================================
 
-def display_selected_card(card_id, called_numbers=None, is_winner=False):
+def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
     """Display a BINGO card with circular cells"""
     if called_numbers is None:
         called_numbers = []
@@ -765,7 +806,9 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False):
                 if num in st.session_state.clicked_numbers:
                     total_ticked += 1
     
-    if is_winner:
+    if is_winner and winning_pattern:
+        html += f'<div class="selected-footer" style="color:#FFD700;font-size:0.9rem;">🏆 WINNER! ({winning_pattern}) 🏆</div>'
+    elif is_winner:
         html += f'<div class="selected-footer" style="color:#FFD700;font-size:0.9rem;">🏆 WINNER! 🏆</div>'
     else:
         html += f'<div class="selected-footer">✅ {total_called_on_card}/24 called | ⭐ {total_ticked} ticked</div>'
@@ -774,7 +817,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False):
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the BINGO board 1-75 in correct B, I, N, G, O format"""
+    """Display the BINGO board with B I N G O as a row at the top (no row numbers)"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -805,25 +848,23 @@ def display_master_board():
             font-weight: bold;
             min-width: 35px;
         }
-        .master-table .row-label {
+        .master-table .header-cell {
             background: #2E7D32;
             color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 50px;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: auto;
+            font-size: 1.8rem;
+            font-weight: 900;
+            padding: 12px 6px;
+            text-align: center;
+            border: 2px solid #1B5E20;
+            letter-spacing: 4px;
+            font-family: 'Montserrat', Arial, sans-serif;
         }
         .circle-number {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 35px;
-            height: 35px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             background: #E8F5E9;
             color: #1A237E;
@@ -846,20 +887,6 @@ def display_master_board():
             animation: pulse 0.5s ease-in-out;
             box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
         }
-        .circle-letter {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #2E7D32;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            border: 3px solid #1B5E20;
-            margin: auto;
-        }
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.3); }
@@ -876,15 +903,9 @@ def display_master_board():
                 height: 28px;
                 font-size: 0.7rem;
             }
-            .circle-letter {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
-            }
-            .master-table .row-label {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
+            .master-table .header-cell {
+                font-size: 1.2rem;
+                padding: 8px 4px;
             }
         }
     </style>
@@ -910,16 +931,16 @@ def display_master_board():
     
     html += '<table class="master-table">'
     
-    # Header row with B, I, N, G, O
+    # Header row with B, I, N, G, O only (no row number column)
     html += '<tr>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:10px;font-size:1.5rem;">B</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:10px;font-size:1.5rem;">I</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:10px;font-size:1.5rem;">N</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:10px;font-size:1.5rem;">G</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:10px;font-size:1.5rem;">O</td>'
+    html += '<td class="header-cell" style="background:#2E7D32;color:white;font-weight:900;text-align:center;border:2px solid #1B5E20;padding:12px;font-size:1.8rem;">B</td>'
+    html += '<td class="header-cell" style="background:#2E7D32;color:white;font-weight:900;text-align:center;border:2px solid #1B5E20;padding:12px;font-size:1.8rem;">I</td>'
+    html += '<td class="header-cell" style="background:#2E7D32;color:white;font-weight:900;text-align:center;border:2px solid #1B5E20;padding:12px;font-size:1.8rem;">N</td>'
+    html += '<td class="header-cell" style="background:#2E7D32;color:white;font-weight:900;text-align:center;border:2px solid #1B5E20;padding:12px;font-size:1.8rem;">G</td>'
+    html += '<td class="header-cell" style="background:#2E7D32;color:white;font-weight:900;text-align:center;border:2px solid #1B5E20;padding:12px;font-size:1.8rem;">O</td>'
     html += '</tr>'
     
-    # Number rows (1-15)
+    # Number rows (1-15) - no row number column
     for row in range(15):
         html += '<tr>'
         for letter in ['B', 'I', 'N', 'G', 'O']:
@@ -955,7 +976,7 @@ st.markdown("""
         🎯 ደራሽ ቢንጎ
     </h1>
     <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:2px;font-size:0.8rem;margin:5px 0;">
-        Derash BINGO
+        Derash BINGO - 201 Cards
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -1105,7 +1126,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 
 if not st.session_state.selected_card:
     # Card Selection Phase
-    st.markdown("## 📋 Select Your Card")
+    st.markdown("## 📋 Select Your Card (1 - 201)")
     
     # Timer display
     remaining = st.session_state.card_selection_time
@@ -1195,6 +1216,12 @@ else:
         total_prize = len(all_player_cards) * PRIZE_PER_CARD
         prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
         
+        # Get winning pattern info
+        winning_pattern = ""
+        if st.session_state.winners_list:
+            pattern_info = st.session_state.winners_list[0].get("pattern", {})
+            winning_pattern = pattern_info.get("type", "BINGO!")
+        
         st.markdown(f"""
         <div style="text-align:center;padding:40px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:20px 0;">
             <div style="font-size:4rem;color:#FFD700;">🎉 BINGO! 🎉</div>
@@ -1202,6 +1229,7 @@ else:
             <div style="font-size:1.5rem;color:white;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
             <div style="font-size:1.2rem;color:#00C9B7;">💰 Prize per winner: {prize_per_winner} ETB</div>
             <div style="font-size:1rem;color:#aaa;margin-top:5px;">Total cards: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
+            <div style="font-size:1rem;color:#FFD700;margin-top:5px;">🏅 Winning Pattern: {winning_pattern}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1212,11 +1240,14 @@ else:
         st.markdown("### 📋 Your Cards")
         for card_id in all_player_cards:
             is_winner = False
+            winning_pattern = None
             for winner in st.session_state.winners_list:
                 if winner.get("card_id") == card_id:
                     is_winner = True
+                    pattern_info = winner.get("pattern", {})
+                    winning_pattern = pattern_info.get("type", "BINGO!")
                     break
-            display_selected_card(card_id, list(st.session_state.called_numbers), is_winner)
+            display_selected_card(card_id, list(st.session_state.called_numbers), is_winner, winning_pattern)
         
         display_master_board()
         
