@@ -653,12 +653,12 @@ PRIZE_PER_CARD = 8
 # ===================================================================
 
 MOTIVATIONAL_QUOTES = [
-    {"am": "በቢንጎ ጨዋታ እየተዝናኑ ያሸንፉ! 🎯", "en": "Have fun and win at BINGO!", "author": "ደራሽ ቢንጎ"},
-    {"am": "አሁንኑ እድልዎን ይሞክሩ! 💪", "en": "Try your luck right now!", "author": "ደራሽ ቢንጎ"},
-    {"am": "ቢንጎ! ማለት እድለኛ ማለት ነው! 🏆", "en": "BINGO! means you are lucky!", "author": "ደራሽ ቢንጎ"},
-    {"am": "ያሸንፉ ይሸለሙ! 🌟", "en": "Win and celebrate!", "author": "ደራሽ ቢንጎ"},
-    {"am": "መልካም ዕድል ይሁንልዎ! 🍀", "en": "Good luck to you!", "author": "ደራሽ ቢንጎ"},
-    {"am": "ማን ያዉቃል አንድ ቁጥር ሕይወትን ይለውጣል! ✨", "en": "Who knows, one number can change your life!", "author": "ደራሽ ቢንጎ"},
+    {"am": "በቢንጎ ጨዋታ እየተዝናኑ ያሸንፉ! 🎯⚡⚡", "en": "Have fun and win at BINGO!", "author": "ደራሽ ቢንጎ"},
+    {"am": "አሁንኑ እድልዎን ይሞክሩ! 💪🎖️", "en": "Try your luck right now!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ቢንጎ! ማለት እድለኛ ማለት ነው! 🏆🎖️", "en": "BINGO! means you are lucky!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ያሸንፉ ይሸለሙ! 🌟🎖️🚀", "en": "Win and celebrate!", "author": "ደራሽ ቢንጎ"},
+    {"am": "መልካም ዕድል ይሁንልዎ! 🍀🎖️🚀", "en": "Good luck to you!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ማን ያዉቃል አንድ ቁጥር ሕይወትን ይለውጣል! ✨🎖️🚀", "en": "Who knows, one number can change your life!", "author": "ደራሽ ቢንጎ"},
 ]
 
 def get_random_quote():
