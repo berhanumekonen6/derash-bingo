@@ -269,13 +269,12 @@ def get_card_numbers(card_id):
     return numbers
 
 def display_bingo_card(card_id):
-    """Display a BINGO card - only highlight called numbers that exist on the card"""
+    """Display a BINGO card - highlight called numbers that exist on the card"""
     card = get_card(card_id)
     if not card:
         return
     
     cells = card["cells"]
-    card_numbers = get_card_numbers(card_id)
     
     st.markdown(f"""
     <style>
@@ -336,9 +335,11 @@ def display_bingo_card(card_id):
         .bingo-table .highlighted-number {{
             background: #4CAF50 !important;
             color: white !important;
-            border-radius: 4px;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            border-radius: 50% !important;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
             font-weight: bold;
+            transform: scale(1.1);
+            transition: all 0.3s ease;
         }}
         .bingo-footer {{
             text-align: center;
@@ -348,6 +349,16 @@ def display_bingo_card(card_id):
             margin-top: 8px;
             letter-spacing: 2px;
             font-family: Arial, sans-serif;
+        }}
+        .matched-count {{
+            text-align: center;
+            font-size: 1rem;
+            color: #2E7D32;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 8px;
+            background: #E8F5E9;
+            border-radius: 5px;
         }}
         @media (max-width: 600px) {{
             .bingo-table td {{
@@ -363,6 +374,12 @@ def display_bingo_card(card_id):
         }}
     </style>
     """, unsafe_allow_html=True)
+    
+    # Get the numbers on this card
+    card_numbers = get_card_numbers(card_id)
+    
+    # Count matches
+    matches = card_numbers.intersection(st.session_state.called_numbers)
     
     # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
@@ -390,7 +407,7 @@ def display_bingo_card(card_id):
                 html += '<td class="free-space">★</td>'
             else:
                 num = int(value)
-                # Only highlight if the number has been called AND exists on this card
+                # Check if this number has been called AND exists on this card
                 if num in st.session_state.called_numbers and num in card_numbers:
                     html += f'<td class="number-cell highlighted-number">{value}</td>'
                 else:
@@ -398,6 +415,10 @@ def display_bingo_card(card_id):
         html += '</tr>'
     
     html += '</tbody></table>'
+    
+    # Show match count
+    html += f'<div class="matched-count">✅ Matches: {len(matches)} / 24 numbers</div>'
+    
     html += '<div class="bingo-footer"></div>'
     html += '</div>'
     
