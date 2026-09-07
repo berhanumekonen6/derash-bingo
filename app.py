@@ -38,15 +38,40 @@ time_passed = current_time - st.session_state.timer_last_update
 st.session_state.timer_remaining = max(0, st.session_state.timer_remaining - time_passed)
 st.session_state.timer_last_update = current_time
 
-# Reset timer when it reaches 0
+# Auto-call numbers when timer reaches specific points
 if st.session_state.timer_remaining <= 0:
+    # Reset timer
     st.session_state.timer_remaining = 60
+    
+    # Call a number when timer resets
+    if len(st.session_state.called_numbers) < 75:
+        available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+        if available:
+            called_num = random.choice(available)
+            st.session_state.called_numbers.add(called_num)
+            st.session_state.last_called_number = called_num
+            st.session_state.auto_called_count += 1
+            st.session_state.last_call_time = time.time()
+    
     # Clear selected cards when timer resets (optional - remove this if you want cards to persist)
     st.session_state.clicked_numbers = set()
     st.session_state.selected_card = None
     st.rerun()
 
-# Check if we need to auto-call
+# Also auto-call at 30 second mark (halfway)
+elif st.session_state.timer_remaining <= 30 and st.session_state.timer_remaining > 29:
+    # Call a number at 30 seconds
+    if len(st.session_state.called_numbers) < 75:
+        available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+        if available:
+            called_num = random.choice(available)
+            st.session_state.called_numbers.add(called_num)
+            st.session_state.last_called_number = called_num
+            st.session_state.auto_called_count += 1
+            st.session_state.last_call_time = time.time()
+            st.rerun()
+
+# Check if we need to auto-call (for the regular auto-call feature)
 if st.session_state.is_auto_calling:
     if len(st.session_state.called_numbers) < 75:
         current_time = time.time()
@@ -629,19 +654,29 @@ with timer_col2:
     else:
         color = "#2E7D32"
     
+    # Show number of auto-calls made
+    auto_call_info = f" | Auto-calls: {st.session_state.auto_called_count}" if st.session_state.auto_called_count > 0 else ""
+    
     st.markdown(f"""
     <div style="text-align:center;padding:15px;background:#f8f9fa;border-radius:10px;border:2px solid {color};margin-bottom:10px;">
         <div style="font-size:3rem;font-weight:bold;color:{color};font-family:monospace;">
             {time_str}
         </div>
         <div style="font-size:0.9rem;color:#666;">⏳ Time Remaining</div>
-        <div style="font-size:0.8rem;color:#999;margin-top:5px;">Max 2 cards allowed</div>
+        <div style="font-size:0.8rem;color:#999;margin-top:5px;">Max 2 cards allowed{auto_call_info}</div>
     </div>
     """, unsafe_allow_html=True)
     
     # Progress bar
     progress = 1 - (remaining / 60)
     st.progress(progress)
+    
+    # Show auto-call status
+    if st.session_state.auto_called_count > 0:
+        st.info(f"🎯 Auto-called {st.session_state.auto_called_count} numbers")
+    
+    # Show timer call points
+    st.caption("⏱️ Auto-calls at 0:00 (reset) and 0:30")
 
 # Check if more than 2 cards are selected (enforce limit)
 if len(st.session_state.clicked_numbers) > 2:
@@ -820,5 +855,6 @@ st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
     Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 cards | Called: {len(st.session_state.called_numbers)}/75 numbers
     {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
+    {' | 🎯 Auto-calls: ' + str(st.session_state.auto_called_count) if st.session_state.auto_called_count > 0 else ''}
 </div>
 """, unsafe_allow_html=True)
