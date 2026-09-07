@@ -23,8 +23,8 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
-if 'show_game' not in st.session_state:
-    st.session_state.show_game = False
+if 'game_started' not in st.session_state:
+    st.session_state.game_started = False
 
 # Check if we need to auto-call
 if st.session_state.is_auto_calling:
@@ -575,7 +575,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# MAIN APP - Card Selection First
+# MAIN APP - Show Selection or Game
 # ===================================================================
 
 # Header
@@ -590,50 +590,55 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Cards selection section - ALWAYS displayed first
-st.markdown("## 📋 Select Your Card (1 - 201)")
-
-# Numbers in a grid - Mobile optimized
-cols = st.columns(8)
-for i in range(1, 202):
-    col_idx = (i - 1) % 8
-    with cols[col_idx]:
-        is_clicked = i in st.session_state.clicked_numbers
-        
-        if st.button(
-            str(i),
-            key=f"num_{i}",
-            use_container_width=True,
-            type="secondary" if is_clicked else "primary"
-        ):
-            if i in st.session_state.clicked_numbers:
-                st.session_state.clicked_numbers.remove(i)
-                st.session_state.selected_card = None
-            else:
-                st.session_state.clicked_numbers.add(i)
-                st.session_state.selected_card = i
-            st.rerun()
-
-# Show selected card info
-if st.session_state.selected_card:
-    st.success(f"✅ Card #{st.session_state.selected_card} selected! Scroll down to see the game board.")
-else:
+# Check if a card is selected
+if not st.session_state.selected_card:
+    # Show card selection only
+    st.markdown("## 📋 Select Your Card (1 - 201)")
+    
+    # Numbers in a grid - Mobile optimized
+    cols = st.columns(8)
+    for i in range(1, 202):
+        col_idx = (i - 1) % 8
+        with cols[col_idx]:
+            is_clicked = i in st.session_state.clicked_numbers
+            
+            if st.button(
+                str(i),
+                key=f"num_{i}",
+                use_container_width=True,
+                type="secondary" if is_clicked else "primary"
+            ):
+                if i in st.session_state.clicked_numbers:
+                    st.session_state.clicked_numbers.remove(i)
+                    st.session_state.selected_card = None
+                else:
+                    st.session_state.clicked_numbers.add(i)
+                    st.session_state.selected_card = i
+                st.rerun()
+    
     st.info("👆 Click a card number above to select it and start playing!")
-
-# Only show the game if a card is selected
-if st.session_state.selected_card:
-    st.markdown("---")
-    st.markdown("## 🎯 Game Area")
+    
+else:
+    # Show the game with BINGO Board and Selected Card
+    st.markdown(f"""
+    <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
+        🎯 Playing with Card #{st.session_state.selected_card}
+        <span style="margin-left:15px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+            {len(st.session_state.called_numbers)}/75 Called
+        </span>
+        <button onclick="window.location.reload()" style="margin-left:15px;background:rgba(255,255,255,0.2);border:1px solid white;color:white;padding:5px 15px;border-radius:5px;cursor:pointer;">
+            🔄 Change Card
+        </button>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Create two columns for BINGO Board and Selected Card
     board_col, card_col = st.columns([2, 1])
     
     with board_col:
-        # Display Master Board
         display_master_board()
     
     with card_col:
-        # Display Selected Card
         display_selected_card(st.session_state.selected_card)
     
     # Call Number Section
@@ -642,15 +647,13 @@ if st.session_state.selected_card:
     with col2:
         st.markdown("### 🎲 Number Calling")
         
-        # Check if all numbers are called
         all_called = len(st.session_state.called_numbers) >= 75
         
-        # Control buttons
         control_col1, control_col2, control_col3, control_col4 = st.columns(4)
         
         with control_col1:
             if not st.session_state.is_auto_calling and not all_called:
-                if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
+                if st.button("▶️ Start Auto", use_container_width=True, type="primary"):
                     st.session_state.is_auto_calling = True
                     st.session_state.last_call_time = time.time()
                     available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
@@ -664,7 +667,7 @@ if st.session_state.selected_card:
         
         with control_col2:
             if st.session_state.is_auto_calling:
-                if st.button("⏹️ Stop Auto-Call", use_container_width=True):
+                if st.button("⏹️ Stop", use_container_width=True):
                     st.session_state.is_auto_calling = False
                     st.rerun()
         
@@ -690,17 +693,17 @@ if st.session_state.selected_card:
                 st.session_state.last_call_time = time.time()
                 st.rerun()
         
-        # Status display with countdown
+        # Status display
         if st.session_state.is_auto_calling:
             time_since_last = time.time() - st.session_state.last_call_time
             time_until_next = max(0, 3.0 - time_since_last)
             
-            st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
+            st.info(f"⏳ Auto-calling... ({len(st.session_state.called_numbers)}/75)")
             progress = len(st.session_state.called_numbers) / 75
             st.progress(progress)
             
             countdown_percent = (time_since_last / 3.0) * 100
-            st.caption(f"⏱️ Next call in: {time_until_next:.1f} seconds")
+            st.caption(f"⏱️ Next call in: {time_until_next:.1f}s")
             
             st.markdown(f"""
             <div style="width:100%; background:#e0e0e0; border-radius:10px; height:10px; margin-top:5px;">
