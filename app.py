@@ -13,8 +13,6 @@ if 'clicked_numbers' not in st.session_state:
     st.session_state.clicked_numbers = set()
 if 'selected_card' not in st.session_state:
     st.session_state.selected_card = None
-if 'selected_card_numbers' not in st.session_state:
-    st.session_state.selected_card_numbers = set()
 if 'called_numbers' not in st.session_state:
     st.session_state.called_numbers = set()
 if 'last_called_number' not in st.session_state:
@@ -25,6 +23,23 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
+
+# Check if we need to auto-call
+if st.session_state.is_auto_calling:
+    if len(st.session_state.called_numbers) < 75:
+        current_time = time.time()
+        if current_time - st.session_state.last_call_time >= 3.0:
+            # Call a number
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = current_time
+                st.rerun()
+    else:
+        st.session_state.is_auto_calling = False
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -240,118 +255,269 @@ def get_card(card_id):
             return card
     return None
 
-def get_card_numbers(card_id):
-    """Get all numbers from a card (excluding 'F' free space)"""
+def display_bingo_card(card_id):
+    """Display a BINGO card with called numbers highlighted"""
     card = get_card(card_id)
     if not card:
-        return set()
-    numbers = set()
-    for row in card["cells"]:
-        for cell in row:
-            if cell != 'F':
-                numbers.add(int(cell))
-    return numbers
+        return
+    
+    cells = card["cells"]
+    
+    st.markdown(f"""
+    <style>
+        .bingo-card-wrapper {{
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 500px;
+            border: 2px solid #2E7D32;
+        }}
+        .bingo-card-title {{
+            text-align: center;
+            color: #1B5E20;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }}
+        .bingo-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+        }}
+        .bingo-table th {{
+            background: #2E7D32;
+            color: white;
+            padding: 8px 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid #1B5E20;
+        }}
+        .bingo-table td {{
+            border: 1px solid #333;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            min-width: 40px;
+            height: 40px;
+        }}
+        .bingo-table .row-label {{
+            background: #2E7D32 !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 0.8rem;
+            min-width: 30px;
+        }}
+        .bingo-table .free-space {{
+            background: #FFEB3B;
+            color: #E53935;
+            font-size: 1.5rem;
+        }}
+        .bingo-table .number-cell {{
+            color: #1A237E;
+        }}
+        .bingo-table .called-number {{
+            background: #FF9800 !important;
+            color: white !important;
+            border-radius: 4px;
+        }}
+        .bingo-table .ticked-number {{
+            background: #4CAF50 !important;
+            color: white !important;
+            border-radius: 4px;
+        }}
+        .bingo-footer {{
+            text-align: center;
+            color: #333;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 8px;
+            letter-spacing: 2px;
+            font-family: Arial, sans-serif;
+        }}
+        @media (max-width: 600px) {{
+            .bingo-table td {{
+                padding: 4px 2px;
+                font-size: 0.8rem;
+                min-width: 30px;
+                height: 30px;
+            }}
+            .bingo-table th {{
+                padding: 4px 2px;
+                font-size: 0.8rem;
+            }}
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Card wrapper
+    html = f'<div class="bingo-card-wrapper">'
+    html += f'<div class="bingo-card-title">Card #{card_id}</div>'
+    
+    # Table
+    html += '<table class="bingo-table">'
+    html += '<thead><tr>'
+    html += '<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;"></th>'
+    for col in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
+    html += '</tr></thead><tbody>'
+    
+    # Row labels - B, I, N, G, O
+    row_labels = ['B', 'I', 'N', 'G', 'O']
+    
+    for row_idx in range(5):
+        html += '<tr>'
+        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:8px 6px;">{row_labels[row_idx]}</td>'
+        
+        for col_idx in range(5):
+            value = cells[row_idx][col_idx]
+            
+            if value == 'F':
+                html += '<td class="free-space">★</td>'
+            else:
+                # Check if this number has been called
+                num = int(value)
+                is_called = num in st.session_state.called_numbers
+                # Check if this number is on the selected card (ticked)
+                is_ticked = num in st.session_state.clicked_numbers
+                
+                if is_ticked and is_called:
+                    html += f'<td class="number-cell ticked-number">{value}</td>'
+                elif is_called:
+                    html += f'<td class="number-cell called-number">{value}</td>'
+                else:
+                    html += f'<td class="number-cell">{value}</td>'
+        html += '</tr>'
+    
+    html += '</tbody></table>'
+    html += '<div class="bingo-footer"></div>'
+    html += '</div>'
+    
+    st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the BINGO board with numbers like the Select Cards grid"""
+    """Display the BINGO board with all letters and numbers in circles"""
     st.markdown("""
     <style>
         .master-board-container {
-            max-width: 100%;
+            max-width: 950px;
             margin: 0 auto;
-            padding: 5px 10px;
+            padding: 20px;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
         .master-board-title {
             text-align: center;
-            font-size: 1.3rem;
+            font-size: 2rem;
             font-weight: bold;
             color: #1B5E20;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
-        .master-board-subtitle {
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .master-table td {
+            border: 1px solid #333;
+            padding: 8px 6px;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: bold;
-            color: #E53935;
-            margin-bottom: 8px;
+            min-width: 35px;
         }
-        .master-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 4px;
-            max-width: 100%;
-        }
-        .master-grid .col-label {
+        .master-table .row-label {
             background: #2E7D32;
             color: white;
-            font-size: 0.9rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            padding: 4px;
-            text-align: center;
-            border-radius: 4px;
+            min-width: 50px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
         }
-        .master-grid .num-btn {
-            padding: 4px 2px;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-            border-radius: 4px;
+        .circle-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
             background: #E8F5E9;
             color: #1A237E;
-            border: 1px solid #2E7D32;
-            cursor: default;
-            transition: all 0.2s ease;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: 2px solid #2E7D32;
+            transition: all 0.3s ease;
         }
-        .master-grid .num-btn.called {
+        .circle-number.called {
             background: #FF9800;
             color: white;
             border-color: #E65100;
-            transform: scale(1.02);
+            transform: scale(1.1);
         }
-        .master-grid .num-btn.last-called {
+        .circle-number.last-called {
             background: #E53935;
             color: white;
             border-color: #B71C1C;
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(229, 57, 53, 0.4);
+            transform: scale(1.2);
             animation: pulse 0.5s ease-in-out;
+            box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
+        }
+        .circle-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #2E7D32;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            border: 3px solid #1B5E20;
+            margin: auto;
         }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+            50% { transform: scale(1.3); }
             100% { transform: scale(1); }
         }
-        .master-stats {
-            text-align: center;
-            margin-top: 8px;
-            font-size: 0.85rem;
-            color: #333;
-            padding: 5px;
-            background: #F5F5F5;
-            border-radius: 4px;
-        }
         @media (max-width: 600px) {
-            .master-grid .num-btn {
-                font-size: 0.55rem;
-                padding: 2px 1px;
+            .master-table td {
+                padding: 4px 2px;
+                font-size: 0.7rem;
+                min-width: 20px;
             }
-            .master-grid .col-label {
-                font-size: 0.65rem;
-                padding: 2px;
+            .circle-number {
+                width: 28px;
+                height: 28px;
+                font-size: 0.7rem;
             }
-            .master-board-title {
+            .circle-letter {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+            .master-table .row-label {
+                width: 35px;
+                height: 35px;
                 font-size: 1rem;
             }
         }
     </style>
     """, unsafe_allow_html=True)
     
-    # Master board data - transposed
-    master_data = {
+    # Create master board data
+    master_board = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
         'N': list(range(31, 46)),
@@ -362,174 +528,32 @@ def display_master_board():
     html = '<div class="master-board-container">'
     html += '<div class="master-board-title">🎯 BINGO Board</div>'
     
+    # Show last called number if exists
     if st.session_state.last_called_number:
-        html += f'<div class="master-board-subtitle">🎯 Last Called: <span style="background:#E53935;color:white;padding:2px 12px;border-radius:15px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
+        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
     
-    html += '<div class="master-grid">'
+    html += '<table class="master-table">'
     
-    # Header row with B, I, N, G, O
     for letter in ['B', 'I', 'N', 'G', 'O']:
-        html += f'<div class="col-label">{letter}</div>'
-    
-    # Numbers in transposed format - 15 rows x 5 columns
-    for row_idx in range(15):
-        for letter in ['B', 'I', 'N', 'G', 'O']:
-            num = master_data[letter][row_idx]
+        html += '<tr>'
+        html += f'<td><div class="circle-letter">{letter}</div></td>'
+        for num in master_board[letter]:
             is_called = num in st.session_state.called_numbers
             is_last = num == st.session_state.last_called_number
             
             if is_last:
-                html += f'<div class="num-btn last-called">{num}</div>'
+                html += f'<td><div class="circle-number last-called">{num}</div></td>'
             elif is_called:
-                html += f'<div class="num-btn called">{num}</div>'
+                html += f'<td><div class="circle-number called">{num}</div></td>'
             else:
-                html += f'<div class="num-btn">{num}</div>'
-    
-    html += '</div>'
-    html += f'<div class="master-stats">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
-    html += '</div>'
-    
-    st.markdown(html, unsafe_allow_html=True)
-
-def display_bingo_card(card_id):
-    """Display a BINGO card - highlight called numbers that exist on the card"""
-    card = get_card(card_id)
-    if not card:
-        return
-    
-    cells = card["cells"]
-    card_numbers = get_card_numbers(card_id)
-    matches = card_numbers.intersection(st.session_state.called_numbers)
-    
-    st.markdown(f"""
-    <style>
-        .bingo-card-wrapper {{
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 5px auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-            max-width: 350px;
-            border: 2px solid #2E7D32;
-        }}
-        .bingo-card-title {{
-            text-align: center;
-            color: #1B5E20;
-            font-size: 0.9rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }}
-        .bingo-table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-family: Arial, sans-serif;
-        }}
-        .bingo-table th {{
-            background: #2E7D32;
-            color: white;
-            padding: 4px 2px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-align: center;
-            border: 1px solid #1B5E20;
-        }}
-        .bingo-table td {{
-            border: 1px solid #333;
-            padding: 4px 2px;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-            min-width: 30px;
-            height: 30px;
-        }}
-        .bingo-table .row-label {{
-            background: #2E7D32 !important;
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.65rem;
-            min-width: 25px;
-        }}
-        .bingo-table .free-space {{
-            background: #FFEB3B;
-            color: #E53935;
-            font-size: 1rem;
-        }}
-        .bingo-table .number-cell {{
-            color: #1A237E;
-        }}
-        .bingo-table .highlighted-number {{
-            background: #4CAF50 !important;
-            color: white !important;
-            border-radius: 50% !important;
-            box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
-            font-weight: bold;
-            transform: scale(1.05);
-        }}
-        .bingo-footer {{
-            text-align: center;
-            color: #333;
-            font-size: 0.7rem;
-            font-weight: bold;
-            margin-top: 5px;
-            letter-spacing: 1px;
-        }}
-        .matched-count {{
-            text-align: center;
-            font-size: 0.8rem;
-            color: #2E7D32;
-            font-weight: bold;
-            margin-top: 5px;
-            padding: 4px;
-            background: #E8F5E9;
-            border-radius: 4px;
-        }}
-        @media (max-width: 600px) {{
-            .bingo-table td {{
-                padding: 2px 1px;
-                font-size: 0.6rem;
-                min-width: 20px;
-                height: 22px;
-            }}
-            .bingo-table th {{
-                padding: 2px 1px;
-                font-size: 0.55rem;
-            }}
-        }}
-    </style>
-    """, unsafe_allow_html=True)
-    
-    html = f'<div class="bingo-card-wrapper">'
-    html += f'<div class="bingo-card-title">🎯 Card #{card_id}</div>'
-    
-    html += '<table class="bingo-table">'
-    html += '<thead><tr>'
-    html += '<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;"></th>'
-    for col in ['B', 'I', 'N', 'G', 'O']:
-        html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
-    html += '</tr></thead><tbody>'
-    
-    row_labels = ['B', 'I', 'N', 'G', 'O']
-    
-    for row_idx in range(5):
-        html += '<tr>'
-        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:4px 6px;">{row_labels[row_idx]}</td>'
-        
-        for col_idx in range(5):
-            value = cells[row_idx][col_idx]
-            
-            if value == 'F':
-                html += '<td class="free-space">★</td>'
-            else:
-                num = int(value)
-                if num in st.session_state.called_numbers and num in card_numbers:
-                    html += f'<td class="number-cell highlighted-number">{value}</td>'
-                else:
-                    html += f'<td class="number-cell">{value}</td>'
+                html += f'<td><div class="circle-number">{num}</div></td>'
         html += '</tr>'
     
-    html += '</tbody></table>'
-    html += f'<div class="matched-count">✅ Matches: {len(matches)} / 24 numbers</div>'
-    html += '<div class="bingo-footer"></div>'
+    html += '</table>'
+    
+    # Show count of called numbers
+    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
+    
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -538,27 +562,19 @@ def display_bingo_card(card_id):
 # MAIN APP
 # ===================================================================
 
-# Create two columns for side-by-side layout
-col_left, col_right = st.columns([2, 1])
-
-with col_left:
-    display_master_board()
-
-with col_right:
-    if st.session_state.selected_card:
-        display_bingo_card(st.session_state.selected_card)
-    else:
-        st.info("👈 Select a card below")
-
-st.markdown("---")
+# Display Master Board at top
+display_master_board()
 
 # Call Number Section
+st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("### 🎲 Number Calling")
     
+    # Check if all numbers are called
     all_called = len(st.session_state.called_numbers) >= 75
     
+    # Control buttons
     control_col1, control_col2, control_col3, control_col4 = st.columns(4)
     
     with control_col1:
@@ -566,6 +582,7 @@ with col2:
             if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
                 st.session_state.is_auto_calling = True
                 st.session_state.last_call_time = time.time()
+                # Call first number immediately
                 available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
                 if available:
                     called_num = random.choice(available)
@@ -597,29 +614,37 @@ with col2:
             st.session_state.called_numbers = set()
             st.session_state.clicked_numbers = set()
             st.session_state.selected_card = None
-            st.session_state.selected_card_numbers = set()
             st.session_state.last_called_number = None
             st.session_state.is_auto_calling = False
             st.session_state.auto_called_count = 0
             st.session_state.last_call_time = time.time()
             st.rerun()
     
+    # Status display with countdown
     if st.session_state.is_auto_calling:
+        # Calculate time until next call
         time_since_last = time.time() - st.session_state.last_call_time
-        time_until_next = max(0, 2.0 - time_since_last)
+        time_until_next = max(0, 3.0 - time_since_last)
         
         st.info(f"⏳ Auto-calling in progress... ({len(st.session_state.called_numbers)}/75 called)")
         progress = len(st.session_state.called_numbers) / 75
         st.progress(progress)
         
-        countdown_percent = (time_since_last / 2.0) * 100
+        # Show countdown with visual bar
+        countdown_percent = (time_since_last / 3.0) * 100
         st.caption(f"⏱️ Next call in: {time_until_next:.1f} seconds")
         
+        # Visual countdown bar
         st.markdown(f"""
-        <div style="width:100%; background:#e0e0e0; border-radius:8px; height:6px; margin-top:3px;">
-            <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:8px; height:6px; transition: width 0.1s;"></div>
+        <div style="width:100%; background:#e0e0e0; border-radius:10px; height:10px; margin-top:5px;">
+            <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:10px; height:10px; transition: width 0.1s;"></div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Auto-refresh for countdown
+        import time as timer
+        timer.sleep(0.5)
+        st.rerun()
         
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
@@ -633,12 +658,15 @@ with col2:
 st.markdown("---")
 st.markdown("## Select Cards (1 - 201)")
 
+# Numbers in a grid
 cols = st.columns(10)
 for i in range(1, 202):
     col_idx = (i - 1) % 10
     with cols[col_idx]:
+        # Check if number is clicked
         is_clicked = i in st.session_state.clicked_numbers
         
+        # Create clickable button
         if st.button(
             str(i),
             key=f"num_{i}",
@@ -648,34 +676,21 @@ for i in range(1, 202):
             if i in st.session_state.clicked_numbers:
                 st.session_state.clicked_numbers.remove(i)
                 st.session_state.selected_card = None
-                st.session_state.selected_card_numbers = set()
             else:
                 st.session_state.clicked_numbers.add(i)
                 st.session_state.selected_card = i
-                st.session_state.selected_card_numbers = get_card_numbers(i)
             st.rerun()
 
+# Footer with stats
 st.markdown(f"""
-<div style="text-align: center; color: #2d6a4f; padding: 15px; margin-top: 15px; border-top: 2px solid #2d6a4f; font-size: 0.85rem;">
+<div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
     Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)}/75 numbers
     {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
 
-# ===================================================================
-# AUTO-CALL ENGINE - 2 second interval
-# ===================================================================
-if st.session_state.is_auto_calling:
-    current_time = time.time()
-    if current_time - st.session_state.last_call_time >= 2.0:
-        available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-        if available:
-            called_num = random.choice(available)
-            st.session_state.called_numbers.add(called_num)
-            st.session_state.last_called_number = called_num
-            st.session_state.auto_called_count += 1
-            st.session_state.last_call_time = current_time
-            st.markdown(
-                f'<meta http-equiv="refresh" content="0.1">',
-                unsafe_allow_html=True
-            )
+# Display selected card
+if st.session_state.selected_card:
+    st.markdown("---")
+    st.markdown("### 📋 Selected Card")
+    display_bingo_card(st.session_state.selected_card)
