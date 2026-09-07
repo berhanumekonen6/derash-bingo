@@ -22,9 +22,17 @@ A complete BINGO game platform integrated with Supabase backend, built with Stre
 | **Selection Time** | 60 seconds |
 | **Number Range** | 1-75 |
 
+## 🔗 Quick Links
+
+| Link | URL |
+|------|-----|
+| 🎯 Play Game | https://tinyurl.com/u8ctbvr6 |
+| 🤖 Telegram Bot | @DerashBingoPlayBot |
+| 📞 Telebirr | 0905527481 |
+
 ## 🚀 Installation
 
-1. Clone the repository
-2. Install dependencies:
+### 1. Clone the repository
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/berhanumekonen6/derash-bingo.git
+cd derash-bingo
