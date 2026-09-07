@@ -255,8 +255,8 @@ def get_card(card_id):
             return card
     return None
 
-def display_bingo_card(card_id):
-    """Display a BINGO card with called numbers highlighted"""
+def display_selected_card(card_id):
+    """Display a BINGO card with circular cells like the master board"""
     card = get_card(card_id)
     if not card:
         return
@@ -265,135 +265,151 @@ def display_bingo_card(card_id):
     
     st.markdown(f"""
     <style>
-        .bingo-card-wrapper {{
+        .selected-card-container {{
             background: white;
             border-radius: 10px;
-            padding: 20px;
-            margin: 20px auto;
+            padding: 15px;
+            margin: 10px auto;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 500px;
+            max-width: 400px;
             border: 2px solid #2E7D32;
         }}
-        .bingo-card-title {{
+        .selected-card-title {{
             text-align: center;
             color: #1B5E20;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: bold;
             margin-bottom: 10px;
         }}
-        .bingo-table {{
+        .selected-table {{
             width: 100%;
             border-collapse: collapse;
-            font-family: Arial, sans-serif;
         }}
-        .bingo-table th {{
+        .selected-table td {{
+            border: 1px solid #333;
+            padding: 6px 4px;
+            text-align: center;
+            min-width: 35px;
+        }}
+        .selected-table .row-label {{
             background: #2E7D32;
             color: white;
-            padding: 8px 6px;
+            font-weight: bold;
             font-size: 0.9rem;
-            font-weight: bold;
-            text-align: center;
-            border: 1px solid #1B5E20;
-        }}
-        .bingo-table td {{
-            border: 1px solid #333;
-            padding: 8px 4px;
-            text-align: center;
-            font-size: 0.9rem;
-            font-weight: bold;
-            min-width: 40px;
-            height: 40px;
-        }}
-        .bingo-table .row-label {{
-            background: #2E7D32 !important;
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.8rem;
             min-width: 30px;
         }}
-        .bingo-table .free-space {{
+        .selected-circle {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #E8F5E9;
+            color: #1A237E;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: 2px solid #2E7D32;
+            transition: all 0.3s ease;
+        }}
+        .selected-circle.called {{
+            background: #FF9800;
+            color: white;
+            border-color: #E65100;
+            transform: scale(1.1);
+        }}
+        .selected-circle.ticked {{
+            background: #4CAF50;
+            color: white;
+            border-color: #1B5E20;
+            transform: scale(1.05);
+        }}
+        .selected-circle.ticked-and-called {{
+            background: #4CAF50;
+            color: white;
+            border-color: #E65100;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+        }}
+        .selected-circle.free {{
             background: #FFEB3B;
             color: #E53935;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
+            border-color: #F57F17;
         }}
-        .bingo-table .number-cell {{
-            color: #1A237E;
-        }}
-        .bingo-table .called-number {{
-            background: #FF9800 !important;
-            color: white !important;
-            border-radius: 4px;
-        }}
-        .bingo-table .ticked-number {{
-            background: #4CAF50 !important;
-            color: white !important;
-            border-radius: 4px;
-        }}
-        .bingo-footer {{
+        .selected-footer {{
             text-align: center;
             color: #333;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             font-weight: bold;
-            margin-top: 8px;
-            letter-spacing: 2px;
+            margin-top: 6px;
+            letter-spacing: 1px;
             font-family: Arial, sans-serif;
         }}
         @media (max-width: 600px) {{
-            .bingo-table td {{
-                padding: 4px 2px;
-                font-size: 0.8rem;
-                min-width: 30px;
-                height: 30px;
+            .selected-circle {{
+                width: 32px;
+                height: 32px;
+                font-size: 0.75rem;
             }}
-            .bingo-table th {{
+            .selected-table td {{
                 padding: 4px 2px;
-                font-size: 0.8rem;
+                min-width: 25px;
             }}
         }}
     </style>
     """, unsafe_allow_html=True)
     
-    # Card wrapper
-    html = f'<div class="bingo-card-wrapper">'
-    html += f'<div class="bingo-card-title">Card #{card_id}</div>'
+    html = f'<div class="selected-card-container">'
+    html += f'<div class="selected-card-title">🎯 Card #{card_id}</div>'
     
-    # Table
-    html += '<table class="bingo-table">'
-    html += '<thead><tr>'
-    html += '<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;"></th>'
-    for col in ['B', 'I', 'N', 'G', 'O']:
-        html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
-    html += '</tr></thead><tbody>'
-    
-    # Row labels - B, I, N, G, O
-    row_labels = ['B', 'I', 'N', 'G', 'O']
+    html += '<table class="selected-table">'
+    html += '<tr>'
+    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">B</td>'
+    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">I</td>'
+    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">N</td>'
+    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">G</td>'
+    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">O</td>'
+    html += '</tr>'
     
     for row_idx in range(5):
         html += '<tr>'
-        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:8px 6px;">{row_labels[row_idx]}</td>'
-        
         for col_idx in range(5):
             value = cells[row_idx][col_idx]
             
             if value == 'F':
-                html += '<td class="free-space">★</td>'
+                html += f'<td><div class="selected-circle free">★</div></td>'
             else:
-                # Check if this number has been called
                 num = int(value)
                 is_called = num in st.session_state.called_numbers
-                # Check if this number is on the selected card (ticked)
                 is_ticked = num in st.session_state.clicked_numbers
                 
+                circle_class = "selected-circle"
                 if is_ticked and is_called:
-                    html += f'<td class="number-cell ticked-number">{value}</td>'
+                    circle_class += " ticked-and-called"
                 elif is_called:
-                    html += f'<td class="number-cell called-number">{value}</td>'
-                else:
-                    html += f'<td class="number-cell">{value}</td>'
+                    circle_class += " called"
+                elif is_ticked:
+                    circle_class += " ticked"
+                
+                html += f'<td><div class="{circle_class}">{value}</div></td>'
         html += '</tr>'
     
-    html += '</tbody></table>'
-    html += '<div class="bingo-footer"></div>'
+    html += '</table>'
+    
+    # Stats footer
+    total_called_on_card = 0
+    total_ticked = 0
+    for row in cells:
+        for val in row:
+            if val != 'F':
+                num = int(val)
+                if num in st.session_state.called_numbers:
+                    total_called_on_card += 1
+                if num in st.session_state.clicked_numbers:
+                    total_ticked += 1
+    
+    html += f'<div class="selected-footer">✅ {total_called_on_card}/24 called | ⭐ {total_ticked} ticked</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -571,8 +587,7 @@ with board_col:
 with card_col:
     # Display Selected Card right next to the BINGO Board
     if st.session_state.selected_card:
-        st.markdown("### 📋 Selected Card")
-        display_bingo_card(st.session_state.selected_card)
+        display_selected_card(st.session_state.selected_card)
     else:
         st.info("👆 Click a card number below to select it")
 
