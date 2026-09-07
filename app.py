@@ -253,7 +253,7 @@ def get_card_numbers(card_id):
     return numbers
 
 def display_transposed_master_board():
-    """Display the BINGO board in transposed position (rows become columns)"""
+    """Display the BINGO board in transposed position without the first column"""
     st.markdown("""
     <style>
         .master-board-container {
@@ -352,7 +352,6 @@ def display_transposed_master_board():
     """, unsafe_allow_html=True)
     
     # Transposed data - each row is a number, columns are B, I, N, G, O
-    # Numbers 1-75, each with their letter
     transposed_data = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -362,26 +361,22 @@ def display_transposed_master_board():
     }
     
     html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯 BINGO Board (Transposed)</div>'
+    html += '<div class="master-board-title">🎯 BINGO Board</div>'
     
     if st.session_state.last_called_number:
         html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
     
     html += '<table class="master-table">'
     
-    # Header row with B, I, N, G, O labels
+    # Header row with B, I, N, G, O labels (no first column)
     html += '<tr>'
-    html += '<td></td>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += f'<td><div class="col-label">{letter}</div></td>'
     html += '</tr>'
     
-    # Transpose: For each row index (1-15), show the number from each column
+    # Transpose: For each row index (0-14), show the number from each column
     for row_idx in range(15):
         html += '<tr>'
-        # Row number (1-15 for B, 16-30 for I, etc.)
-        html += f'<td style="font-weight:bold;color:#2E7D32;font-size:0.8rem;">{row_idx + 1}</td>'
-        
         for letter in ['B', 'I', 'N', 'G', 'O']:
             num = transposed_data[letter][row_idx]
             is_called = num in st.session_state.called_numbers
@@ -560,7 +555,7 @@ with col_right:
     if st.session_state.selected_card:
         display_bingo_card(st.session_state.selected_card)
     else:
-        st.info("👈 Select a card from below to display it here")
+        st.info("👈 Select a card below to display here")
 
 st.markdown("---")
 
