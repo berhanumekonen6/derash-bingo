@@ -7,8 +7,8 @@ import os
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="ደራሽ ቢንጎ",
-    page_icon="🎯",
+    page_title="ደራሽ ቢንጎ🍀",
+    page_icon="🎯🍀",
     layout="wide"
 )
 
