@@ -253,46 +253,49 @@ def get_card_numbers(card_id):
     return numbers
 
 def display_transposed_master_board():
-    """Display the BINGO board in transposed position with compact styling"""
+    """Display the BINGO board in transposed position with ultra compact styling"""
     st.markdown("""
     <style>
         .master-board-container {
             max-width: 100%;
             margin: 0 auto;
-            padding: 5px 10px;
+            padding: 2px 4px;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom: 4px;
         }
         .master-board-title {
             text-align: center;
-            font-size: 1.3rem;
+            font-size: 1rem;
             font-weight: bold;
             color: #1B5E20;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         .master-table {
             width: 100%;
             border-collapse: collapse;
             border: none;
+            margin: 0;
+            padding: 0;
         }
         .master-table td {
             border: none;
-            padding: 1px 2px;
+            padding: 0px 1px;
             text-align: center;
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             font-weight: bold;
-            min-width: 20px;
+            min-width: 12px;
+            line-height: 1.2;
         }
         .master-table .col-label {
             background: #2E7D32;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.7rem;
             font-weight: bold;
-            min-width: 25px;
-            width: 25px;
-            height: 25px;
+            min-width: 18px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -303,15 +306,15 @@ def display_transposed_master_board():
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: #E8F5E9;
             color: #1A237E;
             font-weight: bold;
-            font-size: 0.65rem;
-            border: 1.5px solid #2E7D32;
-            transition: all 0.2s ease;
+            font-size: 0.55rem;
+            border: 1px solid #2E7D32;
+            transition: all 0.15s ease;
         }
         .circle-number.called {
             background: #FF9800;
@@ -324,30 +327,30 @@ def display_transposed_master_board():
             color: white;
             border-color: #B71C1C;
             transform: scale(1.1);
-            animation: pulse 0.4s ease-in-out;
-            box-shadow: 0 0 12px rgba(229, 57, 53, 0.4);
+            animation: pulse 0.3s ease-in-out;
+            box-shadow: 0 0 8px rgba(229, 57, 53, 0.3);
         }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+            50% { transform: scale(1.15); }
             100% { transform: scale(1); }
         }
         @media (max-width: 600px) {
             .master-table td {
-                padding: 0px 1px;
-                font-size: 0.55rem;
-                min-width: 12px;
+                padding: 0px 0px;
+                font-size: 0.45rem;
+                min-width: 8px;
             }
             .circle-number {
-                width: 16px;
-                height: 16px;
-                font-size: 0.5rem;
-                border: 1px solid #2E7D32;
+                width: 13px;
+                height: 13px;
+                font-size: 0.4rem;
+                border: 0.5px solid #2E7D32;
             }
             .master-table .col-label {
-                width: 18px;
-                height: 18px;
-                font-size: 0.65rem;
+                width: 14px;
+                height: 14px;
+                font-size: 0.5rem;
             }
         }
     </style>
@@ -366,7 +369,7 @@ def display_transposed_master_board():
     html += '<div class="master-board-title">🎯 BINGO Board</div>'
     
     if st.session_state.last_called_number:
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#E53935;margin-bottom:4px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:2px 10px;border-radius:15px;display:inline-block;font-size:0.9rem;">{st.session_state.last_called_number}</span></div>'
+        html += f'<div style="text-align:center;font-size:0.85rem;font-weight:bold;color:#E53935;margin-bottom:2px;">🎯 Last: <span style="background:#E53935;color:white;padding:1px 8px;border-radius:12px;display:inline-block;font-size:0.75rem;">{st.session_state.last_called_number}</span></div>'
     
     html += '<table class="master-table">'
     
@@ -393,7 +396,7 @@ def display_transposed_master_board():
         html += '</tr>'
     
     html += '</table>'
-    html += f'<div style="text-align:center;margin-top:5px;font-size:0.8rem;color:#333;padding:4px;background:#F5F5F5;border-radius:5px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75</div>'
+    html += f'<div style="text-align:center;margin-top:2px;font-size:0.65rem;color:#333;padding:2px;background:#F5F5F5;border-radius:3px;">📊 {len(st.session_state.called_numbers)}/75</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -412,19 +415,19 @@ def display_bingo_card(card_id):
     <style>
         .bingo-card-wrapper {{
             background: white;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 5px auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-            max-width: 350px;
-            border: 2px solid #2E7D32;
+            border-radius: 6px;
+            padding: 6px 8px;
+            margin: 2px auto;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            max-width: 280px;
+            border: 1.5px solid #2E7D32;
         }}
         .bingo-card-title {{
             text-align: center;
             color: #1B5E20;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }}
         .bingo-table {{
             width: 100%;
@@ -434,32 +437,32 @@ def display_bingo_card(card_id):
         .bingo-table th {{
             background: #2E7D32;
             color: white;
-            padding: 3px 2px;
-            font-size: 0.65rem;
+            padding: 1px 1px;
+            font-size: 0.5rem;
             font-weight: bold;
             text-align: center;
-            border: 1px solid #1B5E20;
+            border: 0.5px solid #1B5E20;
         }}
         .bingo-table td {{
-            border: 1px solid #333;
-            padding: 3px 2px;
+            border: 0.5px solid #333;
+            padding: 1px 1px;
             text-align: center;
-            font-size: 0.7rem;
+            font-size: 0.55rem;
             font-weight: bold;
-            min-width: 25px;
-            height: 28px;
+            min-width: 18px;
+            height: 20px;
         }}
         .bingo-table .row-label {{
             background: #2E7D32 !important;
             color: white !important;
             font-weight: bold;
-            font-size: 0.6rem;
-            min-width: 20px;
+            font-size: 0.45rem;
+            min-width: 14px;
         }}
         .bingo-table .free-space {{
             background: #FFEB3B;
             color: #E53935;
-            font-size: 1rem;
+            font-size: 0.8rem;
         }}
         .bingo-table .number-cell {{
             color: #1A237E;
@@ -468,40 +471,42 @@ def display_bingo_card(card_id):
             background: #4CAF50 !important;
             color: white !important;
             border-radius: 50% !important;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
             font-weight: bold;
-            transform: scale(1.05);
-            transition: all 0.2s ease;
+            transform: scale(1.02);
         }}
         .bingo-footer {{
             text-align: center;
             color: #333;
-            font-size: 0.6rem;
+            font-size: 0.5rem;
             font-weight: bold;
-            margin-top: 4px;
-            letter-spacing: 1px;
-            font-family: Arial, sans-serif;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
         }}
         .matched-count {{
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 0.6rem;
             color: #2E7D32;
             font-weight: bold;
-            margin-top: 4px;
-            padding: 4px;
+            margin-top: 2px;
+            padding: 2px;
             background: #E8F5E9;
-            border-radius: 4px;
+            border-radius: 3px;
         }}
         @media (max-width: 600px) {{
             .bingo-table td {{
-                padding: 2px 1px;
-                font-size: 0.55rem;
-                min-width: 18px;
-                height: 20px;
+                padding: 1px 0px;
+                font-size: 0.45rem;
+                min-width: 12px;
+                height: 14px;
             }}
             .bingo-table th {{
-                padding: 2px 1px;
-                font-size: 0.5rem;
+                padding: 1px 0px;
+                font-size: 0.4rem;
+            }}
+            .bingo-card-wrapper {{
+                padding: 4px 4px;
+                max-width: 200px;
             }}
         }}
     </style>
@@ -512,16 +517,16 @@ def display_bingo_card(card_id):
     
     html += '<table class="bingo-table">'
     html += '<thead><tr>'
-    html += '<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;"></th>'
+    html += '<th style="background:#2E7D32;color:white;border:0.5px solid #1B5E20;"></th>'
     for col in ['B', 'I', 'N', 'G', 'O']:
-        html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
+        html += f'<th style="background:#2E7D32;color:white;border:0.5px solid #1B5E20;">{col}</th>'
     html += '</tr></thead><tbody>'
     
     row_labels = ['B', 'I', 'N', 'G', 'O']
     
     for row_idx in range(5):
         html += '<tr>'
-        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:3px 4px;">{row_labels[row_idx]}</td>'
+        html += f'<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:0.5px solid #1B5E20;padding:1px 2px;">{row_labels[row_idx]}</td>'
         
         for col_idx in range(5):
             value = cells[row_idx][col_idx]
@@ -537,7 +542,7 @@ def display_bingo_card(card_id):
         html += '</tr>'
     
     html += '</tbody></table>'
-    html += f'<div class="matched-count">✅ Matches: {len(matches)} / 24</div>'
+    html += f'<div class="matched-count">✅ {len(matches)}/24</div>'
     html += '<div class="bingo-footer"></div>'
     html += '</div>'
     
@@ -622,11 +627,11 @@ with col2:
         st.progress(progress)
         
         countdown_percent = (time_since_last / 2.0) * 100
-        st.caption(f"⏱️ Next call in: {time_until_next:.1f}s")
+        st.caption(f"⏱️ Next: {time_until_next:.1f}s")
         
         st.markdown(f"""
-        <div style="width:100%; background:#e0e0e0; border-radius:8px; height:6px; margin-top:3px;">
-            <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:8px; height:6px; transition: width 0.1s;"></div>
+        <div style="width:100%; background:#e0e0e0; border-radius:4px; height:4px; margin-top:2px;">
+            <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:4px; height:4px; transition: width 0.1s;"></div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -634,7 +639,7 @@ with col2:
         st.success("🎉 All 75 numbers called!")
         st.progress(1.0)
     elif st.session_state.last_called_number:
-        st.success(f"✅ Last called: **{st.session_state.last_called_number}**")
+        st.success(f"✅ Last: **{st.session_state.last_called_number}**")
         progress = len(st.session_state.called_numbers) / 75
         st.progress(progress)
 
@@ -665,9 +670,9 @@ for i in range(1, 202):
             st.rerun()
 
 st.markdown(f"""
-<div style="text-align: center; color: #2d6a4f; padding: 15px; margin-top: 15px; border-top: 2px solid #2d6a4f; font-size: 0.9rem;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} | Called: {len(st.session_state.called_numbers)}/75
-    {' | ⏳ Auto-calling' if st.session_state.is_auto_calling else ''}
+<div style="text-align: center; color: #2d6a4f; padding: 10px; margin-top: 10px; border-top: 1px solid #2d6a4f; font-size: 0.75rem;">
+    Cards: 201 | Selected: {len(st.session_state.clicked_numbers)} | Called: {len(st.session_state.called_numbers)}/75
+    {' | ⏳ Auto' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
 
