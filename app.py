@@ -34,28 +34,24 @@ if 'card_selection_round' not in st.session_state:
 if 'has_auto_joined' not in st.session_state:
     st.session_state.has_auto_joined = False
 
-# Timer for card selection - ALWAYS RUNNING
+# Timer for card selection - ALWAYS RUNNING (never stops)
 current_time = time.time()
 time_passed = current_time - st.session_state.card_selection_last_update
 st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
 st.session_state.card_selection_last_update = current_time
 
-# When timer reaches 0, auto-select card and join game
+# When timer reaches 0, auto-select card and reset timer (always resets)
 if st.session_state.card_selection_time <= 0:
-    # Reset timer
+    # ALWAYS reset timer immediately
     st.session_state.card_selection_time = 60
     st.session_state.card_selection_round += 1
-    st.session_state.has_auto_joined = True
+    st.session_state.card_selection_last_update = time.time()
     
     # If there are clicked cards, select the first one and join game
-    if len(st.session_state.clicked_numbers) > 0:
+    if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
         st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         st.session_state.auto_call_started = False
         st.session_state.game_started = True
-        st.rerun()
-    else:
-        # No card selected - reset timer and keep showing selection
-        st.session_state.card_selection_last_update = time.time()
         st.rerun()
 
 # Auto-call numbers every 2 seconds automatically once a card is selected
@@ -626,7 +622,7 @@ def display_master_board():
 # MAIN APP - Show Selection or Game
 # ===================================================================
 
-# Header with Title only (no timer in header)
+# Header with Title only
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
     <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:5px;margin:0;">
