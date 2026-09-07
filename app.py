@@ -25,18 +25,38 @@ if 'game_started' not in st.session_state:
     st.session_state.game_started = False
 if 'auto_call_started' not in st.session_state:
     st.session_state.auto_call_started = False
+if 'card_selection_timer_started' not in st.session_state:
+    st.session_state.card_selection_timer_started = False
+if 'card_selection_time' not in st.session_state:
+    st.session_state.card_selection_time = 60  # 60 seconds for card selection
+if 'card_selection_last_update' not in st.session_state:
+    st.session_state.card_selection_last_update = time.time()
 
-# Timer session state variables - ALWAYS RUNNING
-if 'timer_last_update' not in st.session_state:
-    st.session_state.timer_last_update = time.time()
-if 'timer_remaining' not in st.session_state:
-    st.session_state.timer_remaining = 60  # 60 seconds = 1:00
-
-# Update timer - ALWAYS RUNNING
-current_time = time.time()
-time_passed = current_time - st.session_state.timer_last_update
-st.session_state.timer_remaining = max(0, st.session_state.timer_remaining - time_passed)
-st.session_state.timer_last_update = current_time
+# Timer for card selection - ALWAYS RUNNING when no card is selected
+if st.session_state.selected_card is None:
+    # Update card selection timer
+    current_time = time.time()
+    time_passed = current_time - st.session_state.card_selection_last_update
+    st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
+    st.session_state.card_selection_last_update = current_time
+    
+    # When timer reaches 0, automatically select the first clicked card or show message
+    if st.session_state.card_selection_time <= 0:
+        st.session_state.card_selection_time = 60
+        # If there are clicked cards, select the first one
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+            st.session_state.auto_call_started = False
+            st.session_state.card_selection_timer_started = False
+            st.rerun()
+        else:
+            # Reset timer if no card selected
+            st.session_state.card_selection_time = 60
+            st.session_state.card_selection_last_update = time.time()
+else:
+    # Card is selected - timer stops and auto-calling begins
+    st.session_state.card_selection_time = 60
+    st.session_state.card_selection_last_update = time.time()
 
 # Auto-call numbers every 2 seconds automatically once a card is selected
 if st.session_state.selected_card is not None:
@@ -69,17 +89,6 @@ if st.session_state.selected_card is not None:
                 st.rerun()
 else:
     st.session_state.auto_call_started = False
-
-# Reset timer when it reaches 0
-if st.session_state.timer_remaining <= 0:
-    st.session_state.timer_remaining = 60
-    st.session_state.clicked_numbers = set()
-    st.session_state.selected_card = None
-    st.session_state.auto_call_started = False
-    st.session_state.called_numbers = set()
-    st.session_state.last_called_number = None
-    st.session_state.auto_called_count = 0
-    st.rerun()
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -617,7 +626,7 @@ def display_master_board():
 # MAIN APP - Show Selection or Game
 # ===================================================================
 
-# Header with Title and Timer next to each other
+# Header with Title
 header_col1, header_col2 = st.columns([1, 1])
 
 with header_col1:
@@ -633,36 +642,54 @@ with header_col1:
     """, unsafe_allow_html=True)
 
 with header_col2:
-    # Timer in a small inline format
-    remaining = st.session_state.timer_remaining
-    minutes = int(remaining // 60)
-    seconds = int(remaining % 60)
-    time_str = f"{minutes:01d}:{seconds:02d}"
-    
-    # Color coding
-    if remaining <= 10:
-        color = "#E53935"
-    elif remaining <= 30:
-        color = "#FF9800"
+    # Show timer only when no card is selected
+    if st.session_state.selected_card is None:
+        remaining = st.session_state.card_selection_time
+        minutes = int(remaining // 60)
+        seconds = int(remaining % 60)
+        time_str = f"{minutes:01d}:{seconds:02d}"
+        
+        # Color coding
+        if remaining <= 10:
+            color = "#E53935"
+        elif remaining <= 30:
+            color = "#FF9800"
+        else:
+            color = "#2E7D32"
+        
+        st.markdown(f"""
+        <div style="text-align:right;padding:10px 0;">
+            <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.1rem;font-weight:bold;color:{color};font-family:monospace;">
+                ⏱️ {time_str}
+            </span>
+            <span style="display:inline-block;margin-left:10px;padding:8px 15px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
+                Select Card
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        color = "#2E7D32"
-    
-    st.markdown(f"""
-    <div style="text-align:right;padding:10px 0;">
-        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.1rem;font-weight:bold;color:{color};font-family:monospace;">
-            ⏱️ {time_str}
-        </span>
-        <span style="display:inline-block;margin-left:10px;padding:8px 15px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
-            Max 2 cards
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+        # Show auto-call status when card is selected
+        st.markdown(f"""
+        <div style="text-align:right;padding:10px 0;">
+            <span style="display:inline-block;padding:8px 20px;background:#4CAF50;border-radius:10px;border:2px solid #2E7D32;font-size:1.0rem;font-weight:bold;color:white;font-family:monospace;">
+                🎯 Auto-calling...
+            </span>
+            <span style="display:inline-block;margin-left:10px;padding:8px 15px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
+                {st.session_state.auto_called_count} called
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Check if a card is selected
 if not st.session_state.selected_card:
     # Show card selection
     st.markdown("## 📋 Select Your Card (1 - 201)")
-    st.caption(f"📌 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
+    
+    # Show warning if timer is low
+    if st.session_state.card_selection_time <= 10:
+        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left to select a card!")
+    else:
+        st.caption(f"⏱️ Select up to 2 cards within 60 seconds | Selected: {len(st.session_state.clicked_numbers)}/2 cards")
     
     # Numbers in a grid - Mobile optimized
     cols = st.columns(8)
@@ -695,24 +722,23 @@ if not st.session_state.selected_card:
                     # Only add if within limit
                     if len(st.session_state.clicked_numbers) < 2:
                         st.session_state.clicked_numbers.add(i)
-                        st.session_state.selected_card = i
+                        # Auto-select when timer reaches 0
+                        # But user can also manually select
                 st.rerun()
     
     # Show info message
     if len(st.session_state.clicked_numbers) >= 2:
-        st.warning("⚠️ Maximum 2 cards reached!")
+        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
     else:
-        st.info("👆 Click a card number above to select it (max 2 cards)!")
+        st.info("👆 Click a card number above to select it (max 2 cards)")
+    
+    # Show timer progress
+    progress = 1 - (st.session_state.card_selection_time / 60)
+    st.progress(progress)
     
 else:
     # Show the game with BINGO Board and Selected Card
     card_display = st.session_state.selected_card
-    
-    # Auto-call status
-    if st.session_state.auto_called_count > 0:
-        auto_status = f"🎯 Auto-calls: {st.session_state.auto_called_count}"
-    else:
-        auto_status = "⏳ Auto-calling started..."
     
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
@@ -724,7 +750,7 @@ else:
             Cards: {len(st.session_state.clicked_numbers)}/2
         </span>
         <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-            {auto_status}
+            🎯 Auto-calls: {st.session_state.auto_called_count}
         </span>
         <button onclick="window.location.reload()" style="margin-left:15px;background:rgba(255,255,255,0.2);border:1px solid white;color:white;padding:5px 15px;border-radius:5px;cursor:pointer;">
             🔄 Change Card
