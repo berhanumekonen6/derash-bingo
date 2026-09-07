@@ -1641,7 +1641,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 # ===================================================================
 
 if not st.session_state.selected_card:
-    st.markdown("## 📋ካርድዎን ይምረጡ🔥🚀")
+    st.markdown("## 📋ካርቴላ ይምረጡ🔥🚀")
     
     # Check if we should auto-select
     if st.session_state.card_selection_time <= 0 and len(st.session_state.clicked_numbers) > 0:
