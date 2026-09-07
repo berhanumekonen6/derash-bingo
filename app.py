@@ -31,6 +31,8 @@ if 'card_selection_last_update' not in st.session_state:
     st.session_state.card_selection_last_update = time.time()
 if 'card_selection_round' not in st.session_state:
     st.session_state.card_selection_round = 0
+if 'has_auto_joined' not in st.session_state:
+    st.session_state.has_auto_joined = False
 
 # Timer for card selection - ALWAYS RUNNING
 current_time = time.time()
@@ -38,20 +40,23 @@ time_passed = current_time - st.session_state.card_selection_last_update
 st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
 st.session_state.card_selection_last_update = current_time
 
-# When timer reaches 0, auto-select card and reset timer
+# When timer reaches 0, auto-select card and join game
 if st.session_state.card_selection_time <= 0:
     # Reset timer
     st.session_state.card_selection_time = 60
     st.session_state.card_selection_round += 1
+    st.session_state.has_auto_joined = True
     
-    # If there are clicked cards, select the first one
+    # If there are clicked cards, select the first one and join game
     if len(st.session_state.clicked_numbers) > 0:
         st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         st.session_state.auto_call_started = False
+        st.session_state.game_started = True
         st.rerun()
     else:
-        # No card selected - keep showing selection screen
+        # No card selected - reset timer and keep showing selection
         st.session_state.card_selection_last_update = time.time()
+        st.rerun()
 
 # Auto-call numbers every 2 seconds automatically once a card is selected
 if st.session_state.selected_card is not None:
@@ -621,23 +626,24 @@ def display_master_board():
 # MAIN APP - Show Selection or Game
 # ===================================================================
 
-# Header with Title
-header_col1, header_col2 = st.columns([1, 1])
+# Header with Title only (no timer in header)
+st.markdown("""
+<div style="text-align:center;padding:10px 0;margin-bottom:10px;">
+    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:5px;margin:0;">
+        🎯 ደራሽ ቢንጎ
+    </h1>
+    <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:2px;font-size:0.8rem;margin:5px 0;">
+        Derash BINGO - 201 Cards
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-with header_col1:
-    st.markdown("""
-    <div style="text-align:left;padding:5px 0;">
-        <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:1.8rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:3px;margin:0;">
-            🎯 ደራሽ ቢንጎ
-        </h1>
-        <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:1px;font-size:0.7rem;margin:2px 0;">
-            Derash BINGO - 201 Cards
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with header_col2:
-    # Always show timer
+# Check if a card is selected
+if not st.session_state.selected_card:
+    # Show card selection with timer
+    st.markdown("## 📋 Select Your Card (1 - 201)")
+    
+    # Timer display right here
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
@@ -651,33 +657,26 @@ with header_col2:
     else:
         color = "#2E7D32"
     
-    # Show different status based on game state
-    if st.session_state.selected_card is None:
-        status_text = "Select Card"
-    else:
-        status_text = f"🎯 {st.session_state.auto_called_count} called"
-    
+    # Show timer with status
     st.markdown(f"""
-    <div style="text-align:right;padding:10px 0;">
-        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.1rem;font-weight:bold;color:{color};font-family:monospace;">
+    <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;flex-wrap:wrap;">
+        <span style="display:inline-block;padding:10px 25px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.5rem;font-weight:bold;color:{color};font-family:monospace;">
             ⏱️ {time_str}
         </span>
-        <span style="display:inline-block;margin-left:10px;padding:8px 15px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
-            {status_text}
+        <span style="display:inline-block;padding:8px 20px;background:#2E7D32;border-radius:10px;font-size:1rem;font-weight:bold;color:white;">
+            Select Card
+        </span>
+        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
+            Selected: {len(st.session_state.clicked_numbers)}/2 cards
         </span>
     </div>
     """, unsafe_allow_html=True)
-
-# Check if a card is selected
-if not st.session_state.selected_card:
-    # Show card selection
-    st.markdown("## 📋 Select Your Card (1 - 201)")
     
     # Show warning if timer is low
     if st.session_state.card_selection_time <= 10:
         st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left to select a card!")
-    else:
-        st.caption(f"⏱️ Select up to 2 cards within 60 seconds | Selected: {len(st.session_state.clicked_numbers)}/2 cards")
+    elif st.session_state.card_selection_time <= 30:
+        st.info(f"⏱️ Hurry! {int(st.session_state.card_selection_time)} seconds remaining...")
     
     # Numbers in a grid - Mobile optimized
     cols = st.columns(8)
@@ -714,7 +713,7 @@ if not st.session_state.selected_card:
     
     # Show info message
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
+        st.success("✅ Maximum 2 cards selected! Waiting for timer to reach 0:00...")
     else:
         st.info("👆 Click a card number above to select it (max 2 cards)")
     
@@ -722,8 +721,11 @@ if not st.session_state.selected_card:
     progress = 1 - (st.session_state.card_selection_time / 60)
     st.progress(progress)
     
+    # Show countdown text
+    st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)} seconds")
+    
 else:
-    # Show the game with BINGO Board and Selected Card
+    # Show the game with BINGO Board and Selected Card (NO TIMER HERE)
     card_display = st.session_state.selected_card
     
     st.markdown(f"""
@@ -762,6 +764,7 @@ st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
     Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 cards | Called: {len(st.session_state.called_numbers)}/75 numbers
     {' | 🎯 Auto-calls: ' + str(st.session_state.auto_called_count) if st.session_state.auto_called_count > 0 else ''}
+    {' | ⏱️ Next auto-join in ' + str(int(st.session_state.card_selection_time)) + 's' if st.session_state.selected_card is None else ''}
 </div>
 """, unsafe_allow_html=True)
 
