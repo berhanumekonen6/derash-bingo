@@ -25,22 +25,8 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
-
-# Check if we need to auto-call
-if st.session_state.is_auto_calling:
-    if len(st.session_state.called_numbers) < 75:
-        current_time = time.time()
-        if current_time - st.session_state.last_call_time >= 3.0:
-            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-            if available:
-                called_num = random.choice(available)
-                st.session_state.called_numbers.add(called_num)
-                st.session_state.last_called_number = called_num
-                st.session_state.auto_called_count += 1
-                st.session_state.last_call_time = current_time
-                st.rerun()
-    else:
-        st.session_state.is_auto_calling = False
+if 'auto_call_trigger' not in st.session_state:
+    st.session_state.auto_call_trigger = False
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -275,6 +261,8 @@ def display_bingo_card(card_id):
         return
     
     cells = card["cells"]
+    card_numbers = get_card_numbers(card_id)
+    matches = card_numbers.intersection(st.session_state.called_numbers)
     
     st.markdown(f"""
     <style>
@@ -375,17 +363,9 @@ def display_bingo_card(card_id):
     </style>
     """, unsafe_allow_html=True)
     
-    # Get the numbers on this card
-    card_numbers = get_card_numbers(card_id)
-    
-    # Count matches
-    matches = card_numbers.intersection(st.session_state.called_numbers)
-    
-    # Card wrapper
     html = f'<div class="bingo-card-wrapper">'
     html += f'<div class="bingo-card-title">🎯 Card #{card_id}</div>'
     
-    # Table
     html += '<table class="bingo-table">'
     html += '<thead><tr>'
     html += '<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;"></th>'
@@ -393,7 +373,6 @@ def display_bingo_card(card_id):
         html += f'<th style="background:#2E7D32;color:white;border:1px solid #1B5E20;">{col}</th>'
     html += '</tr></thead><tbody>'
     
-    # Row labels - B, I, N, G, O
     row_labels = ['B', 'I', 'N', 'G', 'O']
     
     for row_idx in range(5):
@@ -407,7 +386,6 @@ def display_bingo_card(card_id):
                 html += '<td class="free-space">★</td>'
             else:
                 num = int(value)
-                # Check if this number has been called AND exists on this card
                 if num in st.session_state.called_numbers and num in card_numbers:
                     html += f'<td class="number-cell highlighted-number">{value}</td>'
                 else:
@@ -415,10 +393,7 @@ def display_bingo_card(card_id):
         html += '</tr>'
     
     html += '</tbody></table>'
-    
-    # Show match count
     html += f'<div class="matched-count">✅ Matches: {len(matches)} / 24 numbers</div>'
-    
     html += '<div class="bingo-footer"></div>'
     html += '</div>'
     
@@ -542,7 +517,6 @@ def display_master_board():
     </style>
     """, unsafe_allow_html=True)
     
-    # Create master board data
     master_board = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -554,7 +528,6 @@ def display_master_board():
     html = '<div class="master-board-container">'
     html += '<div class="master-board-title">🎯 BINGO Board</div>'
     
-    # Show last called number if exists
     if st.session_state.last_called_number:
         html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
     
@@ -576,10 +549,7 @@ def display_master_board():
         html += '</tr>'
     
     html += '</table>'
-    
-    # Show count of called numbers
     html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
-    
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -588,10 +558,8 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Display Master Board at top
 display_master_board()
 
-# Call Number Section
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
@@ -644,7 +612,6 @@ with col2:
             st.session_state.last_call_time = time.time()
             st.rerun()
     
-    # Status display with countdown
     if st.session_state.is_auto_calling:
         time_since_last = time.time() - st.session_state.last_call_time
         time_until_next = max(0, 3.0 - time_since_last)
@@ -661,10 +628,6 @@ with col2:
             <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:10px; height:10px; transition: width 0.1s;"></div>
         </div>
         """, unsafe_allow_html=True)
-        
-        import time as timer
-        timer.sleep(0.5)
-        st.rerun()
         
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
@@ -700,7 +663,6 @@ for i in range(1, 202):
                 st.session_state.selected_card_numbers = get_card_numbers(i)
             st.rerun()
 
-# Footer with stats
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
     Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)} cards | Called: {len(st.session_state.called_numbers)}/75 numbers
@@ -708,8 +670,20 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Display selected card
 if st.session_state.selected_card:
     st.markdown("---")
     st.markdown("### 📋 Selected Card")
     display_bingo_card(st.session_state.selected_card)
+
+# Auto-call trigger - only called when auto-call is active and time has passed
+if st.session_state.is_auto_calling:
+    current_time = time.time()
+    if current_time - st.session_state.last_call_time >= 3.0:
+        available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+        if available:
+            called_num = random.choice(available)
+            st.session_state.called_numbers.add(called_num)
+            st.session_state.last_called_number = called_num
+            st.session_state.auto_called_count += 1
+            st.session_state.last_call_time = current_time
+            st.rerun()
