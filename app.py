@@ -1044,7 +1044,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 
 if not st.session_state.selected_card:
     # Card Selection Phase
-    st.markdown("## 📋 Select Your Card (1 - 201)")
+    st.markdown("## 📋 Select Your Card")
     
     # Timer display
     remaining = st.session_state.card_selection_time
