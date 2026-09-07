@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state for clicked numbers
+# Initialize session state
 if 'clicked_numbers' not in st.session_state:
     st.session_state.clicked_numbers = set()
 if 'selected_card' not in st.session_state:
@@ -23,8 +23,23 @@ if 'auto_called_count' not in st.session_state:
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
-if 'auto_call_timer' not in st.session_state:
-    st.session_state.auto_call_timer = None
+
+# Check if we need to auto-call
+if st.session_state.is_auto_calling:
+    if len(st.session_state.called_numbers) < 75:
+        current_time = time.time()
+        if current_time - st.session_state.last_call_time >= 3.0:
+            # Call a number
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = current_time
+                st.rerun()
+    else:
+        st.session_state.is_auto_calling = False
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -239,18 +254,6 @@ def get_card(card_id):
         if card["id"] == card_id:
             return card
     return None
-
-def call_random_number():
-    """Call a random number from 1-75 that hasn't been called yet"""
-    available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-    if available:
-        called_num = random.choice(available)
-        st.session_state.called_numbers.add(called_num)
-        st.session_state.last_called_number = called_num
-        st.session_state.auto_called_count += 1
-        st.session_state.last_call_time = time.time()
-        return True
-    return False
 
 def display_bingo_card(card_id):
     """Display a BINGO card with called numbers highlighted"""
@@ -559,25 +562,6 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Auto-call logic - using a placeholder approach
-if st.session_state.is_auto_calling:
-    # Check if all numbers have been called
-    if len(st.session_state.called_numbers) >= 75:
-        st.session_state.is_auto_calling = False
-        st.success("🎉 All numbers have been called! Auto-call stopped.")
-    else:
-        # Check if 3 seconds have passed
-        current_time = time.time()
-        if current_time - st.session_state.last_call_time >= 3.0:
-            # Call a number
-            call_random_number()
-            # Force a rerun to update the display
-            st.rerun()
-        else:
-            # Use a small sleep to prevent CPU overuse and rerun to update countdown
-            time.sleep(0.1)
-            st.rerun()
-
 # Display Master Board at top
 display_master_board()
 
@@ -599,7 +583,13 @@ with col2:
                 st.session_state.is_auto_calling = True
                 st.session_state.last_call_time = time.time()
                 # Call first number immediately
-                call_random_number()
+                available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+                if available:
+                    called_num = random.choice(available)
+                    st.session_state.called_numbers.add(called_num)
+                    st.session_state.last_called_number = called_num
+                    st.session_state.auto_called_count += 1
+                    st.session_state.last_call_time = time.time()
                 st.rerun()
     
     with control_col2:
@@ -611,7 +601,12 @@ with col2:
     with control_col3:
         if not st.session_state.is_auto_calling and not all_called:
             if st.button("🎯 Call One", use_container_width=True):
-                call_random_number()
+                available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+                if available:
+                    called_num = random.choice(available)
+                    st.session_state.called_numbers.add(called_num)
+                    st.session_state.last_called_number = called_num
+                    st.session_state.auto_called_count += 1
                 st.rerun()
     
     with control_col4:
@@ -645,6 +640,11 @@ with col2:
             <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:10px; height:10px; transition: width 0.1s;"></div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Auto-refresh for countdown
+        import time as timer
+        timer.sleep(0.5)
+        st.rerun()
         
     elif all_called:
         st.success("🎉 All 75 numbers have been called!")
@@ -694,8 +694,3 @@ if st.session_state.selected_card:
     st.markdown("---")
     st.markdown("### 📋 Selected Card")
     display_bingo_card(st.session_state.selected_card)
-
-# Auto-refresh the page every second when auto-calling is active
-if st.session_state.is_auto_calling:
-    time.sleep(0.5)
-    st.rerun()
