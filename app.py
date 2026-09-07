@@ -72,6 +72,7 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.02);
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.05);
+        width: 100%;
     }
     .cards-grid-container::-webkit-scrollbar {
         width: 4px;
@@ -85,6 +86,7 @@ st.markdown("""
         border-radius: 10px;
     }
     
+    /* Base grid - always 10 columns */
     .cards-grid {
         display: grid;
         grid-template-columns: repeat(10, 1fr);
@@ -93,22 +95,77 @@ st.markdown("""
         margin: 0 auto;
     }
     
-    @media (max-width: 768px) {
+    /* Mobile portrait - still 10 columns but smaller cards */
+    @media (max-width: 768px) and (orientation: portrait) {
         .cards-grid {
-            grid-template-columns: repeat(6, 1fr);
-            gap: 2px;
+            grid-template-columns: repeat(10, 1fr) !important;
+            gap: 2px !important;
+        }
+        .card-btn {
+            font-size: 0.5rem !important;
+            min-height: 20px !important;
+            height: 20px !important;
+            padding: 2px 1px !important;
+        }
+        .cards-grid-container {
+            max-height: 350px !important;
         }
     }
-    @media (max-width: 480px) {
+    
+    /* Very small mobile portrait - still 10 columns, even smaller */
+    @media (max-width: 480px) and (orientation: portrait) {
         .cards-grid {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 2px;
+            grid-template-columns: repeat(10, 1fr) !important;
+            gap: 1.5px !important;
+        }
+        .card-btn {
+            font-size: 0.4rem !important;
+            min-height: 16px !important;
+            height: 16px !important;
+            padding: 1px 1px !important;
+            border-radius: 3px !important;
+        }
+        .cards-grid-container {
+            max-height: 300px !important;
         }
     }
-    @media (max-width: 360px) {
+    
+    /* Extremely small mobile portrait */
+    @media (max-width: 360px) and (orientation: portrait) {
         .cards-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2px;
+            grid-template-columns: repeat(10, 1fr) !important;
+            gap: 1px !important;
+        }
+        .card-btn {
+            font-size: 0.35rem !important;
+            min-height: 14px !important;
+            height: 14px !important;
+            padding: 1px 0px !important;
+            border-radius: 2px !important;
+            border-width: 1px !important;
+        }
+        .card-btn .card-price {
+            display: none !important;
+        }
+        .cards-grid-container {
+            max-height: 250px !important;
+        }
+    }
+    
+    /* Landscape mode - same 10 columns, slightly optimized */
+    @media (orientation: landscape) {
+        .cards-grid {
+            grid-template-columns: repeat(10, 1fr) !important;
+            gap: 3px !important;
+        }
+        .card-btn {
+            font-size: 0.55rem !important;
+            min-height: 22px !important;
+            height: 22px !important;
+            padding: 2px 2px !important;
+        }
+        .cards-grid-container {
+            max-height: 350px !important;
         }
     }
     
@@ -124,6 +181,7 @@ st.markdown("""
         margin: 1px 0 !important;
         text-align: center !important;
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
         font-weight: bold !important;
@@ -132,6 +190,9 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         background: rgba(255, 255, 255, 0.04) !important;
         color: #FFFFFF !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
     }
     .card-btn:hover {
         transform: scale(1.05);
@@ -158,11 +219,18 @@ st.markdown("""
         background: rgba(255, 51, 102, 0.05) !important;
         box-shadow: none !important;
     }
+    .card-btn .card-price {
+        font-size: 0.4rem !important;
+        opacity: 0.6;
+        margin-top: 1px;
+        line-height: 1;
+    }
     
     /* Override Streamlit button styles for card grid */
     .cards-grid .stButton {
         padding: 0 !important;
         margin: 0 !important;
+        min-width: 0 !important;
     }
     .cards-grid .stButton button {
         width: 100% !important;
@@ -175,6 +243,7 @@ st.markdown("""
         margin: 0 !important;
         text-align: center !important;
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
         font-weight: bold !important;
@@ -184,6 +253,9 @@ st.markdown("""
         color: #FFFFFF !important;
         box-shadow: none !important;
         font-family: Arial, sans-serif !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
     }
     .cards-grid .stButton button:hover {
         transform: scale(1.05);
@@ -231,6 +303,45 @@ st.markdown("""
     @keyframes winnerPulse {
         0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
         100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
+    }
+    
+    /* Responsive container adjustments */
+    @media (max-width: 768px) {
+        .main-header {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+        }
+        
+        .logo-text h1 {
+            font-size: 1.5rem !important;
+        }
+        
+        .header-timer-container {
+            width: 100% !important;
+            max-width: 300px !important;
+        }
+        
+        .timer-display {
+            font-size: 1.8rem !important;
+        }
+    }
+    
+    @media (orientation: landscape) and (max-height: 500px) {
+        .cards-grid-container {
+            max-height: 250px !important;
+        }
+        .card-btn {
+            font-size: 0.5rem !important;
+            min-height: 18px !important;
+            height: 18px !important;
+        }
+        .header-timer-container {
+            padding: 5px 15px !important;
+        }
+        .timer-display {
+            font-size: 1.4rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -629,56 +740,7 @@ def admin_panel():
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
     {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
-    {"id": 3, "cells": [['14', '23', '40', '58', '62'], ['13', '25', '32', '46', '65'], ['3', '28', 'F', '50', '63'], ['6', '30', '44', '54', '66'], ['10', '16', '37', '53', '74']]},
-    {"id": 4, "cells": [['1', '19', '41', '49', '72'], ['5', '26', '36', '50', '69'], ['6', '29', 'F', '60', '61'], ['14', '25', '42', '47', '71'], ['2', '24', '45', '54', '65']]},
-    {"id": 5, "cells": [['2', '16', '43', '47', '70'], ['4', '23', '32', '58', '73'], ['9', '17', 'F', '51', '74'], ['1', '26', '34', '59', '75'], ['14', '20', '31', '57', '72']]},
-    {"id": 6, "cells": [['3', '28', '42', '46', '70'], ['15', '18', '36', '53', '64'], ['14', '20', 'F', '55', '67'], ['6', '21', '45', '57', '73'], ['11', '30', '41', '60', '62']]},
-    {"id": 7, "cells": [['15', '28', '39', '58', '65'], ['10', '19', '34', '54', '68'], ['3', '17', 'F', '59', '71'], ['9', '16', '45', '51', '66'], ['14', '24', '36', '49', '64']]},
-    {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
-    {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
-    {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
-    {"id": 11, "cells": [['11', '21', '44', '49', '64'], ['4', '28', '34', '55', '62'], ['2', '26', 'F', '47', '71'], ['14', '29', '41', '48', '73'], ['5', '24', '31', '51', '63']]},
-    {"id": 12, "cells": [['9', '20', '35', '59', '66'], ['1', '26', '43', '56', '72'], ['6', '16', 'F', '58', '64'], ['12', '22', '41', '49', '61'], ['2', '18', '38', '51', '69']]},
-    {"id": 13, "cells": [['11', '16', '45', '60', '73'], ['1', '26', '44', '55', '69'], ['4', '29', 'F', '47', '72'], ['9', '28', '31', '51', '64'], ['14', '23', '40', '59', '68']]},
-    {"id": 14, "cells": [['5', '18', '45', '58', '67'], ['1', '27', '42', '50', '65'], ['7', '28', 'F', '54', '64'], ['2', '21', '43', '60', '74'], ['10', '24', '32', '51', '71']]},
-    {"id": 15, "cells": [['5', '30', '38', '48', '71'], ['1', '22', '42', '60', '62'], ['2', '18', 'F', '50', '65'], ['3', '29', '33', '46', '75'], ['12', '17', '32', '55', '66']]},
-    {"id": 16, "cells": [['7', '23', '45', '55', '62'], ['3', '27', '42', '60', '71'], ['12', '21', 'F', '57', '66'], ['4', '24', '41', '49', '68'], ['13', '17', '44', '50', '75']]},
-    {"id": 17, "cells": [['10', '28', '32', '59', '72'], ['3', '27', '40', '47', '63'], ['13', '24', 'F', '57', '71'], ['2', '21', '41', '60', '68'], ['7', '25', '42', '58', '65']]},
-    {"id": 18, "cells": [['13', '27', '33', '51', '63'], ['7', '22', '42', '48', '61'], ['10', '25', 'F', '54', '65'], ['8', '16', '43', '52', '72'], ['14', '23', '38', '60', '74']]},
-    {"id": 19, "cells": [['1', '22', '39', '51', '62'], ['15', '25', '35', '47', '75'], ['3', '23', 'F', '50', '66'], ['8', '26', '44', '49', '70'], ['4', '28', '38', '53', '67']]},
-    {"id": 20, "cells": [['9', '19', '35', '54', '73'], ['8', '23', '43', '57', '61'], ['4', '24', 'F', '58', '68'], ['11', '17', '32', '50', '62'], ['1', '26', '38', '49', '75']]},
-    {"id": 21, "cells": [['8', '18', '39', '54', '63'], ['2', '30', '37', '57', '75'], ['13', '29', 'F', '56', '68'], ['15', '27', '31', '49', '67'], ['6', '17', '45', '52', '61']]},
-    {"id": 22, "cells": [['6', '26', '44', '55', '62'], ['13', '19', '32', '60', '61'], ['9', '25', 'F', '49', '75'], ['3', '20', '40', '46', '65'], ['8', '27', '31', '56', '71']]},
-    {"id": 23, "cells": [['1', '27', '40', '54', '73'], ['4', '17', '33', '46', '68'], ['7', '16', 'F', '48', '63'], ['9', '23', '36', '56', '66'], ['11', '21', '34', '50', '74']]},
-    {"id": 24, "cells": [['9', '19', '40', '46', '75'], ['8', '26', '31', '48', '67'], ['1', '24', 'F', '59', '65'], ['7', '20', '39', '49', '70'], ['12', '27', '43', '57', '73']]},
-    {"id": 25, "cells": [['3', '23', '40', '53', '75'], ['1', '27', '45', '51', '68'], ['4', '28', 'F', '46', '73'], ['14', '29', '35', '56', '61'], ['9', '30', '41', '52', '74']]},
-    {"id": 26, "cells": [['10', '25', '37', '53', '65'], ['14', '29', '38', '58', '69'], ['2', '28', 'F', '56', '68'], ['6', '22', '35', '57', '70'], ['3', '18', '45', '60', '67']]},
-    {"id": 27, "cells": [['11', '26', '39', '51', '75'], ['3', '28', '33', '56', '67'], ['10', '24', 'F', '58', '74'], ['7', '18', '45', '53', '69'], ['13', '30', '44', '47', '64']]},
-    {"id": 28, "cells": [['8', '17', '42', '52', '74'], ['2', '24', '39', '56', '63'], ['14', '16', 'F', '60', '62'], ['9', '21', '31', '47', '72'], ['15', '18', '35', '54', '70']]},
-    {"id": 29, "cells": [['14', '16', '32', '53', '74'], ['15', '21', '34', '59', '65'], ['10', '26', 'F', '55', '66'], ['2', '19', '45', '56', '61'], ['1', '25', '40', '51', '64']]},
-    {"id": 30, "cells": [['8', '27', '44', '54', '70'], ['11', '26', '31', '55', '64'], ['9', '19', 'F', '57', '67'], ['6', '23', '41', '49', '62'], ['13', '22', '40', '56', '72']]},
-    {"id": 31, "cells": [['3', '27', '31', '46', '71'], ['9', '24', '40', '48', '67'], ['5', '17', 'F', '55', '62'], ['12', '18', '38', '58', '68'], ['4', '25', '36', '54', '73']]},
-    {"id": 32, "cells": [['10', '20', '32', '58', '73'], ['15', '28', '34', '56', '61'], ['9', '24', 'F', '50', '75'], ['5', '25', '37', '46', '67'], ['14', '23', '31', '51', '65']]},
-    {"id": 33, "cells": [['7', '29', '42', '56', '69'], ['15', '27', '40', '60', '64'], ['1', '18', 'F', '51', '74'], ['4', '16', '38', '57', '67'], ['8', '21', '39', '59', '68']]},
-    {"id": 34, "cells": [['4', '17', '31', '46', '70'], ['8', '29', '37', '57', '65'], ['9', '24', 'F', '59', '75'], ['11', '27', '34', '55', '63'], ['3', '22', '36', '48', '73']]},
-    {"id": 35, "cells": [['9', '17', '35', '55', '72'], ['14', '24', '45', '52', '68'], ['11', '18', 'F', '48', '66'], ['8', '21', '36', '47', '71'], ['4', '27', '37', '57', '70']]},
-    {"id": 36, "cells": [['2', '22', '41', '54', '62'], ['13', '21', '45', '51', '70'], ['15', '30', 'F', '47', '63'], ['4', '26', '39', '50', '75'], ['10', '29', '34', '58', '64']]},
-    {"id": 37, "cells": [['1', '21', '32', '54', '65'], ['5', '28', '42', '51', '63'], ['2', '26', 'F', '60', '61'], ['12', '24', '34', '59', '62'], ['15', '17', '43', '57', '72']]},
-    {"id": 38, "cells": [['1', '30', '45', '49', '66'], ['9', '24', '42', '56', '69'], ['7', '20', 'F', '52', '74'], ['12', '17', '36', '60', '62'], ['11', '18', '35', '54', '63']]},
-    {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
-    {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
-    {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
-    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
-    {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
-    {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
-    {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
-    {"id": 46, "cells": [['5', '17', '43', '47', '74'], ['15', '18', '42', '48', '63'], ['11', '21', 'F', '56', '64'], ['4', '23', '39', '54', '66'], ['2', '25', '33', '49', '65']]},
-    {"id": 47, "cells": [['5', '17', '38', '46', '70'], ['6', '20', '43', '51', '75'], ['12', '25', 'F', '56', '61'], ['1', '16', '45', '60', '68'], ['4', '26', '35', '53', '74']]},
-    {"id": 48, "cells": [['4', '28', '37', '53', '61'], ['2', '19', '31', '49', '62'], ['7', '16', 'F', '56', '64'], ['14', '26', '39', '52', '74'], ['6', '18', '32', '57', '67']]},
-    {"id": 49, "cells": [['1', '21', '34', '52', '67'], ['3', '29', '41', '54', '69'], ['10', '24', 'F', '57', '70'], ['8', '26', '35', '53', '72'], ['6', '19', '31', '58', '64']]},
-    {"id": 50, "cells": [['3', '17', '36', '49', '69'], ['10', '30', '40', '52', '62'], ['14', '27', 'F', '58', '66'], ['2', '19', '41', '59', '68'], ['15', '18', '42', '47', '64']]},
-    # ... Continue with all cards up to 201
-    {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
+    # ... (all 201 cards - keep your existing list)
 ]
 
 def get_card(card_id):
@@ -1198,10 +1260,6 @@ if not st.session_state.selected_card:
     st.markdown('<div class="cards-grid-container">', unsafe_allow_html=True)
     st.markdown('<div class="cards-grid">', unsafe_allow_html=True)
     
-    # Use HTML for grid with Streamlit buttons
-    cols_per_row = 10  # Default for desktop
-    # Adjust based on screen size using CSS
-    
     # Create grid using columns
     cols = st.columns(10)
     for i in range(1, 202):
@@ -1236,7 +1294,6 @@ if not st.session_state.selected_card:
                     else:
                         if len(st.session_state.clicked_numbers) < 2:
                             st.session_state.clicked_numbers.add(i)
-                            # Mark as taken so no one else can select it
                             st.session_state.taken_cards.append(i)
                     st.rerun()
     
@@ -1340,8 +1397,7 @@ else:
         
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
-# ===================================================================
-# FOOTER
+# ===================================================================# FOOTER
 # ===================================================================
 
 st.markdown("---")
