@@ -13,6 +13,8 @@ if 'clicked_numbers' not in st.session_state:
     st.session_state.clicked_numbers = set()
 if 'selected_card' not in st.session_state:
     st.session_state.selected_card = None
+if 'selected_card_numbers' not in st.session_state:
+    st.session_state.selected_card_numbers = set()
 if 'called_numbers' not in st.session_state:
     st.session_state.called_numbers = set()
 if 'last_called_number' not in st.session_state:
@@ -29,7 +31,6 @@ if st.session_state.is_auto_calling:
     if len(st.session_state.called_numbers) < 75:
         current_time = time.time()
         if current_time - st.session_state.last_call_time >= 3.0:
-            # Call a number
             available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
             if available:
                 called_num = random.choice(available)
@@ -255,13 +256,26 @@ def get_card(card_id):
             return card
     return None
 
+def get_card_numbers(card_id):
+    """Get all numbers from a card (excluding 'F' free space)"""
+    card = get_card(card_id)
+    if not card:
+        return set()
+    numbers = set()
+    for row in card["cells"]:
+        for cell in row:
+            if cell != 'F':
+                numbers.add(int(cell))
+    return numbers
+
 def display_bingo_card(card_id):
-    """Display a BINGO card with called numbers highlighted"""
+    """Display a BINGO card - only highlight called numbers that exist on the card"""
     card = get_card(card_id)
     if not card:
         return
     
     cells = card["cells"]
+    card_numbers = get_card_numbers(card_id)
     
     st.markdown(f"""
     <style>
@@ -319,16 +333,12 @@ def display_bingo_card(card_id):
         .bingo-table .number-cell {{
             color: #1A237E;
         }}
-        .bingo-table .called-number {{
-            background: #FF9800 !important;
-            color: white !important;
-            border-radius: 4px;
-        }}
-        .bingo-table .ticked-number {{
+        .bingo-table .highlighted-number {{
             background: #4CAF50 !important;
             color: white !important;
             border-radius: 4px;
             box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            font-weight: bold;
         }}
         .bingo-footer {{
             text-align: center;
@@ -379,16 +389,10 @@ def display_bingo_card(card_id):
             if value == 'F':
                 html += '<td class="free-space">★</td>'
             else:
-                # Check if this number has been called
                 num = int(value)
-                is_called = num in st.session_state.called_numbers
-                # Check if this number is on the selected card (ticked)
-                is_ticked = num in st.session_state.clicked_numbers
-                
-                if is_ticked and is_called:
-                    html += f'<td class="number-cell ticked-number">{value}</td>'
-                elif is_called:
-                    html += f'<td class="number-cell called-number">{value}</td>'
+                # Only highlight if the number has been called AND exists on this card
+                if num in st.session_state.called_numbers and num in card_numbers:
+                    html += f'<td class="number-cell highlighted-number">{value}</td>'
                 else:
                     html += f'<td class="number-cell">{value}</td>'
         html += '</tr>'
@@ -572,10 +576,8 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("### 🎲 Number Calling")
     
-    # Check if all numbers are called
     all_called = len(st.session_state.called_numbers) >= 75
     
-    # Control buttons
     control_col1, control_col2, control_col3, control_col4 = st.columns(4)
     
     with control_col1:
@@ -583,7 +585,6 @@ with col2:
             if st.button("▶️ Start Auto-Call", use_container_width=True, type="primary"):
                 st.session_state.is_auto_calling = True
                 st.session_state.last_call_time = time.time()
-                # Call first number immediately
                 available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
                 if available:
                     called_num = random.choice(available)
@@ -615,6 +616,7 @@ with col2:
             st.session_state.called_numbers = set()
             st.session_state.clicked_numbers = set()
             st.session_state.selected_card = None
+            st.session_state.selected_card_numbers = set()
             st.session_state.last_called_number = None
             st.session_state.is_auto_calling = False
             st.session_state.auto_called_count = 0
@@ -623,7 +625,6 @@ with col2:
     
     # Status display with countdown
     if st.session_state.is_auto_calling:
-        # Calculate time until next call
         time_since_last = time.time() - st.session_state.last_call_time
         time_until_next = max(0, 3.0 - time_since_last)
         
@@ -631,18 +632,15 @@ with col2:
         progress = len(st.session_state.called_numbers) / 75
         st.progress(progress)
         
-        # Show countdown with visual bar
         countdown_percent = (time_since_last / 3.0) * 100
         st.caption(f"⏱️ Next call in: {time_until_next:.1f} seconds")
         
-        # Visual countdown bar
         st.markdown(f"""
         <div style="width:100%; background:#e0e0e0; border-radius:10px; height:10px; margin-top:5px;">
             <div style="width:{min(countdown_percent, 100)}%; background:#FF9800; border-radius:10px; height:10px; transition: width 0.1s;"></div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Auto-refresh for countdown
         import time as timer
         timer.sleep(0.5)
         st.rerun()
@@ -659,15 +657,12 @@ with col2:
 st.markdown("---")
 st.markdown("## Select Cards (1 - 201)")
 
-# Numbers in a grid
 cols = st.columns(10)
 for i in range(1, 202):
     col_idx = (i - 1) % 10
     with cols[col_idx]:
-        # Check if number is clicked
         is_clicked = i in st.session_state.clicked_numbers
         
-        # Create clickable button
         if st.button(
             str(i),
             key=f"num_{i}",
@@ -677,9 +672,11 @@ for i in range(1, 202):
             if i in st.session_state.clicked_numbers:
                 st.session_state.clicked_numbers.remove(i)
                 st.session_state.selected_card = None
+                st.session_state.selected_card_numbers = set()
             else:
                 st.session_state.clicked_numbers.add(i)
                 st.session_state.selected_card = i
+                st.session_state.selected_card_numbers = get_card_numbers(i)
             st.rerun()
 
 # Footer with stats
