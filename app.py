@@ -764,7 +764,11 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Auto-rerun for continuous calling
+# Auto-rerun for continuous calling and timer updates
 if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75:
+    time.sleep(0.5)
+    st.rerun()
+elif st.session_state.selected_card is None:
+    # Auto-rerun on selection screen to update timer
     time.sleep(0.5)
     st.rerun()
