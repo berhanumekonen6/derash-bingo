@@ -436,7 +436,6 @@ def display_master_board():
             font-size: 1.5rem;
             font-weight: bold;
             min-width: 50px;
-            border-radius: 50%;
             width: 50px;
             height: 50px;
             display: flex;
@@ -562,8 +561,20 @@ def display_master_board():
 # MAIN APP
 # ===================================================================
 
-# Display Master Board at top
-display_master_board()
+# Create two columns for BINGO Board and Selected Card
+board_col, card_col = st.columns([2, 1])
+
+with board_col:
+    # Display Master Board
+    display_master_board()
+
+with card_col:
+    # Display Selected Card right next to the BINGO Board
+    if st.session_state.selected_card:
+        st.markdown("### 📋 Selected Card")
+        display_bingo_card(st.session_state.selected_card)
+    else:
+        st.info("👆 Click a card number below to select it")
 
 # Call Number Section
 st.markdown("---")
@@ -688,9 +699,3 @@ st.markdown(f"""
     {' | ⏳ Auto-calling active' if st.session_state.is_auto_calling else ''}
 </div>
 """, unsafe_allow_html=True)
-
-# Display selected card
-if st.session_state.selected_card:
-    st.markdown("---")
-    st.markdown("### 📋 Selected Card")
-    display_bingo_card(st.session_state.selected_card)
