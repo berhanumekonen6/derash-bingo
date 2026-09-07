@@ -895,7 +895,7 @@ st.markdown("""
         🎯 ደራሽ ቢንጎ
     </h1>
     <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:2px;font-size:0.8rem;margin:5px 0;">
-        Derash BINGO - 201 Cards
+        Derash BINGO
     </p>
 </div>
 """, unsafe_allow_html=True)
