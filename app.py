@@ -617,23 +617,22 @@ def display_master_board():
 # MAIN APP - Show Selection or Game
 # ===================================================================
 
-# Header
-st.markdown("""
-<div style="text-align:center;padding:15px 10px;margin-bottom:10px;">
-    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:5px;margin:0;">
-        🎯 ደራሽ ቢንጎ
-    </h1>
-    <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:2px;font-size:0.8rem;margin:5px 0;">
-        Derash BINGO - 201 Cards
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# Header with Title and Timer next to each other
+header_col1, header_col2 = st.columns([1, 1])
 
-# Check if a card is selected
-if not st.session_state.selected_card:
-    # Show card selection with small timer next to it
-    st.markdown("## 📋 Select Your Card (1 - 201)")
-    
+with header_col1:
+    st.markdown("""
+    <div style="text-align:left;padding:5px 0;">
+        <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:1.8rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:3px;margin:0;">
+            🎯 ደራሽ ቢንጎ
+        </h1>
+        <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:1px;font-size:0.7rem;margin:2px 0;">
+            Derash BINGO - 201 Cards
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with header_col2:
     # Timer in a small inline format
     remaining = st.session_state.timer_remaining
     minutes = int(remaining // 60)
@@ -648,14 +647,21 @@ if not st.session_state.selected_card:
     else:
         color = "#2E7D32"
     
-    # Small timer display
     st.markdown(f"""
-    <div style="display:inline-block;padding:5px 15px;background:#f8f9fa;border-radius:8px;border:2px solid {color};margin-bottom:10px;">
-        <span style="font-size:1.2rem;font-weight:bold;color:{color};font-family:monospace;">⏱️ {time_str}</span>
-        <span style="font-size:0.8rem;color:#666;margin-left:8px;">Max 2 cards</span>
+    <div style="text-align:right;padding:10px 0;">
+        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.1rem;font-weight:bold;color:{color};font-family:monospace;">
+            ⏱️ {time_str}
+        </span>
+        <span style="display:inline-block;margin-left:10px;padding:8px 15px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
+            Max 2 cards
+        </span>
     </div>
     """, unsafe_allow_html=True)
-    
+
+# Check if a card is selected
+if not st.session_state.selected_card:
+    # Show card selection
+    st.markdown("## 📋 Select Your Card (1 - 201)")
     st.caption(f"📌 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
     
     # Numbers in a grid - Mobile optimized
@@ -704,9 +710,9 @@ else:
     
     # Auto-call status
     if st.session_state.auto_called_count > 0:
-        auto_status = f" | 🎯 Auto-calls: {st.session_state.auto_called_count}"
+        auto_status = f"🎯 Auto-calls: {st.session_state.auto_called_count}"
     else:
-        auto_status = " | ⏳ Auto-calling started..."
+        auto_status = "⏳ Auto-calling started..."
     
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
@@ -716,9 +722,6 @@ else:
         </span>
         <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
             Cards: {len(st.session_state.clicked_numbers)}/2
-        </span>
-        <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-            ⏱️ {time_str}
         </span>
         <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
             {auto_status}
