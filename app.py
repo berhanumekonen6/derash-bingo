@@ -516,6 +516,29 @@ def check_winning_pattern(card_data, called_numbers):
     
     return None
 
+def check_for_winners():
+    """Check all selected cards for winning patterns"""
+    if st.session_state.winner_declared:
+        return
+    
+    called_numbers = list(st.session_state.called_numbers)
+    
+    # Check all cards in the game
+    for card_id in st.session_state.clicked_numbers:
+        card_data = get_card_data(card_id)
+        if card_data:
+            pattern = check_winning_pattern(card_data, called_numbers)
+            if pattern:
+                st.session_state.winners_list.append({
+                    "card_id": card_id,
+                    "username": st.session_state.current_user,
+                    "pattern": pattern,
+                    "card_data": card_data
+                })
+                st.session_state.winner_declared = True
+                st.session_state.game_over = True
+                return
+
 # ===================================================================
 # DISPLAY FUNCTIONS
 # ===================================================================
@@ -995,6 +1018,8 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 st.session_state.last_called_number = called_num
                 st.session_state.auto_called_count += 1
                 st.session_state.last_call_time = time.time()
+                # Check for winners after first call
+                check_for_winners()
                 st.rerun()
     
     # Continue calling every 2 seconds
@@ -1012,33 +1037,6 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 # Check for winners after each call
                 check_for_winners()
                 st.rerun()
-
-# ===================================================================
-# CHECK FOR WINNERS
-# ===================================================================
-
-def check_for_winners():
-    """Check all selected cards for winning patterns"""
-    if st.session_state.winner_declared:
-        return
-    
-    called_numbers = list(st.session_state.called_numbers)
-    
-    # Check all cards in the game
-    for card_id in st.session_state.clicked_numbers:
-        card_data = get_card_data(card_id)
-        if card_data:
-            pattern = check_winning_pattern(card_data, called_numbers)
-            if pattern:
-                st.session_state.winners_list.append({
-                    "card_id": card_id,
-                    "username": st.session_state.current_user,
-                    "pattern": pattern,
-                    "card_data": card_data
-                })
-                st.session_state.winner_declared = True
-                st.session_state.game_over = True
-                return
 
 # ===================================================================
 # GAME LOOP
