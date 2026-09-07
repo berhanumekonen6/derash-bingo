@@ -206,6 +206,84 @@ st.markdown("""
             max-height: 400px !important;
         }
     }
+
+    /* ============================================================= */
+    /* FIX: Make Streamlit columns wrap on mobile devices */
+    /* ============================================================= */
+    
+    @media (max-width: 992px) {
+        /* Make Streamlit columns wrap on tablets */
+        .row-widget.stColumns {
+            flex-wrap: wrap !important;
+        }
+        .row-widget.stColumns > div {
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            padding: 3px !important;
+        }
+        /* Force 5 columns on tablets */
+        .row-widget.stColumns > div {
+            flex-basis: 20% !important;
+            max-width: 20% !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        /* Force 4 columns on phones */
+        .row-widget.stColumns > div {
+            flex-basis: 25% !important;
+            max-width: 25% !important;
+        }
+        .card-btn {
+            font-size: 0.85rem !important;
+            min-height: 40px !important;
+            height: 40px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        /* Force 3 columns on small phones */
+        .row-widget.stColumns > div {
+            flex-basis: 33.33% !important;
+            max-width: 33.33% !important;
+        }
+        .card-btn {
+            font-size: 0.75rem !important;
+            min-height: 36px !important;
+            height: 36px !important;
+            padding: 3px 2px !important;
+        }
+    }
+
+    @media (max-width: 360px) {
+        /* Force 2 columns on very small phones */
+        .row-widget.stColumns > div {
+            flex-basis: 50% !important;
+            max-width: 50% !important;
+        }
+        .card-btn {
+            font-size: 0.7rem !important;
+            min-height: 32px !important;
+            height: 32px !important;
+            padding: 2px 1px !important;
+        }
+    }
+
+    /* Landscape mode for phones */
+    @media (orientation: landscape) and (max-height: 500px) {
+        .row-widget.stColumns > div {
+            flex-basis: 12.5% !important;
+            max-width: 12.5% !important;
+        }
+        .card-btn {
+            font-size: 0.65rem !important;
+            min-height: 28px !important;
+            height: 28px !important;
+            padding: 2px 1px !important;
+        }
+    }
     
     /* Scrollbar */
     ::-webkit-scrollbar {
@@ -1641,7 +1719,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 # ===================================================================
 
 if not st.session_state.selected_card:
-    st.markdown("## 📋ካርቴላ ይምረጡ🔥🚀")
+    st.markdown("## 📋ካርድዎን ይምረጡ🔥🚀")
     
     # Check if we should auto-select
     if st.session_state.card_selection_time <= 0 and len(st.session_state.clicked_numbers) > 0:
@@ -1673,8 +1751,8 @@ else:
         st.markdown(f"""
         <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));border-radius:20px;border:2px solid #FFD700;margin:15px 0;box-shadow:0 0 50px rgba(255,215,0,0.1);">
             <div style="font-size:3.5rem;color:#FFD700;">🎉</div>
-            <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;">🎉 ቢንጎ! የጨዋታዉ አሸናፊ ሆነዋል!!!🎉</div>
-            <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;">🎊 እንኳን ደስ አለዎት!!!🎊</div>
+            <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;">🎉 ቢንጎ! የጨዋታዉ አሸናፊ ታዉቋል!!!🎉</div>
+            <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;">🎊🍀ፈጥንዉ ካርቴላ በመምረጥ ዕድልዎን ይሞክሩ🍀!!!🎊</div>
             <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
             <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner} ETB</div>
             <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
@@ -1734,7 +1812,7 @@ else:
             display_master_board()
         
         with cards_col:
-            st.markdown("### 📋 Your Cards")
+            st.markdown("### 📋🍀የእርስዎ ካርቴላ/ዎች")
             for card_id in all_player_cards:
                 display_selected_card(card_id, list(st.session_state.called_numbers), False)
         
