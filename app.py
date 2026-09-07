@@ -19,7 +19,7 @@ if 'last_called_number' not in st.session_state:
     st.session_state.last_called_number = None
 if 'is_auto_calling' not in st.session_state:
     st.session_state.is_auto_calling = False
-if 'auto_called_count' not in st.session_state:
+if 'auto_called_count' not in st.session_state: 
     st.session_state.auto_called_count = 0
 if 'last_call_time' not in st.session_state:
     st.session_state.last_call_time = time.time()
