@@ -26,15 +26,25 @@ if 'last_call_time' not in st.session_state:
 if 'game_started' not in st.session_state:
     st.session_state.game_started = False
 
-# Timer session state variables
-if 'timer_started' not in st.session_state:
-    st.session_state.timer_started = False
-if 'timer_start_time' not in st.session_state:
-    st.session_state.timer_start_time = None
+# Timer session state variables - ALWAYS RUNNING
+if 'timer_last_update' not in st.session_state:
+    st.session_state.timer_last_update = time.time()
 if 'timer_remaining' not in st.session_state:
     st.session_state.timer_remaining = 60  # 60 seconds = 1:00
-if 'timer_running' not in st.session_state:
-    st.session_state.timer_running = False
+
+# Update timer - ALWAYS RUNNING
+current_time = time.time()
+time_passed = current_time - st.session_state.timer_last_update
+st.session_state.timer_remaining = max(0, st.session_state.timer_remaining - time_passed)
+st.session_state.timer_last_update = current_time
+
+# Reset timer when it reaches 0
+if st.session_state.timer_remaining <= 0:
+    st.session_state.timer_remaining = 60
+    # Clear selected cards when timer resets (optional - remove this if you want cards to persist)
+    st.session_state.clicked_numbers = set()
+    st.session_state.selected_card = None
+    st.rerun()
 
 # Check if we need to auto-call
 if st.session_state.is_auto_calling:
@@ -600,74 +610,52 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Timer control and display
+# Timer display - ALWAYS SHOWING
 timer_col1, timer_col2, timer_col3 = st.columns([1, 2, 1])
 with timer_col2:
     st.markdown("### ⏱️ Card Selection Timer")
     
-    # Timer display with large format
-    if st.session_state.timer_running:
-        # Calculate remaining time
-        elapsed = time.time() - st.session_state.timer_start_time
-        remaining = max(0, 60 - elapsed)
-        minutes = int(remaining // 60)
-        seconds = int(remaining % 60)
-        time_str = f"{minutes:01d}:{seconds:02d}"
-        
-        # Show timer with color coding
-        if remaining <= 10:
-            color = "#E53935"
-        elif remaining <= 30:
-            color = "#FF9800"
-        else:
-            color = "#2E7D32"
-            
-        st.markdown(f"""
-        <div style="text-align:center;padding:15px;background:#f8f9fa;border-radius:10px;border:2px solid {color};margin-bottom:10px;">
-            <div style="font-size:3rem;font-weight:bold;color:{color};font-family:monospace;">
-                {time_str}
-            </div>
-            <div style="font-size:0.9rem;color:#666;">⏳ Time Remaining</div>
-            <div style="font-size:0.8rem;color:#999;margin-top:5px;">Max 2 cards allowed</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Progress bar
-        progress = 1 - (remaining / 60)
-        st.progress(progress)
-        
-        # Check if time is up
-        if remaining <= 0:
-            st.session_state.timer_running = False
-            st.session_state.timer_started = False
-            st.rerun()
+    # Calculate time display
+    remaining = st.session_state.timer_remaining
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
+    time_str = f"{minutes:01d}:{seconds:02d}"
+    
+    # Color coding
+    if remaining <= 10:
+        color = "#E53935"
+    elif remaining <= 30:
+        color = "#FF9800"
     else:
-        # Timer not running - show start button
-        col_start1, col_start2, col_start3 = st.columns([1, 2, 1])
-        with col_start2:
-            if st.button("▶️ Start 1-Minute Timer", use_container_width=True, type="primary"):
-                st.session_state.timer_started = True
-                st.session_state.timer_running = True
-                st.session_state.timer_start_time = time.time()
-                st.rerun()
-            
-            st.caption("⏱️ Select up to 2 cards within 1 minute")
+        color = "#2E7D32"
+    
+    st.markdown(f"""
+    <div style="text-align:center;padding:15px;background:#f8f9fa;border-radius:10px;border:2px solid {color};margin-bottom:10px;">
+        <div style="font-size:3rem;font-weight:bold;color:{color};font-family:monospace;">
+            {time_str}
+        </div>
+        <div style="font-size:0.9rem;color:#666;">⏳ Time Remaining</div>
+        <div style="font-size:0.8rem;color:#999;margin-top:5px;">Max 2 cards allowed</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Progress bar
+    progress = 1 - (remaining / 60)
+    st.progress(progress)
 
-# Check if timer is running and enforce card limit
-if st.session_state.timer_running:
-    # Check if more than 2 cards are selected
-    if len(st.session_state.clicked_numbers) > 2:
-        # Remove excess cards (keep only first 2)
-        excess = list(st.session_state.clicked_numbers)[2:]
-        for card_id in excess:
-            st.session_state.clicked_numbers.remove(card_id)
-            if st.session_state.selected_card == card_id:
-                st.session_state.selected_card = None
-        # If selected_card was removed, set to first available
-        if st.session_state.selected_card is None and len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        st.warning("⚠️ Maximum 2 cards allowed! Excess cards have been removed.")
-        st.rerun()
+# Check if more than 2 cards are selected (enforce limit)
+if len(st.session_state.clicked_numbers) > 2:
+    # Remove excess cards (keep only first 2)
+    excess = list(st.session_state.clicked_numbers)[2:]
+    for card_id in excess:
+        st.session_state.clicked_numbers.remove(card_id)
+        if st.session_state.selected_card == card_id:
+            st.session_state.selected_card = None
+    # If selected_card was removed, set to first available
+    if st.session_state.selected_card is None and len(st.session_state.clicked_numbers) > 0:
+        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+    st.warning("⚠️ Maximum 2 cards allowed! Excess cards have been removed.")
+    st.rerun()
 
 # Check if a card is selected
 if not st.session_state.selected_card:
@@ -685,35 +673,35 @@ if not st.session_state.selected_card:
             
             if is_clicked:
                 btn_type = "secondary"
-            elif is_disabled and st.session_state.timer_running:
+            elif is_disabled:
                 btn_type = "secondary"
             else:
                 btn_type = "primary"
             
-            # Handle card selection with timer limit
+            # Handle card selection with limit
             if st.button(
                 str(i),
                 key=f"num_{i}",
                 use_container_width=True,
                 type=btn_type,
-                disabled=is_disabled and st.session_state.timer_running
+                disabled=is_disabled
             ):
                 if i in st.session_state.clicked_numbers:
                     st.session_state.clicked_numbers.remove(i)
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                 else:
-                    # Only add if within limit or timer not running
-                    if len(st.session_state.clicked_numbers) < 2 or not st.session_state.timer_running:
+                    # Only add if within limit
+                    if len(st.session_state.clicked_numbers) < 2:
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.selected_card = i
                 st.rerun()
     
-    # Show disabled message
-    if len(st.session_state.clicked_numbers) >= 2 and st.session_state.timer_running:
-        st.warning("⚠️ Maximum 2 cards reached! Timer is running.")
+    # Show info message
+    if len(st.session_state.clicked_numbers) >= 2:
+        st.warning("⚠️ Maximum 2 cards reached!")
     else:
-        st.info("👆 Click a card number above to select it (max 2 cards in 1 minute)!")
+        st.info("👆 Click a card number above to select it (max 2 cards)!")
     
 else:
     # Show the game with BINGO Board and Selected Card
@@ -792,8 +780,8 @@ else:
                 st.session_state.is_auto_calling = False
                 st.session_state.auto_called_count = 0
                 st.session_state.last_call_time = time.time()
-                st.session_state.timer_running = False
-                st.session_state.timer_started = False
+                st.session_state.timer_remaining = 60
+                st.session_state.timer_last_update = time.time()
                 st.rerun()
         
         # Status display
