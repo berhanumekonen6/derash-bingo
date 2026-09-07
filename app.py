@@ -1,6 +1,10 @@
 import streamlit as st
 import random
 import time
+import hashlib
+import json
+import os
+from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ",
@@ -8,83 +12,253 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state
-if 'clicked_numbers' not in st.session_state:
-    st.session_state.clicked_numbers = set()
-if 'selected_card' not in st.session_state:
-    st.session_state.selected_card = None
-if 'called_numbers' not in st.session_state:
-    st.session_state.called_numbers = set()
-if 'last_called_number' not in st.session_state:
-    st.session_state.last_called_number = None
-if 'auto_called_count' not in st.session_state:
-    st.session_state.auto_called_count = 0
-if 'last_call_time' not in st.session_state:
-    st.session_state.last_call_time = time.time()
-if 'game_started' not in st.session_state:
-    st.session_state.game_started = False
-if 'auto_call_started' not in st.session_state:
-    st.session_state.auto_call_started = False
-if 'card_selection_time' not in st.session_state:
-    st.session_state.card_selection_time = 60  # 60 seconds for card selection
-if 'card_selection_last_update' not in st.session_state:
-    st.session_state.card_selection_last_update = time.time()
-if 'card_selection_round' not in st.session_state:
-    st.session_state.card_selection_round = 0
-if 'has_auto_joined' not in st.session_state:
-    st.session_state.has_auto_joined = False
+# ===================================================================
+# SESSION STATE INITIALIZATION
+# ===================================================================
 
-# Timer for card selection - ALWAYS RUNNING (never stops)
-current_time = time.time()
-time_passed = current_time - st.session_state.card_selection_last_update
-st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
-st.session_state.card_selection_last_update = current_time
-
-# When timer reaches 0, auto-select card and reset timer (always resets)
-if st.session_state.card_selection_time <= 0:
-    # ALWAYS reset timer immediately
-    st.session_state.card_selection_time = 60
-    st.session_state.card_selection_round += 1
-    st.session_state.card_selection_last_update = time.time()
-    
-    # If there are clicked cards, select the first one and join game
-    if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
-        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        st.session_state.auto_call_started = False
-        st.session_state.game_started = True
-        st.rerun()
-
-# Auto-call numbers every 2 seconds automatically once a card is selected
-if st.session_state.selected_card is not None:
-    # Start auto-calling when card is selected
-    if not st.session_state.auto_call_started:
-        st.session_state.auto_call_started = True
+def init_session_state():
+    """Initialize all session state variables"""
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+    if 'current_user' not in st.session_state:
+        st.session_state.current_user = None
+    if 'current_role' not in st.session_state:
+        st.session_state.current_role = None
+    if 'clicked_numbers' not in st.session_state:
+        st.session_state.clicked_numbers = set()
+    if 'selected_card' not in st.session_state:
+        st.session_state.selected_card = None
+    if 'called_numbers' not in st.session_state:
+        st.session_state.called_numbers = set()
+    if 'last_called_number' not in st.session_state:
+        st.session_state.last_called_number = None
+    if 'auto_called_count' not in st.session_state:
+        st.session_state.auto_called_count = 0
+    if 'last_call_time' not in st.session_state:
         st.session_state.last_call_time = time.time()
-        # Call first number immediately
-        if len(st.session_state.called_numbers) < 75:
-            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-            if available:
-                called_num = random.choice(available)
-                st.session_state.called_numbers.add(called_num)
-                st.session_state.last_called_number = called_num
-                st.session_state.auto_called_count += 1
-                st.session_state.last_call_time = time.time()
-                st.rerun()
+    if 'game_started' not in st.session_state:
+        st.session_state.game_started = False
+    if 'auto_call_started' not in st.session_state:
+        st.session_state.auto_call_started = False
+    if 'card_selection_time' not in st.session_state:
+        st.session_state.card_selection_time = 60
+    if 'card_selection_last_update' not in st.session_state:
+        st.session_state.card_selection_last_update = time.time()
+    if 'game_over' not in st.session_state:
+        st.session_state.game_over = False
+    if 'winners_list' not in st.session_state:
+        st.session_state.winners_list = []
+    if 'winner_declared' not in st.session_state:
+        st.session_state.winner_declared = False
+    if 'user_db' not in st.session_state:
+        st.session_state.user_db = {}
+    if 'selected_cards' not in st.session_state:
+        st.session_state.selected_cards = []
+    if 'taken_cards' not in st.session_state:
+        st.session_state.taken_cards = []
+
+init_session_state()
+
+# ===================================================================
+# LOCAL FILE STORAGE
+# ===================================================================
+
+def get_local_users_file():
+    return "bingo_users_local.json"
+
+def load_local_users():
+    try:
+        if os.path.exists(get_local_users_file()):
+            with open(get_local_users_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
+
+def save_local_users(users):
+    try:
+        with open(get_local_users_file(), "w") as f:
+            json.dump(users, f, indent=2)
+        return True
+    except:
+        return False
+
+def load_all_data():
+    local_users = load_local_users()
+    if local_users:
+        st.session_state.user_db = local_users
+    else:
+        st.session_state.user_db = {}
+
+def save_all_data():
+    if "user_db" in st.session_state and st.session_state.user_db:
+        save_local_users(st.session_state.user_db)
+
+# ===================================================================
+# AUTHENTICATION
+# ===================================================================
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    if not hashed:
+        return False
+    return hash_password(password) == hashed
+
+def login_user(username, password):
+    username = username.strip()
+    password = password.strip()
+    load_all_data()
     
-    # Continue calling every 2 seconds
-    if len(st.session_state.called_numbers) < 75:
-        current_time = time.time()
-        if current_time - st.session_state.last_call_time >= 2.0:
-            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-            if available:
-                called_num = random.choice(available)
-                st.session_state.called_numbers.add(called_num)
-                st.session_state.last_called_number = called_num
-                st.session_state.auto_called_count += 1
-                st.session_state.last_call_time = current_time
-                st.rerun()
-else:
-    st.session_state.auto_call_started = False
+    if username == "admin" and password == "admin123":
+        if username not in st.session_state.user_db:
+            user_data = {
+                "password": hash_password("admin123"),
+                "balance": 1000,
+                "role": "admin",
+                "name": "Admin",
+                "phone": "",
+                "game_played": 0
+            }
+            st.session_state.user_db[username] = user_data
+            save_local_users(st.session_state.user_db)
+            load_all_data()
+        
+        st.session_state.logged_in = True
+        st.session_state.current_user = username
+        st.session_state.current_role = "admin"
+        return True, "✅ Admin login successful!"
+    
+    if username not in st.session_state.user_db:
+        return False, "❌ Username not found"
+    
+    if verify_password(password, st.session_state.user_db[username]["password"]):
+        st.session_state.logged_in = True
+        st.session_state.current_user = username
+        st.session_state.current_role = st.session_state.user_db[username]["role"]
+        return True, "✅ Login successful!"
+    return False, "❌ Incorrect password"
+
+def register_user(username, password, name, phone=""):
+    username = username.strip()
+    password = password.strip()
+    name = name.strip()
+    
+    if len(username) < 2:
+        return False, "❌ Username must be at least 2 characters"
+    if len(password) < 6:
+        return False, "❌ Password must be at least 6 characters"
+    
+    load_all_data()
+    
+    if username in st.session_state.user_db:
+        return False, "❌ Username already exists"
+    
+    user_data = {
+        "password": hash_password(password),
+        "balance": 100,
+        "role": "player",
+        "name": name,
+        "phone": phone,
+        "game_played": 0
+    }
+    
+    st.session_state.user_db[username] = user_data
+    save_local_users(st.session_state.user_db)
+    load_all_data()
+    
+    return True, "✅ Registration successful!"
+
+def logout_user():
+    st.session_state.logged_in = False
+    st.session_state.current_user = None
+    st.session_state.current_role = None
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
+
+def admin_panel():
+    """Admin panel for managing user balances"""
+    st.markdown("### 🔧 Admin Panel")
+    st.markdown("Manage user balances, view all users.")
+    
+    users = list(st.session_state.user_db.keys())
+    users = [u for u in users if u != "admin"]
+    
+    if not users:
+        st.info("No users registered yet.")
+        return
+    
+    selected_user = st.selectbox("Select User", users)
+    
+    if selected_user:
+        user_data = st.session_state.user_db.get(selected_user, {})
+        current_balance = user_data.get("balance", 0)
+        game_played = user_data.get("game_played", 0)
+        name = user_data.get("name", selected_user)
+        phone = user_data.get("phone", "")
+        
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1rem;border-radius:12px;color:white;border:1px solid rgba(255,255,255,0.1);margin-bottom:15px;">
+            <p style="margin:0;font-weight:600;">👤 {name}</p>
+            <p style="margin:5px 0;font-size:0.85rem;">📱 {phone}</p>
+            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 Current Balance: {current_balance} ETB</p>
+            <p style="margin:5px 0;font-size:0.85rem;">🎮 Games Played: {game_played}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("#### 💰 Update Balance")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            balance_options = [20, 50, 100, 200, 300, 500, 1000, 1500, 2000, 3000, 5000]
+            custom_amount = st.number_input("Custom Amount (ETB)", min_value=0, step=10, value=100)
+            
+            st.markdown("**Quick Select Amounts:**")
+            cols = st.columns(5)
+            for i, amount in enumerate(balance_options):
+                with cols[i % 5]:
+                    if st.button(f"{amount}", key=f"bal_{amount}_{selected_user}"):
+                        if selected_user in st.session_state.user_db:
+                            st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + amount
+                            save_local_users(st.session_state.user_db)
+                            st.success(f"✅ Added {amount} ETB to {selected_user}'s balance!")
+                            st.rerun()
+        
+        with col2:
+            if st.button("➕ Add Balance", type="primary", use_container_width=True):
+                if selected_user in st.session_state.user_db:
+                    st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + custom_amount
+                    save_local_users(st.session_state.user_db)
+                    st.success(f"✅ Added {custom_amount} ETB to {selected_user}'s balance!")
+                    st.rerun()
+            
+            if st.button("💰 Set Balance", type="primary", use_container_width=True):
+                if selected_user in st.session_state.user_db:
+                    st.session_state.user_db[selected_user]["balance"] = custom_amount
+                    save_local_users(st.session_state.user_db)
+                    st.success(f"✅ Set {selected_user}'s balance to {custom_amount} ETB!")
+                    st.rerun()
+        
+        st.markdown("---")
+        st.markdown("#### 📊 All Users")
+        
+        user_list = []
+        for username, data in st.session_state.user_db.items():
+            if username != "admin":
+                user_list.append({
+                    "Username": username,
+                    "Name": data.get("name", ""),
+                    "Phone": data.get("phone", ""),
+                    "Balance": data.get("balance", 0),
+                    "Games Played": data.get("game_played", 0),
+                })
+        
+        if user_list:
+            st.dataframe(user_list, use_container_width=True)
 
 # ===================================================================
 # ALL 201 BINGO CARDS - FULL LIST
@@ -132,7 +306,7 @@ BINGO_CARDS = [
     {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
     {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
     {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
-    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '35', '52', '71'], ['2', '23', '35', '51', '64']]},
+    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
     {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
     {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
     {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
@@ -300,8 +474,57 @@ def get_card(card_id):
             return card
     return None
 
-def display_selected_card(card_id):
-    """Display a BINGO card with circular cells like the master board"""
+def get_card_data(card_id):
+    card = get_card(card_id)
+    if card:
+        return card["cells"]
+    return None
+
+# ===================================================================
+# GAME FUNCTIONS
+# ===================================================================
+
+def check_winning_pattern(card_data, called_numbers):
+    """Check if a card has a winning pattern"""
+    if not called_numbers or not card_data:
+        return None
+    
+    called_set = set(called_numbers)
+    
+    def is_marked(value):
+        if value == 'F':
+            return True
+        return int(value) in called_set
+    
+    # Check rows
+    for row in range(5):
+        if all(is_marked(card_data[row][col]) for col in range(5)):
+            return {'type': 'row', 'index': row + 1}
+    
+    # Check columns
+    for col in range(5):
+        if all(is_marked(card_data[row][col]) for row in range(5)):
+            letters = ['B', 'I', 'N', 'G', 'O']
+            return {'type': 'column', 'letter': letters[col]}
+    
+    # Check diagonals
+    if all(is_marked(card_data[i][i]) for i in range(5)):
+        return {'type': 'diagonal', 'direction': 'main'}
+    
+    if all(is_marked(card_data[i][4 - i]) for i in range(5)):
+        return {'type': 'diagonal', 'direction': 'anti'}
+    
+    return None
+
+# ===================================================================
+# DISPLAY FUNCTIONS
+# ===================================================================
+
+def display_selected_card(card_id, called_numbers=None):
+    """Display a BINGO card with circular cells"""
+    if called_numbers is None:
+        called_numbers = []
+    
     card = get_card(card_id)
     if not card:
         return
@@ -382,6 +605,10 @@ def display_selected_card(card_id):
             font-size: 1.3rem;
             border-color: #F57F17;
         }}
+        .selected-card-winning {{
+            border-color: #FFD700 !important;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5) !important;
+        }}
         .selected-footer {{
             text-align: center;
             color: #333;
@@ -405,7 +632,18 @@ def display_selected_card(card_id):
     </style>
     """, unsafe_allow_html=True)
     
-    html = f'<div class="selected-card-container">'
+    # Check if this card is a winner
+    is_winner = False
+    for winner in st.session_state.winners_list:
+        if winner.get('card_id') == card_id:
+            is_winner = True
+            break
+    
+    container_class = "selected-card-container"
+    if is_winner:
+        container_class += " selected-card-winning"
+    
+    html = f'<div class="{container_class}">'
     html += f'<div class="selected-card-title">🎯 Card #{card_id}</div>'
     
     html += '<table class="selected-table">'
@@ -426,7 +664,7 @@ def display_selected_card(card_id):
                 html += f'<td><div class="selected-circle free">★</div></td>'
             else:
                 num = int(value)
-                is_called = num in st.session_state.called_numbers
+                is_called = num in called_numbers
                 is_ticked = num in st.session_state.clicked_numbers
                 
                 circle_class = "selected-circle"
@@ -449,12 +687,15 @@ def display_selected_card(card_id):
         for val in row:
             if val != 'F':
                 num = int(val)
-                if num in st.session_state.called_numbers:
+                if num in called_numbers:
                     total_called_on_card += 1
                 if num in st.session_state.clicked_numbers:
                     total_ticked += 1
     
-    html += f'<div class="selected-footer">✅ {total_called_on_card}/24 called | ⭐ {total_ticked} ticked</div>'
+    if is_winner:
+        html += f'<div class="selected-footer" style="color:#FFD700;font-size:0.9rem;">🏆 WINNER! 🏆</div>'
+    else:
+        html += f'<div class="selected-footer">✅ {total_called_on_card}/24 called | ⭐ {total_ticked} ticked</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
@@ -585,6 +826,8 @@ def display_master_board():
         'O': list(range(61, 76))
     }
     
+    called_numbers = list(st.session_state.called_numbers)
+    
     html = '<div class="master-board-container">'
     html += '<div class="master-board-title">🎯 BINGO Board</div>'
     
@@ -598,7 +841,7 @@ def display_master_board():
         html += '<tr>'
         html += f'<td><div class="circle-letter">{letter}</div></td>'
         for num in master_board[letter]:
-            is_called = num in st.session_state.called_numbers
+            is_called = num in called_numbers
             is_last = num == st.session_state.last_called_number
             
             if is_last:
@@ -612,17 +855,17 @@ def display_master_board():
     html += '</table>'
     
     # Show count of called numbers
-    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(st.session_state.called_numbers)}</strong> / 75 numbers</div>'
+    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
     
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# MAIN APP - Show Selection or Game
+# MAIN APP
 # ===================================================================
 
-# Header with Title only
+# Header with Title
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
     <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:5px;margin:0;">
@@ -634,18 +877,183 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Check if a card is selected
+# ===================================================================
+# LOGIN / REGISTER
+# ===================================================================
+
+if not st.session_state.logged_in:
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
+    
+    with tab1:
+        with st.form("login_form"):
+            username = st.text_input("👤 Username", placeholder="Enter username")
+            password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
+            submitted = st.form_submit_button("🎰 Login")
+            if submitted:
+                if username and password:
+                    load_all_data()
+                    success, message = login_user(username, password)
+                    if success:
+                        st.success(message)
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(message)
+    
+    with tab2:
+        with st.form("register_form"):
+            full_name = st.text_input("👤 Full Name", placeholder="Your full name")
+            username = st.text_input("👤 Username", placeholder="Choose a username")
+            phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
+            password = st.text_input("🔑 Password", type="password", placeholder="Create password (min 6 chars)")
+            confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
+            submitted = st.form_submit_button("📝 Register")
+            if submitted:
+                if not full_name or not username or not password:
+                    st.error("❌ Please fill all required fields")
+                elif password != confirm:
+                    st.error("❌ Passwords do not match")
+                elif len(password) < 6:
+                    st.error("❌ Password must be at least 6 characters")
+                else:
+                    success, message = register_user(username, password, full_name, phone)
+                    if success:
+                        st.success(message)
+                        st.balloons()
+                        load_all_data()
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(message)
+    st.stop()
+
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
+
+if st.session_state.current_role == "admin":
+    admin_panel()
+    st.markdown("---")
+
+# ===================================================================
+# USER INFO
+# ===================================================================
+
+user = st.session_state.user_db.get(st.session_state.current_user, {})
+balance = user.get("balance", 0)
+
+st.sidebar.markdown(f"""
+<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1rem;border-radius:12px;color:white;border:1px solid rgba(255,255,255,0.1);">
+    <p style="margin:0;font-weight:600;">👤 {user.get('name', st.session_state.current_user)}</p>
+    <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {balance} ETB</p>
+    <p style="margin:5px 0;font-size:0.85rem;">⭐ {st.session_state.current_role.title()}</p>
+</div>
+""", unsafe_allow_html=True)
+
+if st.sidebar.button("🚪 Logout", use_container_width=True):
+    logout_user()
+    st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
+
+# ===================================================================
+# TIMER - ALWAYS RUNNING
+# ===================================================================
+
+current_time = time.time()
+time_passed = current_time - st.session_state.card_selection_last_update
+st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
+st.session_state.card_selection_last_update = current_time
+
+# When timer reaches 0, auto-select card and start game
+if st.session_state.card_selection_time <= 0 and not st.session_state.game_started:
+    st.session_state.card_selection_time = 60
+    st.session_state.card_selection_last_update = time.time()
+    
+    if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
+        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        st.rerun()
+
+# ===================================================================
+# AUTO-CALL NUMBERS
+# ===================================================================
+
+# Auto-call numbers every 2 seconds once game is started
+if st.session_state.selected_card is not None and st.session_state.game_started:
+    if not st.session_state.auto_call_started:
+        st.session_state.auto_call_started = True
+        st.session_state.last_call_time = time.time()
+        # Call first number immediately
+        if len(st.session_state.called_numbers) < 75:
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = time.time()
+                st.rerun()
+    
+    # Continue calling every 2 seconds
+    if len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
+        current_time = time.time()
+        if current_time - st.session_state.last_call_time >= 2.0:
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = current_time
+                
+                # Check for winners after each call
+                check_for_winners()
+                st.rerun()
+
+# ===================================================================
+# CHECK FOR WINNERS
+# ===================================================================
+
+def check_for_winners():
+    """Check all selected cards for winning patterns"""
+    if st.session_state.winner_declared:
+        return
+    
+    called_numbers = list(st.session_state.called_numbers)
+    
+    # Check all cards in the game
+    for card_id in st.session_state.clicked_numbers:
+        card_data = get_card_data(card_id)
+        if card_data:
+            pattern = check_winning_pattern(card_data, called_numbers)
+            if pattern:
+                st.session_state.winners_list.append({
+                    "card_id": card_id,
+                    "username": st.session_state.current_user,
+                    "pattern": pattern,
+                    "card_data": card_data
+                })
+                st.session_state.winner_declared = True
+                st.session_state.game_over = True
+                return
+
+# ===================================================================
+# GAME LOOP
+# ===================================================================
+
 if not st.session_state.selected_card:
-    # Show card selection with timer
+    # Card Selection Phase
     st.markdown("## 📋 Select Your Card (1 - 201)")
     
-    # Timer display right here
+    # Timer display
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
     
-    # Color coding
     if remaining <= 10:
         color = "#E53935"
     elif remaining <= 30:
@@ -653,7 +1061,6 @@ if not st.session_state.selected_card:
     else:
         color = "#2E7D32"
     
-    # Show timer with status
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;flex-wrap:wrap;">
         <span style="display:inline-block;padding:10px 25px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.5rem;font-weight:bold;color:{color};font-family:monospace;">
@@ -665,16 +1072,18 @@ if not st.session_state.selected_card:
         <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
             Selected: {len(st.session_state.clicked_numbers)}/2 cards
         </span>
+        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid #FFD700;font-size:0.9rem;color:#333;">
+            💰 Balance: {balance} ETB
+        </span>
     </div>
     """, unsafe_allow_html=True)
     
-    # Show warning if timer is low
     if st.session_state.card_selection_time <= 10:
         st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left to select a card!")
     elif st.session_state.card_selection_time <= 30:
         st.info(f"⏱️ Hurry! {int(st.session_state.card_selection_time)} seconds remaining...")
     
-    # Numbers in a grid - Mobile optimized
+    # Numbers grid
     cols = st.columns(8)
     for i in range(1, 202):
         col_idx = (i - 1) % 8
@@ -689,7 +1098,6 @@ if not st.session_state.selected_card:
             else:
                 btn_type = "primary"
             
-            # Handle card selection with limit
             if st.button(
                 str(i),
                 key=f"num_{i}",
@@ -702,73 +1110,103 @@ if not st.session_state.selected_card:
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                 else:
-                    # Only add if within limit
                     if len(st.session_state.clicked_numbers) < 2:
                         st.session_state.clicked_numbers.add(i)
                 st.rerun()
     
-    # Show info message
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for timer to reach 0:00...")
     else:
         st.info("👆 Click a card number above to select it (max 2 cards)")
     
-    # Show timer progress
     progress = 1 - (st.session_state.card_selection_time / 60)
     st.progress(progress)
-    
-    # Show countdown text
     st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)} seconds")
-    
+
+# ===================================================================
+# GAME PLAYING PHASE
+# ===================================================================
+
 else:
-    # Show the game with BINGO Board and Selected Card (NO TIMER HERE)
     card_display = st.session_state.selected_card
     
-    st.markdown(f"""
-    <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
-        🎯 Playing with Card #{card_display}
-        <span style="margin-left:15px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-            {len(st.session_state.called_numbers)}/75 Called
-        </span>
-        <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-            Cards: {len(st.session_state.clicked_numbers)}/2
-        </span>
-        <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-            🎯 Auto-calls: {st.session_state.auto_called_count}
-        </span>
-        <button onclick="window.location.reload()" style="margin-left:15px;background:rgba(255,255,255,0.2);border:1px solid white;color:white;padding:5px 15px;border-radius:5px;cursor:pointer;">
-            🔄 Change Card
-        </button>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Create two columns for BINGO Board and Selected Card
-    board_col, card_col = st.columns([2, 1])
-    
-    with board_col:
+    if st.session_state.winner_declared:
+        # Show winner celebration
+        st.markdown("""
+        <div style="text-align:center;padding:40px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:20px 0;">
+            <div style="font-size:4rem;color:#FFD700;">🎉 BINGO! 🎉</div>
+            <div style="font-size:2.5rem;color:#FFD700;margin:10px 0;">🎉 እንኳን ደስ አለዎት! 🎉</div>
+            <div style="font-size:1.5rem;color:white;">Winner!</div>
+            <div style="font-size:1.2rem;color:#00C9B7;">Card #{card_display}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.balloons()
+        st.snow()
+        
+        # Show winning card
+        display_selected_card(card_display, list(st.session_state.called_numbers))
         display_master_board()
-    
-    with card_col:
-        display_selected_card(card_display)
-    
-    # Auto-call info
-    st.info(f"🎯 Auto-calling every 2 seconds... (Called: {len(st.session_state.called_numbers)}/75 numbers)")
+        
+        if st.button("🔄 New Game", use_container_width=True):
+            st.session_state.selected_card = None
+            st.session_state.clicked_numbers = set()
+            st.session_state.called_numbers = set()
+            st.session_state.last_called_number = None
+            st.session_state.auto_called_count = 0
+            st.session_state.game_started = False
+            st.session_state.auto_call_started = False
+            st.session_state.winner_declared = False
+            st.session_state.game_over = False
+            st.session_state.winners_list = []
+            st.session_state.card_selection_time = 60
+            st.session_state.card_selection_last_update = time.time()
+            st.rerun()
+    else:
+        # Game in progress
+        st.markdown(f"""
+        <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
+            🎯 Playing with Card #{card_display}
+            <span style="margin-left:15px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+                {len(st.session_state.called_numbers)}/75 Called
+            </span>
+            <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+                Cards: {len(st.session_state.clicked_numbers)}/2
+            </span>
+            <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+                🎯 Auto-calls: {st.session_state.auto_called_count}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Display board and card
+        board_col, card_col = st.columns([2, 1])
+        
+        with board_col:
+            display_master_board()
+        
+        with card_col:
+            display_selected_card(card_display, list(st.session_state.called_numbers))
+        
+        st.info(f"🎯 Auto-calling every 2 seconds... (Called: {len(st.session_state.called_numbers)}/75 numbers)")
 
-# Footer with stats
+# ===================================================================
+# FOOTER
+# ===================================================================
+
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
     Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 cards | Called: {len(st.session_state.called_numbers)}/75 numbers
     {' | 🎯 Auto-calls: ' + str(st.session_state.auto_called_count) if st.session_state.auto_called_count > 0 else ''}
-    {' | ⏱️ Next auto-join in ' + str(int(st.session_state.card_selection_time)) + 's' if st.session_state.selected_card is None else ''}
+    {' | ⏱️ Auto-join in ' + str(int(st.session_state.card_selection_time)) + 's' if st.session_state.selected_card is None else ''}
 </div>
 """, unsafe_allow_html=True)
 
-# Auto-rerun for continuous calling and timer updates
-if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75:
+# Auto-rerun for continuous updates
+if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
     time.sleep(0.5)
     st.rerun()
 elif st.session_state.selected_card is None:
-    # Auto-rerun on selection screen to update timer
     time.sleep(0.5)
     st.rerun()
