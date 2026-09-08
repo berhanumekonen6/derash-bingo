@@ -1430,11 +1430,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - FIXED: Shows ALL cards selected by ALL players
+# CARD SELECTION FUNCTION - GLOBAL BOARD FOR ALL PLAYERS
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using Streamlit columns"""
+    """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
@@ -1445,7 +1445,7 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # === CARD COUNTS - ALL PLAYERS ===
+    # === GLOBAL CARD COUNTS - SAME FOR ALL PLAYERS ===
     total_selected = len(st.session_state.taken_cards)  # ALL cards from ALL players
     your_cards = len(st.session_state.clicked_numbers)   # YOUR cards only
     available = 201 - total_selected
@@ -1486,7 +1486,7 @@ def render_card_selection():
             🟢 Your Cards: {your_cards}/2
         </span>
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.15);border-radius:8px;border:2px solid #FFD700;font-size:0.85rem;color:#FFD700;font-weight:bold;">
-            📊 All Players: {total_selected}/201
+            📊 Global Board: {total_selected}/201
         </span>
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
             ⬜ Available: {available}
@@ -1503,13 +1503,19 @@ def render_card_selection():
     # Status Messages
     if not enough_cards:
         st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start the game! 🎯")
-        st.info(f"👥 {total_selected} cards selected by all players. Keep selecting cards! 🃏")
+        st.info(f"👥 {total_selected} cards selected globally. Keep selecting! 🃏")
     elif remaining <= 10:
         st.warning(f"⚠️ Only {int(remaining)} seconds left! Game will start soon! ⏰")
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
         st.info(f"📝 Select your cards (max 2). {int(remaining)} seconds remaining ⏳")
+    
+    # Show currently selected cards by you
+    if len(st.session_state.clicked_numbers) > 0:
+        your_cards_list = sorted(list(st.session_state.clicked_numbers))
+        st.success(f"🟢 Your selected cards: {', '.join(map(str, your_cards_list))}")
+        st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
     # Create grid using selected number of columns
     cols_per_row = st.session_state.columns_per_row
@@ -1540,6 +1546,7 @@ def render_card_selection():
                 disabled=is_disabled
             ):
                 if i in st.session_state.clicked_numbers:
+                    # DESELECT - Remove your card from global board
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1547,6 +1554,7 @@ def render_card_selection():
                         st.session_state.selected_card = None
                     st.rerun()
                 else:
+                    # SELECT - Add your card to global board
                     if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
@@ -1554,6 +1562,8 @@ def render_card_selection():
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for other players... ⏳")
+    elif len(st.session_state.clicked_numbers) > 0:
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 green card to DESELECT")
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
