@@ -1549,12 +1549,17 @@ def render_card_selection():
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
+    # ================================================================
+    # FIX: Display Cards per row with current value
+    # ================================================================
+    
     # Column selection dropdown - save to global when changed
     col_options = [2, 3, 4, 5, 6, 8, 10]
+    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
     selected_cols = st.selectbox(
-        "📊 Cards per row:",
+        f"📊 Cards per row: {current_value}",
         options=col_options,
-        index=col_options.index(st.session_state.columns_per_row) if st.session_state.columns_per_row in col_options else 3,
+        index=col_options.index(current_value),
         help="Select how many cards to display per row"
     )
     
