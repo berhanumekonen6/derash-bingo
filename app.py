@@ -1522,7 +1522,7 @@ def render_card_selection():
                 type=btn_type,
                 disabled=is_disabled
             ):
-                if i in st_session_state.clicked_numbers:
+                if i in st.session_state.clicked_numbers:
                     # Deselect
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
