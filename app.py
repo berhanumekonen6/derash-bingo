@@ -103,18 +103,13 @@ st.markdown("""
     /* CSS Grid - responsive columns */
     .cards-grid {
         display: grid !important;
-        grid-template-columns: repeat(10, 1fr) !important;
         gap: 5px !important;
         max-width: 100% !important;
         margin: 0 auto !important;
     }
     
-    /* Mobile - fewer columns for readable numbers */
+    /* Mobile - allow user's column selection to work */
     @media (max-width: 768px) {
-        .cards-grid {
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 6px !important;
-        }
         .cards-grid-wrapper {
             max-height: 500px !important;
         }
@@ -129,10 +124,6 @@ st.markdown("""
     }
     
     @media (max-width: 480px) {
-        .cards-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 5px !important;
-        }
         .cards-grid-wrapper {
             max-height: 450px !important;
         }
@@ -146,10 +137,6 @@ st.markdown("""
     }
     
     @media (max-width: 360px) {
-        .cards-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 4px !important;
-        }
         .cards-grid-wrapper {
             max-height: 400px !important;
         }
@@ -162,12 +149,8 @@ st.markdown("""
         }
     }
     
-    /* Landscape mode for phones */
+    /* Landscape mode for phones - allow user selection */
     @media (orientation: landscape) and (max-height: 600px) {
-        .cards-grid {
-            grid-template-columns: repeat(6, 1fr) !important;
-            gap: 4px !important;
-        }
         .card-btn {
             font-size: 0.75rem !important;
             min-height: 32px !important;
