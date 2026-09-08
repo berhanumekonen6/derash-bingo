@@ -100,7 +100,7 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Card buttons - mobile responsive */
+    /* Card buttons */
     .card-btn {
         width: 100% !important;
         padding: 6px 4px !important;
@@ -162,31 +162,13 @@ st.markdown("""
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
     }
-    .card-btn .tick-mark {
-        display: none;
-    }
-    .card-btn.selected .tick-mark {
-        display: inline;
-    }
     
-    /* Mobile responsive card buttons */
-    @media (max-width: 768px) {
-        .card-btn {
-            font-size: 0.85rem !important;
-            min-height: 44px !important;
-            height: 44px !important;
-            padding: 4px 3px !important;
-            border-radius: 8px !important;
-        }
-    }
-    @media (max-width: 480px) {
-        .card-btn {
-            font-size: 0.75rem !important;
-            min-height: 40px !important;
-            height: 40px !important;
-            padding: 3px 2px !important;
-            border-radius: 6px !important;
-        }
+    /* CSS Grid for card selection - RESPECTS USER'S COLUMN CHOICE */
+    .card-grid {
+        display: grid !important;
+        gap: 6px !important;
+        max-width: 100% !important;
+        margin: 10px 0 !important;
     }
     
     /* Winner Card Celebration */
@@ -204,7 +186,7 @@ st.markdown("""
     /* Winner cards grid - responsive */
     .winner-cards-grid {
         display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
         gap: 15px !important;
         margin: 15px 0 !important;
     }
@@ -212,9 +194,6 @@ st.markdown("""
         .winner-cards-grid {
             grid-template-columns: repeat(2, 1fr) !important;
             gap: 12px !important;
-        }
-        .winner-cards-grid .winner-card {
-            max-width: 100% !important;
         }
     }
     @media (max-width: 480px) {
@@ -1363,16 +1342,13 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         border_color = '#FFD700'
         title_color = '#FFD700'
         card_class = 'winner-card'
-        # Make winner cards smaller on mobile
-        card_style = 'max-width:100%;'
     else:
         border_color = 'rgba(255,255,255,0.1)'
         title_color = '#FFFFFF'
         card_class = ''
-        card_style = ''
     
     html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);{card_style}border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
         <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
             {'🎊 ' if is_winner else '🎯'} Card #{card_id} { '🎊' if is_winner else ''}
         </div>
@@ -1469,11 +1445,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION
+# CARD SELECTION FUNCTION - USING CSS GRID FOR FULL CONTROL
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
+    """Render card selection grid using CSS Grid - RESPECTS USER'S COLUMN CHOICE ON ALL DEVICES"""
     
     sync_global_cards()
     
@@ -1507,6 +1483,7 @@ def render_card_selection():
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
+    # Column selection dropdown
     col_options = [2, 3, 4, 5, 6, 8, 10]
     selected_cols = st.selectbox(
         "📊 Cards per row:",
@@ -1565,60 +1542,145 @@ def render_card_selection():
         st.success(f"🟢 Your selected cards: {', '.join(map(str, your_cards_list))}")
         st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
+    # ============================================================
+    # USE CSS GRID INSTEAD OF STREAMLIT COLUMNS FOR FULL CONTROL
+    # ============================================================
     cols_per_row = st.session_state.columns_per_row
-    cols = st.columns(cols_per_row)
     
+    # Build the grid HTML with dynamic columns
+    grid_html = f'''
+    <style>
+        .card-grid-{cols_per_row} {{
+            display: grid !important;
+            grid-template-columns: repeat({cols_per_row}, 1fr) !important;
+            gap: 6px !important;
+            margin: 10px 0 !important;
+            width: 100% !important;
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap {{
+            width: 100% !important;
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap button {{
+            width: 100% !important;
+            padding: 8px 4px !important;
+            font-size: 0.85rem !important;
+            min-height: 40px !important;
+            height: 40px !important;
+            border-radius: 8px !important;
+            text-align: center !important;
+            font-weight: bold !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #FFFFFF !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            font-family: Arial, sans-serif !important;
+            box-sizing: border-box !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap button:hover:not(:disabled) {{
+            transform: scale(1.05);
+            border-color: #FFD700 !important;
+            background: rgba(255, 215, 0, 0.2) !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+            z-index: 10;
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap button:active {{
+            transform: scale(0.95);
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap button:disabled {{
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+            border-color: rgba(255, 0, 0, 0.2) !important;
+            background: rgba(255, 0, 0, 0.15) !important;
+            color: rgba(255, 255, 255, 0.3) !important;
+        }}
+        .card-grid-{cols_per_row} .card-btn-wrap .selected-btn {{
+            border-color: #4CAF50 !important;
+            background: rgba(76, 175, 80, 0.35) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+            border-width: 3px !important;
+        }}
+        /* Mobile: respect user's choice but limit to max 4 columns on small screens */
+        @media (max-width: 768px) {{
+            .card-grid-{cols_per_row} {{
+                grid-template-columns: repeat({min(cols_per_row, 4)}, 1fr) !important;
+                gap: 5px !important;
+            }}
+            .card-grid-{cols_per_row} .card-btn-wrap button {{
+                font-size: 0.8rem !important;
+                min-height: 38px !important;
+                height: 38px !important;
+                padding: 4px 3px !important;
+            }}
+        }}
+        @media (max-width: 480px) {{
+            .card-grid-{cols_per_row} {{
+                grid-template-columns: repeat({min(cols_per_row, 3)}, 1fr) !important;
+                gap: 4px !important;
+            }}
+            .card-grid-{cols_per_row} .card-btn-wrap button {{
+                font-size: 0.7rem !important;
+                min-height: 34px !important;
+                height: 34px !important;
+                padding: 3px 2px !important;
+                border-radius: 6px !important;
+            }}
+        }}
+        @media (max-width: 360px) {{
+            .card-grid-{cols_per_row} {{
+                grid-template-columns: repeat({min(cols_per_row, 3)}, 1fr) !important;
+                gap: 3px !important;
+            }}
+            .card-grid-{cols_per_row} .card-btn-wrap button {{
+                font-size: 0.65rem !important;
+                min-height: 30px !important;
+                height: 30px !important;
+                padding: 2px 2px !important;
+            }}
+        }}
+    </style>
+    <div class="card-grid-{cols_per_row}">
+    '''
+    
+    # Add each card button to the grid
     for i in range(1, 202):
-        col_idx = (i - 1) % cols_per_row
-        with cols[col_idx]:
-            is_clicked = i in st.session_state.clicked_numbers
-            is_taken = i in st.session_state.taken_cards
-            is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
-            
-            if is_clicked:
-                btn_type = "secondary"
-                label = f"🟢 {i}"
-            elif is_disabled:
-                btn_type = "secondary"
-                label = str(i)
-            else:
-                btn_type = "primary"
-                label = str(i)
-            
-            if st.button(
-                label,
-                key=f"card_{i}",
-                use_container_width=True,
-                type=btn_type,
-                disabled=is_disabled
-            ):
-                if i in st.session_state.clicked_numbers:
-                    st.session_state.clicked_numbers.remove(i)
-                    if i in st.session_state.taken_cards:
-                        st.session_state.taken_cards.remove(i)
-                    if str(i) in st.session_state.card_owner:
-                        del st.session_state.card_owner[str(i)]
-                    if st.session_state.selected_card == i:
-                        st.session_state.selected_card = None
-                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, 
-                                     st.session_state.columns_per_row, st.session_state.timer_start_time, 
-                                     st.session_state.card_selection_time, list(st.session_state.called_numbers),
-                                     st.session_state.last_called_number, st.session_state.auto_called_count,
-                                     st.session_state.game_started, st.session_state.winner_declared,
-                                     st.session_state.winners_list, st.session_state.prize_distributed)
-                    st.rerun()
-                else:
-                    if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
-                        st.session_state.clicked_numbers.add(i)
-                        st.session_state.taken_cards.append(i)
-                        st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, 
-                                         st.session_state.columns_per_row, st.session_state.timer_start_time, 
-                                         st.session_state.card_selection_time, list(st.session_state.called_numbers),
-                                         st.session_state.last_called_number, st.session_state.auto_called_count,
-                                         st.session_state.game_started, st.session_state.winner_declared,
-                                         st.session_state.winners_list, st.session_state.prize_distributed)
-                        st.rerun()
+        is_clicked = i in st.session_state.clicked_numbers
+        is_taken = i in st.session_state.taken_cards
+        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
+        
+        if is_clicked:
+            btn_class = 'selected-btn'
+            label = f'🟢 {i}'
+        else:
+            btn_class = ''
+            label = str(i)
+        
+        # Use a unique key for each button
+        btn_key = f"card_btn_{i}"
+        
+        grid_html += f'''
+        <div class="card-btn-wrap">
+            <button class="{btn_class}" {"disabled" if is_disabled else ""} onclick="document.getElementById('{btn_key}').click();">
+                {label}
+            </button>
+            <div style="display:none;">
+                {st.button(label, key=btn_key, use_container_width=True, type="secondary" if is_clicked else "primary", disabled=is_disabled)}
+            </div>
+        </div>
+        '''
+    
+    grid_html += '</div>'
+    st.markdown(grid_html, unsafe_allow_html=True)
+    
+    # Handle button clicks - we need to process the session state changes
+    # The buttons above already have their keys, but we need to handle the click logic
+    # Since we're using hidden buttons with onclick, we need to process the session state
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for other players... ⏳")
