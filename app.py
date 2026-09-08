@@ -100,88 +100,84 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* CSS Grid - NO HARDCODED COLUMNS - controlled by CSS classes */
+    /* CSS Grid - responsive columns */
     .cards-grid {
         display: grid !important;
+        grid-template-columns: repeat(10, 1fr) !important;
         gap: 5px !important;
         max-width: 100% !important;
         margin: 0 auto !important;
-        width: 100% !important;
     }
     
-    /* FORCE COLUMN COUNT - These classes will be applied dynamically */
-    .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
-    .grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
-    .grid-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
-    .grid-cols-5 { grid-template-columns: repeat(5, 1fr) !important; }
-    .grid-cols-6 { grid-template-columns: repeat(6, 1fr) !important; }
-    .grid-cols-8 { grid-template-columns: repeat(8, 1fr) !important; }
-    .grid-cols-10 { grid-template-columns: repeat(10, 1fr) !important; }
-    
-    /* OVERRIDE ANY MEDIA QUERIES - Force the grid to respect column count */
+    /* Mobile - fewer columns for readable numbers */
     @media (max-width: 768px) {
-        .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
-        .grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
-        .grid-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
-        .grid-cols-5 { grid-template-columns: repeat(5, 1fr) !important; }
-        .grid-cols-6 { grid-template-columns: repeat(6, 1fr) !important; }
-        .grid-cols-8 { grid-template-columns: repeat(8, 1fr) !important; }
-        .grid-cols-10 { grid-template-columns: repeat(10, 1fr) !important; }
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 6px !important;
+        }
         .cards-grid-wrapper {
             max-height: 500px !important;
         }
-        .grid-btn {
-            font-size: 0.8rem !important;
-            min-height: 36px !important;
-            height: 36px !important;
-            padding: 4px 2px !important;
-            border-radius: 8px !important;
+        .card-btn {
+            font-size: 1rem !important;
+            min-height: 48px !important;
+            height: 48px !important;
+            padding: 6px 4px !important;
+            border-radius: 10px !important;
             border-width: 2px !important;
         }
     }
     
     @media (max-width: 480px) {
-        .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
-        .grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
-        .grid-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
-        .grid-cols-5 { grid-template-columns: repeat(5, 1fr) !important; }
-        .grid-cols-6 { grid-template-columns: repeat(6, 1fr) !important; }
-        .grid-cols-8 { grid-template-columns: repeat(8, 1fr) !important; }
-        .grid-cols-10 { grid-template-columns: repeat(10, 1fr) !important; }
+        .cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 5px !important;
+        }
         .cards-grid-wrapper {
             max-height: 450px !important;
         }
-        .grid-btn {
-            font-size: 0.7rem !important;
-            min-height: 30px !important;
-            height: 30px !important;
-            padding: 3px 2px !important;
-            border-radius: 6px !important;
+        .card-btn {
+            font-size: 0.95rem !important;
+            min-height: 46px !important;
+            height: 46px !important;
+            padding: 5px 3px !important;
+            border-radius: 8px !important;
         }
     }
     
     @media (max-width: 360px) {
-        .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
-        .grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
-        .grid-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
-        .grid-cols-5 { grid-template-columns: repeat(5, 1fr) !important; }
-        .grid-cols-6 { grid-template-columns: repeat(6, 1fr) !important; }
-        .grid-cols-8 { grid-template-columns: repeat(8, 1fr) !important; }
-        .grid-cols-10 { grid-template-columns: repeat(10, 1fr) !important; }
+        .cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 4px !important;
+        }
         .cards-grid-wrapper {
             max-height: 400px !important;
         }
-        .grid-btn {
-            font-size: 0.6rem !important;
-            min-height: 26px !important;
-            height: 26px !important;
-            padding: 2px 1px !important;
-            border-radius: 4px !important;
+        .card-btn {
+            font-size: 0.85rem !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 4px 2px !important;
+            border-radius: 6px !important;
         }
     }
     
-    /* Grid button styling */
-    .grid-btn {
+    /* Landscape mode for phones */
+    @media (orientation: landscape) and (max-height: 600px) {
+        .cards-grid {
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 4px !important;
+        }
+        .card-btn {
+            font-size: 0.75rem !important;
+            min-height: 32px !important;
+            height: 32px !important;
+            padding: 3px 2px !important;
+        }
+    }
+    
+    /* Card buttons */
+    .card-btn {
         width: 100% !important;
         padding: 6px 4px !important;
         font-size: 0.9rem !important;
@@ -212,35 +208,41 @@ st.markdown("""
         font-family: Arial, sans-serif !important;
         box-sizing: border-box !important;
     }
-    .grid-btn:hover:not(.taken) {
+    .card-btn:hover:not(.taken) {
         transform: scale(1.05);
         border-color: #FFD700 !important;
         background: rgba(255, 215, 0, 0.2) !important;
         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
         z-index: 10;
     }
-    .grid-btn:active {
+    .card-btn:active {
         transform: scale(0.95);
     }
-    .grid-btn.selected {
+    .card-btn.selected {
         border-color: #4CAF50 !important;
         background: rgba(76, 175, 80, 0.35) !important;
         color: #FFFFFF !important;
         box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
         border-width: 3px !important;
     }
-    .grid-btn.taken {
+    .card-btn.taken {
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         color: rgba(255, 255, 255, 0.3) !important;
         cursor: not-allowed !important;
         opacity: 0.5 !important;
     }
-    .grid-btn.taken:hover {
+    .card-btn.taken:hover {
         transform: none !important;
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
+    }
+    .card-btn .tick-mark {
+        display: none;
+    }
+    .card-btn.selected .tick-mark {
+        display: inline;
     }
     
     /* Winner Card Celebration */
@@ -1504,11 +1506,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - FIXED: Uses CSS Grid with FORCED columns
+# CARD SELECTION FUNCTION - GLOBAL BOARD FOR ALL PLAYERS
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using CSS Grid - FORCES selected number of columns"""
+    """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
     # Sync with global data first - ALWAYS sync to get latest updates
     sync_global_cards()
@@ -1528,8 +1530,8 @@ def render_card_selection():
     balance = user.get("balance", 0)
     
     # === GLOBAL CARD COUNTS - SAME FOR ALL PLAYERS ===
-    total_selected = len(st.session_state.taken_cards)
-    your_cards = len(st.session_state.clicked_numbers)
+    total_selected = len(st.session_state.taken_cards)  # ALL cards from ALL players
+    your_cards = len(st.session_state.clicked_numbers)   # YOUR cards only
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
@@ -1547,41 +1549,20 @@ def render_card_selection():
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
-    # ================================================================
-    # FIX: Display Cards per row with current value
-    # ================================================================
-    
-    # Display the current cards per row prominently
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,165,0,0.04));
-                border:1px solid rgba(255,215,0,0.15);
-                border-radius:10px;
-                padding:8px 12px;
-                margin-bottom:10px;
-                text-align:center;">
-        <span style="color:rgba(255,255,255,0.6);font-size:0.9rem;">📊 Cards per row:</span>
-        <span style="color:#FFD700;font-size:1.5rem;font-weight:bold;margin:0 6px;text-shadow:0 0 20px rgba(255,215,0,0.2);">
-            {st.session_state.columns_per_row}
-        </span>
-        <span style="color:rgba(255,255,255,0.3);font-size:0.8rem;">cards</span>
-    </div>
-    """, unsafe_allow_html=True)
-    
     # Column selection dropdown - save to global when changed
     col_options = [2, 3, 4, 5, 6, 8, 10]
-    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
-    
     selected_cols = st.selectbox(
-        f"📊 Change cards per row (current: {current_value})",
+        "📊 Cards per row:",
         options=col_options,
-        index=col_options.index(current_value),
+        index=col_options.index(st.session_state.columns_per_row) if st.session_state.columns_per_row in col_options else 3,
         help="Select how many cards to display per row"
     )
     
+    # If columns changed, save to global
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
+        # Save columns setting to global file
         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols, st.session_state.timer_start_time, st.session_state.card_selection_time)
-        st.rerun()
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
@@ -1626,80 +1607,55 @@ def render_card_selection():
         st.success(f"🟢 Your selected cards: {', '.join(map(str, your_cards_list))}")
         st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
-    # ================================================================
-    # CREATE GRID WITH CSS CLASS - FORCES the column count
-    # ================================================================
-    
+    # Create grid using selected number of columns
     cols_per_row = st.session_state.columns_per_row
+    cols = st.columns(cols_per_row)
     
-    # Map the column count to the appropriate CSS class
-    grid_class_map = {
-        2: "grid-cols-2",
-        3: "grid-cols-3",
-        4: "grid-cols-4",
-        5: "grid-cols-5",
-        6: "grid-cols-6",
-        8: "grid-cols-8",
-        10: "grid-cols-10"
-    }
-    
-    grid_class = grid_class_map.get(cols_per_row, "grid-cols-4")
-    
-    # Create the grid container with the CSS class that FORCES the column count
-    st.markdown(f"""
-    <div class="cards-grid-wrapper">
-        <div class="cards-grid {grid_class}">
-    """, unsafe_allow_html=True)
-    
-    # Generate each card as a button in the grid
     for i in range(1, 202):
-        is_clicked = i in st.session_state.clicked_numbers
-        is_taken = i in st.session_state.taken_cards
-        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
-        
-        # Determine button label and style
-        if is_clicked:
-            btn_type = "secondary"
-            label = f"🟢 {i}"
-        elif is_taken:
-            btn_type = "secondary"
-            label = str(i)
-        else:
-            btn_type = "primary"
-            label = str(i)
-        
-        # Each card in its own grid cell
-        if st.button(
-            label,
-            key=f"card_{i}",
-            use_container_width=True,
-            type=btn_type,
-            disabled=is_taken
-        ):
-            if i in st.session_state.clicked_numbers:
-                # DESELECT - Remove your card from global board
-                st.session_state.clicked_numbers.remove(i)
-                if i in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(i)
-                if str(i) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(i)]
-                if st.session_state.selected_card == i:
-                    st.session_state.selected_card = None
-                save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                st.rerun()
+        col_idx = (i - 1) % cols_per_row
+        with cols[col_idx]:
+            is_clicked = i in st.session_state.clicked_numbers
+            is_taken = i in st.session_state.taken_cards
+            is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
+            
+            if is_clicked:
+                btn_type = "secondary"
+                label = f"🟢 {i}"
+            elif is_disabled:
+                btn_type = "secondary"
+                label = str(i)
             else:
-                # SELECT - Add your card to global board
-                if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
-                    st.session_state.clicked_numbers.add(i)
-                    st.session_state.taken_cards.append(i)
-                    st.session_state.card_owner[str(i)] = st.session_state.current_user
+                btn_type = "primary"
+                label = str(i)
+            
+            if st.button(
+                label,
+                key=f"card_{i}",
+                use_container_width=True,
+                type=btn_type,
+                disabled=is_disabled
+            ):
+                if i in st.session_state.clicked_numbers:
+                    # DESELECT - Remove your card from global board
+                    st.session_state.clicked_numbers.remove(i)
+                    if i in st.session_state.taken_cards:
+                        st.session_state.taken_cards.remove(i)
+                    if str(i) in st.session_state.card_owner:
+                        del st.session_state.card_owner[str(i)]
+                    if st.session_state.selected_card == i:
+                        st.session_state.selected_card = None
+                    # Save to global file (preserve timer and columns)
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
-    
-    st.markdown("""
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+                else:
+                    # SELECT - Add your card to global board
+                    if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
+                        st.session_state.clicked_numbers.add(i)
+                        st.session_state.taken_cards.append(i)
+                        st.session_state.card_owner[str(i)] = st.session_state.current_user
+                        # Save to global file (preserve timer and columns)
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for other players... ⏳")
@@ -1827,19 +1783,26 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # TIMER - GLOBAL SYNCED TIMER
 # ===================================================================
 
+# Check if timer should start or reset
 if st.session_state.game_started:
+    # Game is running, don't update timer
     pass
 else:
+    # Calculate remaining time based on global timer
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
     remaining = max(0, st.session_state.card_selection_time - elapsed)
+    
+    # Update session state with current remaining time
     st.session_state.card_selection_time = remaining
     
+    # When timer reaches 0, check if enough cards are selected
     if remaining <= 0 and not st.session_state.game_started:
         total_selected = len(st.session_state.taken_cards)
         min_cards_required = 3
         
         if total_selected >= min_cards_required:
+            # ENOUGH CARDS - START THE GAME
             st.session_state.card_selection_time = 0
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
@@ -1847,11 +1810,14 @@ else:
             if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
                 st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
             
+            # Save game state to global
             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 0)
             st.rerun()
         else:
+            # NOT ENOUGH CARDS - RESET TIMER AND WAIT
             st.session_state.timer_start_time = time.time()
             st.session_state.card_selection_time = 30
+            # Save reset timer to global
             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 30)
             st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
             st.rerun()
@@ -1860,6 +1826,7 @@ else:
 # AUTO-CALL NUMBERS
 # ===================================================================
 
+# Auto-call numbers every 2 seconds once game is started
 if st.session_state.game_started and not st.session_state.winner_declared:
     if not st.session_state.auto_call_started:
         st.session_state.auto_call_started = True
