@@ -743,7 +743,7 @@ def login_user(username, password):
         if username not in st.session_state.user_db:
             user_data = {
                 "password": hash_password("admin123"),
-                "balance": 0.0,  # ← FIXED: 0.00 ETB
+                "balance": 0.0,
                 "role": "admin",
                 "name": "Admin",
                 "phone": "",
@@ -786,7 +786,7 @@ def register_user(username, password, name, phone=""):
     
     user_data = {
         "password": hash_password(password),
-        "balance": 0.0,  # ← FIXED: 0.00 ETB when registering
+        "balance": 0.0,
         "role": "player",
         "name": name,
         "phone": phone,
@@ -1198,6 +1198,7 @@ def distribute_prizes(winners):
     if st.session_state.prize_distributed:
         return
     
+    # TOTAL PRIZE = ALL cards selected by ALL players × 8 ETB
     total_prize = len(st.session_state.clicked_numbers) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
@@ -1429,7 +1430,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - UPDATED: Shows total selected cards
+# CARD SELECTION FUNCTION - FIXED: Shows ALL cards selected by ALL players
 # ===================================================================
 
 def render_card_selection():
@@ -1444,28 +1445,27 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # === CARD COUNTS ===
-    total_selected = len(st.session_state.taken_cards)
-    your_cards = len(st.session_state.clicked_numbers)
+    # === CARD COUNTS - ALL PLAYERS ===
+    total_selected = len(st.session_state.taken_cards)  # ALL cards from ALL players
+    your_cards = len(st.session_state.clicked_numbers)   # YOUR cards only
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
     
     # Determine timer color
     if not enough_cards:
-        color = "#FF9800"  # Orange - waiting for players
+        color = "#FF9800"
     elif remaining <= 10:
-        color = "#E53935"  # Red - urgent
+        color = "#E53935"
     elif remaining <= 30:
-        color = "#FF9800"  # Orange - warning
+        color = "#FF9800"
     else:
-        color = "#FFD700"  # Gold - normal
+        color = "#FFD700"
     
-    # Timer display with min cards requirement
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
-    # Column selection dropdown - DEFAULT SET TO 4
+    # Column selection dropdown
     col_options = [2, 3, 4, 5, 6, 8, 10]
     st.session_state.columns_per_row = st.selectbox(
         "📊 Cards per row:",
@@ -1485,7 +1485,7 @@ def render_card_selection():
         <span style="display:inline-block;padding:6px 15px;background:rgba(76,175,80,0.2);border-radius:8px;border:1px solid rgba(76,175,80,0.3);font-size:0.8rem;color:#4CAF50;">
             🟢 Your Cards: {your_cards}/2
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.15);border-radius:8px;border:2px solid #FFD700;font-size:0.85rem;color:#FFD700;font-weight:bold;">
             📊 All Players: {total_selected}/201
         </span>
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
@@ -1503,7 +1503,7 @@ def render_card_selection():
     # Status Messages
     if not enough_cards:
         st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start the game! 🎯")
-        st.info(f"👥 Current players: {total_selected}/3 cards selected. Keep selecting cards! 🃏")
+        st.info(f"👥 {total_selected} cards selected by all players. Keep selecting cards! 🃏")
     elif remaining <= 10:
         st.warning(f"⚠️ Only {int(remaining)} seconds left! Game will start soon! ⏰")
     elif remaining <= 30:
@@ -1532,7 +1532,6 @@ def render_card_selection():
                 btn_type = "primary"
                 label = str(i)
             
-            # Use key with index to ensure uniqueness
             if st.button(
                 label,
                 key=f"card_{i}",
@@ -1541,7 +1540,6 @@ def render_card_selection():
                 disabled=is_disabled
             ):
                 if i in st.session_state.clicked_numbers:
-                    # Deselect
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1549,7 +1547,6 @@ def render_card_selection():
                         st.session_state.selected_card = None
                     st.rerun()
                 else:
-                    # Select
                     if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
@@ -1560,15 +1557,13 @@ def render_card_selection():
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
-    # Show progress
     progress = 1 - (st.session_state.card_selection_time / 60)
     st.progress(progress)
     
-    # Status caption
     if enough_cards:
-        st.caption(f"✅ {total_selected}/{min_cards_required} cards ready! Game will start in {int(remaining)}s 🎯")
+        st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
-        st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... {total_selected}/{min_cards_required} 🃏")
+        st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... {total_selected} selected 🃏")
         
 # ===================================================================
 # MAIN APP
@@ -1703,9 +1698,8 @@ if st.session_state.card_selection_time <= 0 and not st.session_state.game_start
             st.rerun()
     else:
         # NOT ENOUGH CARDS - RESET TIMER AND WAIT
-        st.session_state.card_selection_time = 30  # Give 30 more seconds
+        st.session_state.card_selection_time = 30
         st.session_state.card_selection_last_update = time.time()
-        # Show warning but DO NOT start the game
         st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
         st.rerun()
 
