@@ -1550,14 +1550,33 @@ def render_card_selection():
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
     # ================================================================
-    # FIX: Display Cards per row with current value
+    # FIX: FORCED DISPLAY - Shows Cards per row prominently
     # ================================================================
+    
+    # Display cards per row as a prominent header
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.05));
+                border:2px solid #FFD700;
+                border-radius:12px;
+                padding:10px 15px;
+                margin-bottom:12px;
+                text-align:center;
+                box-shadow:0 0 20px rgba(255,215,0,0.1);">
+        <span style="font-size:1.1rem;color:rgba(255,255,255,0.7);">📊 Cards per row:</span>
+        <span style="font-size:1.8rem;font-weight:bold;color:#FFD700;margin-left:8px;text-shadow:0 0 30px rgba(255,215,0,0.3);">
+            {st.session_state.columns_per_row}
+        </span>
+        <span style="font-size:0.9rem;color:rgba(255,255,255,0.4);margin-left:8px;">cards</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Column selection dropdown - save to global when changed
     col_options = [2, 3, 4, 5, 6, 8, 10]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
+    
+    # Show the selectbox with the current value in the label
     selected_cols = st.selectbox(
-        f"📊 Cards per row: {current_value}",
+        f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
         help="Select how many cards to display per row"
@@ -1568,6 +1587,7 @@ def render_card_selection():
         st.session_state.columns_per_row = selected_cols
         # Save columns setting to global file
         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols, st.session_state.timer_start_time, st.session_state.card_selection_time)
+        st.rerun()
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
