@@ -737,30 +737,37 @@ def load_global_cards():
         if os.path.exists(get_global_cards_file()):
             with open(get_global_cards_file(), "r") as f:
                 data = json.load(f)
-                return data.get("taken_cards", []), data.get("card_owner", {})
+                return data.get("taken_cards", []), data.get("card_owner", {}), data.get("columns_per_row", 4)
     except:
         pass
-    return [], {}
+    return [], {}, 4
 
-def save_global_cards(taken_cards, card_owner):
+def save_global_cards(taken_cards, card_owner, columns_per_row=None):
     """Save globally selected cards to file"""
     try:
+        data = {
+            "taken_cards": taken_cards,
+            "card_owner": card_owner
+        }
+        if columns_per_row is not None:
+            data["columns_per_row"] = columns_per_row
         with open(get_global_cards_file(), "w") as f:
-            json.dump({
-                "taken_cards": taken_cards,
-                "card_owner": card_owner
-            }, f)
+            json.dump(data, f)
         return True
     except:
         return False
 
 def sync_global_cards():
     """Sync session state with global card data"""
-    global_taken, global_owner = load_global_cards()
+    global_taken, global_owner, global_columns = load_global_cards()
     
     # Update session state with global data
     st.session_state.taken_cards = global_taken
     st.session_state.card_owner = global_owner
+    
+    # Update columns_per_row if it exists in global data
+    if global_columns:
+        st.session_state.columns_per_row = global_columns
     
     # Also sync clicked_numbers for the current user
     current_user = st.session_state.current_user
@@ -1491,10 +1498,8 @@ def display_master_board():
 def render_card_selection():
     """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
-    # Sync with global data first
-    if not st.session_state.global_synced:
-        sync_global_cards()
-        st.session_state.global_synced = True
+    # Sync with global data first - ALWAYS sync to get latest updates
+    sync_global_cards()
     
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
@@ -1525,14 +1530,20 @@ def render_card_selection():
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
-    # Column selection dropdown
+    # Column selection dropdown - save to global when changed
     col_options = [2, 3, 4, 5, 6, 8, 10]
-    st.session_state.columns_per_row = st.selectbox(
+    selected_cols = st.selectbox(
         "📊 Cards per row:",
         options=col_options,
-        index=col_options.index(4),
+        index=col_options.index(st.session_state.columns_per_row) if st.session_state.columns_per_row in col_options else 3,
         help="Select how many cards to display per row"
     )
+    
+    # If columns changed, save to global
+    if selected_cols != st.session_state.columns_per_row:
+        st.session_state.columns_per_row = selected_cols
+        # Save columns setting to global file
+        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols)
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
@@ -1614,8 +1625,8 @@ def render_card_selection():
                         del st.session_state.card_owner[str(i)]
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
-                    # Save to global file
-                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner)
+                    # Save to global file (preserve columns setting)
+                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row)
                     st.rerun()
                 else:
                     # SELECT - Add your card to global board
@@ -1623,8 +1634,8 @@ def render_card_selection():
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
                         st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        # Save to global file
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner)
+                        # Save to global file (preserve columns setting)
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row)
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
@@ -1765,12 +1776,11 @@ if st.session_state.card_selection_time <= 0 and not st.session_state.game_start
     
     if total_selected >= min_cards_required:
         # ENOUGH CARDS - START THE GAME
-        st.session_state.card_selection_time = 0  # Keep at 0 to show it's done
+        st.session_state.card_selection_time = 0
         st.session_state.card_selection_last_update = time.time()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
         
-        # If user has selected cards, auto-select the first one
         if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
             st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         
@@ -1824,29 +1834,24 @@ if st.session_state.game_started and not st.session_state.winner_declared:
 if not st.session_state.selected_card and not st.session_state.game_started:
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
-    # Check if game should start
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
-        total_selected = len(st.session_state.taken_cards)
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
         
         if len(st.session_state.clicked_numbers) > 0:
             st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         else:
-            # If user has no cards, but game started, they can't play - show message
             st.warning("⚠️ You don't have any cards selected! The game has started without you.")
-            st.session_state.selected_card = -1  # Placeholder to show they're not playing
+            st.session_state.selected_card = -1
         
         st.rerun()
     
     render_card_selection()
 
 elif st.session_state.game_started or st.session_state.selected_card is not None:
-    # Game is running
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.selected_card == -1:
-        # User has no cards
         st.warning("⚠️ You don't have any cards in this game! Wait for the next round.")
         display_master_board()
         if st.button("🔄 New Game", use_container_width=True):
@@ -1865,10 +1870,9 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             st.session_state.card_selection_last_update = time.time()
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
-            save_global_cards([], {})
+            save_global_cards([], {}, 4)
             st.rerun()
     else:
-        # Normal game flow
         if st.session_state.winner_declared:
             total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
             prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
@@ -1898,7 +1902,6 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             
             st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
             
-            # Show all player cards with winner highlighted
             for card_id in all_player_cards:
                 is_winner = False
                 winning_pattern_name = None
@@ -1910,7 +1913,6 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
                         break
                 display_selected_card(card_id, list(st.session_state.called_numbers), is_winner, winning_pattern_name)
             
-            # Show winning pattern details for all winners
             if st.session_state.winners_list:
                 st.markdown("### 🏆 አሸናፊዎች 🏆")
                 for idx, winner in enumerate(st.session_state.winners_list, 1):
@@ -1936,10 +1938,9 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
                 st.session_state.card_selection_last_update = time.time()
                 st.session_state.taken_cards = []
                 st.session_state.card_owner = {}
-                save_global_cards([], {})
+                save_global_cards([], {}, 4)
                 st.rerun()
         else:
-            # Game is running - show board and cards
             st.markdown(f"""
             <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
                 🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
