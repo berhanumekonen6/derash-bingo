@@ -1772,7 +1772,7 @@ else:
             <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner:.2f} ETB</div>
             <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
             <div style="font-size:1rem;color:#FFD700;margin-top:5px;text-shadow:0 0 20px rgba(255,215,0,0.2);">🏅 {winning_pattern}</div>
-            <div style="font-size:1.5rem;color:#FFD700;margin-top:10px;">🎊🎊🎊 CONGRATULATIONS! 🎊🎊🎊</div>
+            <div style="font-size:1.5rem;color:#FFD700;margin-top:10px;">🎊🎊🎊ፈጥንዉ ካርቴላ ይምረጡ!🎊🎊🎊</div>
         </div>
         """, unsafe_allow_html=True)
         
