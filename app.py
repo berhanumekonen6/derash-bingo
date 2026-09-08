@@ -807,18 +807,14 @@ def sync_global_cards():
     st.session_state.winners_list = global_winners_list
     st.session_state.prize_distributed = global_prize_distributed
     
-    # Update columns_per_row if it exists in global data
     if global_columns:
         st.session_state.columns_per_row = global_columns
     
-    # Update timer from global
     st.session_state.timer_start_time = global_timer_start
     st.session_state.card_selection_time = global_timer_value
     
-    # Also sync clicked_numbers for the current user
     current_user = st.session_state.current_user
     if current_user:
-        # Get cards owned by current user
         user_cards = [int(card_id) for card_id, owner in global_owner.items() if owner == current_user] if global_owner else []
         st.session_state.clicked_numbers = set(user_cards)
 
@@ -1208,7 +1204,6 @@ BINGO_CARDS = [
     {"id": 200, "cells": [['6', '27', '43', '48', '62'], ['2', '26', '45', '54', '70'], ['5', '24', 'F', '47', '74'], ['10', '19', '40', '46', '65'], ['14', '30', '35', '52', '61']]},
     {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
 ]
-
 def get_card(card_id):
     for card in BINGO_CARDS:
         if card["id"] == card_id:
@@ -1284,7 +1279,6 @@ def check_for_winners():
         if card_data:
             pattern = check_winning_pattern(card_data, called_numbers)
             if pattern:
-                # Get the owner of this card
                 owner = st.session_state.card_owner.get(str(card_id), "Unknown")
                 winners_found.append({
                     "card_id": card_id,
@@ -1298,7 +1292,6 @@ def check_for_winners():
         st.session_state.winner_declared = True
         st.session_state.game_over = True
         distribute_prizes(winners_found)
-        # Save winner state to global
         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, 
                           st.session_state.columns_per_row, st.session_state.timer_start_time, 
                           st.session_state.card_selection_time, list(st.session_state.called_numbers),
@@ -1307,14 +1300,17 @@ def check_for_winners():
                           st.session_state.winners_list, st.session_state.prize_distributed)
 
 def distribute_prizes(winners):
-    """Distribute prizes to winners"""
+    """Distribute prizes to winners - share equally among all winners"""
     if st.session_state.prize_distributed:
         return
     
     # TOTAL PRIZE = ALL cards selected by ALL players × 8 ETB
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+    
+    # Calculate prize per winner (share equally)
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
+    # Distribute to each winner
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
@@ -1546,10 +1542,8 @@ def display_master_board():
 def render_card_selection():
     """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
-    # Sync with global data first - ALWAYS sync to get latest updates
     sync_global_cards()
     
-    # Calculate remaining time based on global timer start
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
     remaining = max(0, st.session_state.card_selection_time - elapsed)
@@ -1559,18 +1553,15 @@ def render_card_selection():
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
     
-    # Get balance from session state
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # === GLOBAL CARD COUNTS - SAME FOR ALL PLAYERS ===
     total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
     
-    # Determine timer color
     if not enough_cards:
         color = "#FF9800"
     elif remaining <= 10:
@@ -1583,7 +1574,6 @@ def render_card_selection():
     timer_display = time_str
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
-    # Column selection dropdown
     col_options = [2, 3, 4, 5, 6, 8, 10]
     selected_cols = st.selectbox(
         "📊 Cards per row:",
@@ -1967,17 +1957,12 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             st.balloons()
             st.snow()
             
-            # ============================================================
-            # DISPLAY ONLY WINNER CARD(S) - FOR ALL PLAYERS TO SEE
-            # ============================================================
             st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
             
-            # Get unique winner cards (in case of multiple winners)
             winner_card_ids = set()
             for winner in st.session_state.winners_list:
                 winner_card_ids.add(winner.get("card_id"))
             
-            # Display ONLY the winner cards
             if winner_card_ids:
                 st.markdown(f"""
                 <div style="text-align:center;padding:10px;margin-bottom:15px;background:rgba(255,215,0,0.1);border-radius:12px;border:2px solid #FFD700;">
@@ -2009,6 +1994,7 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
                     
                     st.success(f"🎉 Winner {idx}: Card #{card_id} - {pattern_type} 🎉")
                     st.info(f"👤 Owner: {username}")
+                    st.info(f"💰 Prize: {prize_per_winner:.2f} ETB")
             
             display_master_board()
             
