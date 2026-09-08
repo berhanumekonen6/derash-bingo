@@ -1688,6 +1688,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
 if not st.session_state.selected_card and not st.session_state.game_started:
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
+    # Only show card selection if game hasn't started
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -1700,7 +1701,13 @@ if not st.session_state.selected_card and not st.session_state.game_started:
         
         st.rerun()
     
-    render_card_selection()
+    # Only render card selection if game hasn't started
+    if not st.session_state.game_started:
+        render_card_selection()
+    else:
+        # Game just started, show board
+        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
+        st.rerun()
 
 elif st.session_state.game_started or st.session_state.selected_card is not None:
     all_player_cards = list(st.session_state.clicked_numbers)
