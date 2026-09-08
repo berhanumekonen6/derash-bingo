@@ -2003,7 +2003,7 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 # ===================================================================
-# FOOTER
+# FOOTER 
 # ===================================================================
 
 st.markdown("---")
