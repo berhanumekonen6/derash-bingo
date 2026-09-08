@@ -1440,13 +1440,6 @@ def render_card_selection():
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
     
-    if remaining <= 10:
-        color = "#E53935"
-    elif remaining <= 30:
-        color = "#FF9800"
-    else:
-        color = "#FFD700"
-    
     # Get balance from session state
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
@@ -1455,6 +1448,22 @@ def render_card_selection():
     total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
+    min_cards_required = 3
+    enough_cards = total_selected >= min_cards_required
+    
+    # Determine timer color
+    if not enough_cards:
+        color = "#FF9800"  # Orange - waiting for players
+    elif remaining <= 10:
+        color = "#E53935"  # Red - urgent
+    elif remaining <= 30:
+        color = "#FF9800"  # Orange - warning
+    else:
+        color = "#FFD700"  # Gold - normal
+    
+    # Timer display with min cards requirement
+    timer_display = time_str
+    timer_icon = "⏸️" if not enough_cards else "⏱️"
     
     # Column selection dropdown - DEFAULT SET TO 4
     col_options = [2, 3, 4, 5, 6, 8, 10]
@@ -1465,19 +1474,10 @@ def render_card_selection():
         help="Select how many cards to display per row"
     )
     
-    # Check if enough cards are selected
-    min_cards_required = 3
-    enough_cards = total_selected >= min_cards_required
-    
-    # Timer display with min cards requirement
-    timer_display = time_str
-    if not enough_cards:
-        timer_display = "⏸️ " + time_str
-    
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
         <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
-            ⏱️ {timer_display}
+            {timer_icon} {timer_display}
         </span>
         <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
             Select Card
@@ -1494,19 +1494,22 @@ def render_card_selection():
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
             💰 {balance:.2f} ETB
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,200,0,0.1);border-radius:8px;border:1px solid {'#4CAF50' if enough_cards else '#FF9800'};font-size:0.8rem;color:{'#4CAF50' if enough_cards else '#FF9800'};">
-            {'✅' if enough_cards else '⚠️'} Min: {total_selected}/{min_cards_required}
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,200,0,0.1);border-radius:8px;border:2px solid {'#4CAF50' if enough_cards else '#FF9800'};font-size:0.8rem;color:{'#4CAF50' if enough_cards else '#FF9800'};font-weight:bold;">
+            {'✅' if enough_cards else '⚠️'} {total_selected}/{min_cards_required}
         </span>
     </div>
     """, unsafe_allow_html=True)
     
-    # Show warning if not enough cards
+    # Status Messages
     if not enough_cards:
-        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) selected by all players to start the game! ⏳")
-    elif st.session_state.card_selection_time <= 10:
-        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left! ⏰")
-    elif st.session_state.card_selection_time <= 30:
-        st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
+        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start the game! 🎯")
+        st.info(f"👥 Current players: {total_selected}/3 cards selected. Keep selecting cards! 🃏")
+    elif remaining <= 10:
+        st.warning(f"⚠️ Only {int(remaining)} seconds left! Game will start soon! ⏰")
+    elif remaining <= 30:
+        st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
+    else:
+        st.info(f"📝 Select your cards (max 2). {int(remaining)} seconds remaining ⏳")
     
     # Create grid using selected number of columns
     cols_per_row = st.session_state.columns_per_row
@@ -1557,15 +1560,15 @@ def render_card_selection():
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
-    # Show progress and status
+    # Show progress
     progress = 1 - (st.session_state.card_selection_time / 60)
     st.progress(progress)
     
-    # Status message
+    # Status caption
     if enough_cards:
-        st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)}s - {total_selected}/{min_cards_required} cards selected ✅")
+        st.caption(f"✅ {total_selected}/{min_cards_required} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
-        st.caption(f"⏸️ Waiting for more players... {total_selected}/{min_cards_required} cards selected ⏳")
+        st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... {total_selected}/{min_cards_required} 🃏")
         
 # ===================================================================
 # MAIN APP
@@ -1683,15 +1686,27 @@ time_passed = current_time - st.session_state.card_selection_last_update
 st.session_state.card_selection_time = max(0, st.session_state.card_selection_time - time_passed)
 st.session_state.card_selection_last_update = current_time
 
-# When timer reaches 0, auto-select card and start game
+# When timer reaches 0, check if enough cards are selected
 if st.session_state.card_selection_time <= 0 and not st.session_state.game_started:
-    st.session_state.card_selection_time = 60
-    st.session_state.card_selection_last_update = time.time()
+    total_selected = len(st.session_state.taken_cards)
+    min_cards_required = 3
     
-    if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
-        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
+    if total_selected >= min_cards_required:
+        # ENOUGH CARDS - START THE GAME
+        st.session_state.card_selection_time = 60
+        st.session_state.card_selection_last_update = time.time()
+        
+        if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            st.rerun()
+    else:
+        # NOT ENOUGH CARDS - RESET TIMER AND WAIT
+        st.session_state.card_selection_time = 30  # Give 30 more seconds
+        st.session_state.card_selection_last_update = time.time()
+        # Show warning but DO NOT start the game
+        st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
         st.rerun()
 
 # ===================================================================
