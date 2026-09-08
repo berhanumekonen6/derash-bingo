@@ -629,6 +629,8 @@ def init_session_state():
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
         st.session_state.columns_per_row = 4
+    if 'global_synced' not in st.session_state:
+        st.session_state.global_synced = False
 
 init_session_state()
 
@@ -723,6 +725,51 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
+# GLOBAL CARD TRACKING - SHARED ACROSS ALL USERS
+# ===================================================================
+
+def get_global_cards_file():
+    return "bingo_global_cards.json"
+
+def load_global_cards():
+    """Load globally selected cards from file"""
+    try:
+        if os.path.exists(get_global_cards_file()):
+            with open(get_global_cards_file(), "r") as f:
+                data = json.load(f)
+                return data.get("taken_cards", []), data.get("card_owner", {})
+    except:
+        pass
+    return [], {}
+
+def save_global_cards(taken_cards, card_owner):
+    """Save globally selected cards to file"""
+    try:
+        with open(get_global_cards_file(), "w") as f:
+            json.dump({
+                "taken_cards": taken_cards,
+                "card_owner": card_owner
+            }, f)
+        return True
+    except:
+        return False
+
+def sync_global_cards():
+    """Sync session state with global card data"""
+    global_taken, global_owner = load_global_cards()
+    
+    # Update session state with global data
+    st.session_state.taken_cards = global_taken
+    st.session_state.card_owner = global_owner
+    
+    # Also sync clicked_numbers for the current user
+    current_user = st.session_state.current_user
+    if current_user:
+        # Get cards owned by current user
+        user_cards = [card_id for card_id, owner in global_owner.items() if int(owner) == current_user] if global_owner else []
+        st.session_state.clicked_numbers = set(user_cards)
+
+# ===================================================================
 # AUTHENTICATION - FIXED: Balance starts at 0.00 ETB
 # ===================================================================
 
@@ -757,6 +804,8 @@ def login_user(username, password):
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
+        # Sync global cards after login
+        sync_global_cards()
         return True, "✅ Admin login successful!"
     
     if username not in st.session_state.user_db:
@@ -766,6 +815,8 @@ def login_user(username, password):
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = st.session_state.user_db[username]["role"]
+        # Sync global cards after login
+        sync_global_cards()
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
 
@@ -804,6 +855,7 @@ def logout_user():
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
+    st.session_state.global_synced = False
 
 # ===================================================================
 # ADMIN PANEL
@@ -1199,7 +1251,7 @@ def distribute_prizes(winners):
         return
     
     # TOTAL PRIZE = ALL cards selected by ALL players × 8 ETB
-    total_prize = len(st.session_state.clicked_numbers) * PRIZE_PER_CARD
+    total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
     for winner in winners:
@@ -1436,6 +1488,11 @@ def display_master_board():
 def render_card_selection():
     """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
+    # Sync with global data first
+    if not st.session_state.global_synced:
+        sync_global_cards()
+        st.session_state.global_synced = True
+    
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
@@ -1550,14 +1607,21 @@ def render_card_selection():
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
+                    if str(i) in st.session_state.card_owner:
+                        del st.session_state.card_owner[str(i)]
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
+                    # Save to global file
+                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner)
                     st.rerun()
                 else:
                     # SELECT - Add your card to global board
                     if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
+                        st.session_state.card_owner[str(i)] = st.session_state.current_user
+                        # Save to global file
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner)
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
@@ -1772,7 +1836,7 @@ else:
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
-        total_prize = len(all_player_cards) * PRIZE_PER_CARD
+        total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
         prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
         
         winning_pattern = ""
@@ -1789,7 +1853,7 @@ else:
             <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;text-shadow:0 0 30px rgba(255,215,0,0.2);">🎊🍀አሸናፊዉን ለማዎቅ ከታች ይመልከቱ🍀🎊ለቀጣይ መልካም ዕድል!!!🍀🎊</div>
             <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)! 🏆</div>
             <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner:.2f} ETB</div>
-            <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
+            <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(st.session_state.taken_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
             <div style="font-size:1rem;color:#FFD700;margin-top:5px;text-shadow:0 0 20px rgba(255,215,0,0.2);">🏅 {winning_pattern}</div>
             <div style="font-size:1.5rem;color:#FFD700;margin-top:10px;">🎊🎊🎊ፈጥንዉ ካርቴላ ይምረጡ!🎊🎊🎊</div>
         </div>
@@ -1837,6 +1901,9 @@ else:
             st.session_state.card_selection_time = 60
             st.session_state.card_selection_last_update = time.time()
             st.session_state.taken_cards = []
+            st.session_state.card_owner = {}
+            # Save empty global state
+            save_global_cards([], {})
             st.rerun()
     else:
         st.markdown(f"""
