@@ -77,8 +77,8 @@ st.markdown("""
         margin-top: 3px;
     }
     
-    /* Card selection grid */
-    .cards-grid-container {
+    /* Card selection grid wrapper */
+    .cards-grid-wrapper {
         max-height: 500px;
         overflow-y: auto;
         padding: 8px;
@@ -88,31 +88,101 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
     }
-    .cards-grid-container::-webkit-scrollbar {
+    .cards-grid-wrapper::-webkit-scrollbar {
         width: 6px;
     }
-    .cards-grid-container::-webkit-scrollbar-track {
+    .cards-grid-wrapper::-webkit-scrollbar-track {
         background: rgba(255,255,255,0.05);
         border-radius: 10px;
     }
-    .cards-grid-container::-webkit-scrollbar-thumb {
+    .cards-grid-wrapper::-webkit-scrollbar-thumb {
         background: #FFD700;
         border-radius: 10px;
     }
     
-    /* Force columns - we'll use st.columns but with proper sizing */
-    .card-grid-column {
-        padding: 2px !important;
-        min-width: 0 !important;
+    /* CSS Grid - responsive columns */
+    .cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(10, 1fr) !important;
+        gap: 5px !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Mobile - fewer columns for readable numbers */
+    @media (max-width: 768px) {
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 6px !important;
+        }
+        .cards-grid-wrapper {
+            max-height: 500px !important;
+        }
+        .card-btn {
+            font-size: 1rem !important;
+            min-height: 48px !important;
+            height: 48px !important;
+            padding: 6px 4px !important;
+            border-radius: 10px !important;
+            border-width: 2px !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 5px !important;
+        }
+        .cards-grid-wrapper {
+            max-height: 450px !important;
+        }
+        .card-btn {
+            font-size: 0.95rem !important;
+            min-height: 46px !important;
+            height: 46px !important;
+            padding: 5px 3px !important;
+            border-radius: 8px !important;
+        }
+    }
+    
+    @media (max-width: 360px) {
+        .cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 4px !important;
+        }
+        .cards-grid-wrapper {
+            max-height: 400px !important;
+        }
+        .card-btn {
+            font-size: 0.85rem !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 4px 2px !important;
+            border-radius: 6px !important;
+        }
+    }
+    
+    /* Landscape mode for phones */
+    @media (orientation: landscape) and (max-height: 600px) {
+        .cards-grid {
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 4px !important;
+        }
+        .card-btn {
+            font-size: 0.75rem !important;
+            min-height: 32px !important;
+            height: 32px !important;
+            padding: 3px 2px !important;
+        }
     }
     
     /* Card buttons */
     .card-btn {
         width: 100% !important;
-        padding: 6px 2px !important;
-        font-size: 0.85rem !important;
-        min-height: 38px !important;
-        height: 38px !important;
+        padding: 6px 4px !important;
+        font-size: 0.9rem !important;
+        min-height: 40px !important;
+        height: 40px !important;
         line-height: 1.2 !important;
         border-radius: 8px !important;
         margin: 0 !important;
@@ -130,6 +200,7 @@ st.markdown("""
         overflow: hidden !important;
         white-space: nowrap !important;
         text-overflow: ellipsis !important;
+        position: relative !important;
         user-select: none !important;
         -webkit-tap-highlight-color: transparent !important;
         text-shadow: 0 1px 3px rgba(0,0,0,0.4);
@@ -148,10 +219,11 @@ st.markdown("""
         transform: scale(0.95);
     }
     .card-btn.selected {
-        border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.25) !important;
-        color: #FFD700 !important;
-        box-shadow: 0 0 35px rgba(255, 215, 0, 0.25) !important;
+        border-color: #4CAF50 !important;
+        background: rgba(76, 175, 80, 0.35) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+        border-width: 3px !important;
     }
     .card-btn.taken {
         border-color: rgba(255, 0, 0, 0.2) !important;
@@ -166,61 +238,23 @@ st.markdown("""
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
     }
-    
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-        .card-btn {
-            font-size: 0.9rem !important;
-            min-height: 42px !important;
-            height: 42px !important;
-            padding: 4px 2px !important;
-            border-radius: 8px !important;
-        }
-        .cards-grid-container {
-            max-height: 500px !important;
-        }
+    .card-btn .tick-mark {
+        display: none;
+    }
+    .card-btn.selected .tick-mark {
+        display: inline;
     }
     
-    @media (max-width: 480px) {
-        .card-btn {
-            font-size: 0.75rem !important;
-            min-height: 36px !important;
-            height: 36px !important;
-            padding: 3px 1px !important;
-            border-radius: 6px !important;
-        }
-        .cards-grid-container {
-            max-height: 450px !important;
-        }
+    /* Winner Card Celebration */
+    .winner-card {
+        animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
+        border: 3px solid #FFD700 !important;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 165, 0, 0.15)) !important;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5) !important;
     }
-    
-    @media (max-width: 360px) {
-        .card-btn {
-            font-size: 0.65rem !important;
-            min-height: 32px !important;
-            height: 32px !important;
-            padding: 2px 1px !important;
-            border-radius: 5px !important;
-        }
-        .cards-grid-container {
-            max-height: 400px !important;
-        }
-    }
-
-    /* ============================================================= */
-    /* FIX: Make Streamlit columns wrap on mobile devices */
-    /* ============================================================= */
-    
-    /* Remove the fixed column forcing - we'll let the user choose */
-    .row-widget.stColumns {
-        flex-wrap: wrap !important;
-    }
-    .row-widget.stColumns > div {
-        flex: 0 0 auto !important;
-        width: auto !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        padding: 3px !important;
+    @keyframes winnerCardPulse {
+        0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255, 215, 0, 0.7); }
     }
     
     /* Scrollbar */
@@ -472,19 +506,6 @@ st.markdown("""
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
     }
-    
-    /* Fix for mobile columns */
-    .stColumn {
-        padding: 2px !important;
-        min-width: 0 !important;
-    }
-    
-    /* Card grid wrapper for columns */
-    .card-grid-wrapper {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 4px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -607,7 +628,7 @@ def init_session_state():
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
-        st.session_state.columns_per_row = 4  # DEFAULT VALUE SET TO 4
+        st.session_state.columns_per_row = 4
 
 init_session_state()
 
@@ -702,7 +723,7 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
-# AUTHENTICATION
+# AUTHENTICATION - FIXED: Balance starts at 0.00 ETB
 # ===================================================================
 
 def hash_password(password):
@@ -722,7 +743,7 @@ def login_user(username, password):
         if username not in st.session_state.user_db:
             user_data = {
                 "password": hash_password("admin123"),
-                "balance": 0,
+                "balance": 0.0,  # ← FIXED: 0.00 ETB
                 "role": "admin",
                 "name": "Admin",
                 "phone": "",
@@ -765,7 +786,7 @@ def register_user(username, password, name, phone=""):
     
     user_data = {
         "password": hash_password(password),
-        "balance": 0,
+        "balance": 0.0,  # ← FIXED: 0.00 ETB when registering
         "role": "player",
         "name": name,
         "phone": phone,
@@ -777,7 +798,7 @@ def register_user(username, password, name, phone=""):
     save_local_users(st.session_state.user_db)
     load_all_data()
     
-    return True, "✅ Registration successful!"
+    return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
     st.session_state.logged_in = False
@@ -819,7 +840,7 @@ def admin_panel():
             <p style="margin:0;font-weight:600;color:#FFD700;">👤 {name}</p>
             <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 <strong style="color:#FFD700;">{phone if phone else 'Not provided'}</strong></p>
             <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">👤 Username: <strong style="color:#FFD700;">{selected_user}</strong></p>
-            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 Current Balance: {current_balance} ETB</p>
+            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 Current Balance: {current_balance:.2f} ETB</p>
             <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games Played: {game_played}</p>
             <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🏆 Wins: {wins}</p>
         </div>
@@ -1191,11 +1212,11 @@ def distribute_prizes(winners):
     st.session_state.prize_distributed = True
 
 # ===================================================================
-# DISPLAY FUNCTIONS
+# DISPLAY FUNCTIONS - UPDATED: Winner cards shown with celebration
 # ===================================================================
 
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
-    """Display a BINGO card"""
+    """Display a BINGO card with winner celebration"""
     if called_numbers is None:
         called_numbers = []
     
@@ -1205,12 +1226,23 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     
     cells = card["cells"]
     
-    border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
-    title_color = '#FFD700' if is_winner else '#FFFFFF'
+    # Winner card gets special styling
+    if is_winner:
+        border_color = '#FFD700'
+        title_color = '#FFD700'
+        card_class = 'winner-card'
+        winner_badge = f'🎉🏆 WINNER! ({winning_pattern}) 🏆🎉' if winning_pattern else '🎉🏆 WINNER! 🏆🎉'
+    else:
+        border_color = 'rgba(255,255,255,0.1)'
+        title_color = '#FFFFFF'
+        card_class = ''
+        winner_badge = ''
     
     html = f"""
-    <div style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">🎯 Card #{card_id}</div>
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+            {'🎊 ' if is_winner else '🎯'} Card #{card_id} { '🎊' if is_winner else ''}
+        </div>
         <table style="width:100%;border-collapse:collapse;">
             <tr>
                 <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
@@ -1233,7 +1265,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
                 is_called = num in called_numbers
                 style = ''
                 if is_called and is_winner:
-                    style = 'background:rgba(255,215,0,0.2);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
+                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
                 elif is_called:
                     style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;transform:scale(1.05);'
                 else:
@@ -1247,7 +1279,8 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:4px;">🏆 WINNER! ({winning_pattern}) 🏆</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.9rem;margin-top:6px;font-weight:bold;text-shadow:0 0 30px rgba(255,215,0,0.3);">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:2px;">🎊🎊🎊 Congratulations! 🎊🎊🎊</div>'
     else:
         html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
@@ -1396,7 +1429,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - USING STREAMLIT BUTTONS WITH COLUMNS
+# CARD SELECTION FUNCTION - UPDATED: Shows total selected cards
 # ===================================================================
 
 def render_card_selection():
@@ -1418,12 +1451,17 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
+    # === CARD COUNTS ===
+    total_selected = len(st.session_state.taken_cards)
+    your_cards = len(st.session_state.clicked_numbers)
+    available = 201 - total_selected
+    
     # Column selection dropdown - DEFAULT SET TO 4
     col_options = [2, 3, 4, 5, 6, 8, 10]
     st.session_state.columns_per_row = st.selectbox(
         "📊 Cards per row:",
         options=col_options,
-        index=col_options.index(4),  # DEFAULT INDEX SET TO 4
+        index=col_options.index(4),
         help="Select how many cards to display per row"
     )
     
@@ -1435,17 +1473,23 @@ def render_card_selection():
         <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
             Select Card
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(0,0,0,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
-            Selected: {len(st.session_state.clicked_numbers)}/2
+        <span style="display:inline-block;padding:6px 15px;background:rgba(76,175,80,0.2);border-radius:8px;border:1px solid rgba(76,175,80,0.3);font-size:0.8rem;color:#4CAF50;">
+            🟢 Your Cards: {your_cards}/2
         </span>
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
-            💰 {balance} ETB
+            📊 All Players: {total_selected}/201
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
+            ⬜ Available: {available}
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
+            💰 {balance:.2f} ETB
         </span>
     </div>
     """, unsafe_allow_html=True)
     
     if st.session_state.card_selection_time <= 10:
-        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left!")
+        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left! ⏰")
     elif st.session_state.card_selection_time <= 30:
         st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
     
@@ -1462,7 +1506,7 @@ def render_card_selection():
             
             if is_clicked:
                 btn_type = "secondary"
-                label = f"✓{i}"
+                label = f"🟢 {i}"
             elif is_disabled:
                 btn_type = "secondary"
                 label = str(i)
@@ -1478,7 +1522,7 @@ def render_card_selection():
                 type=btn_type,
                 disabled=is_disabled
             ):
-                if i in st.session_state.clicked_numbers:
+                if i in st_session_state.clicked_numbers:
                     # Deselect
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
@@ -1494,7 +1538,7 @@ def render_card_selection():
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
+        st.success("✅ Maximum 2 cards selected! Waiting for timer... ⏳")
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
@@ -1569,7 +1613,7 @@ if not st.session_state.logged_in:
                     success, message = register_user(username, password, full_name, phone)
                     if success:
                         st.success(message)
-                        st.info("💡 Your balance starts at 0 ETB. Admin can add balance.")
+                        st.info("💡 Your balance starts at 0.00 ETB. Admin can add balance.")
                         st.balloons()
                         load_all_data()
                         time.sleep(1)
@@ -1587,7 +1631,7 @@ if st.session_state.current_role == "admin":
     st.markdown("---")
 
 # ===================================================================
-# USER INFO
+# USER INFO - UPDATED: Shows balance with 2 decimal places
 # ===================================================================
 
 user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1597,8 +1641,8 @@ st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
     <p style="margin:0;font-weight:600;color:#FFD700;">👤 {user.get('name', st.session_state.current_user)}</p>
     <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">📱 {user.get('phone', 'No phone')}</p>
-    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance} ETB</p>
-    <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">⭐ {st.session_state.current_role.title()} | 🏆 {user.get('wins', 0)} wins</p>
+    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance:.2f} ETB</p>
+    <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">⭐ {st.session_state.current_role.title() if st.session_state.current_role else 'Player'} | 🏆 {user.get('wins', 0)} wins</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1669,7 +1713,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 # ===================================================================
 
 if not st.session_state.selected_card:
-    st.markdown("## 📋ካርድዎን ይምረጡ🔥🚀")
+    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
     # Check if we should auto-select
     if st.session_state.card_selection_time <= 0 and len(st.session_state.clicked_numbers) > 0:
@@ -1681,7 +1725,7 @@ if not st.session_state.selected_card:
     render_card_selection()
 
 # ===================================================================
-# GAME PLAYING PHASE
+# GAME PLAYING PHASE - UPDATED: Shows winner cards with celebration
 # ===================================================================
 
 else:
@@ -1699,21 +1743,24 @@ else:
         st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
         
         st.markdown(f"""
-        <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));border-radius:20px;border:2px solid #FFD700;margin:15px 0;box-shadow:0 0 50px rgba(255,215,0,0.1);">
-            <div style="font-size:3.5rem;color:#FFD700;">🎉</div>
-            <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;">🎉 ቢንጎ! የጨዋታዉ አሸናፊ ታዉቋል!!!🎉</div>
-            <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;">🎊🍀ፈጥንዉ ካርቴላ በመምረጥ ዕድልዎን ይሞክሩ🍀!!!🎊</div>
-            <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
-            <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner} ETB</div>
+        <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.08));border-radius:20px;border:2px solid #FFD700;margin:15px 0;box-shadow:0 0 60px rgba(255,215,0,0.2);">
+            <div style="font-size:4rem;color:#FFD700;">🎉🎊🏆</div>
+            <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;text-shadow:0 0 40px rgba(255,215,0,0.3);">🎉 ቢንጎ! የጨዋታዉ አሸናፊ ታዉቋል!!! 🎉</div>
+            <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;text-shadow:0 0 30px rgba(255,215,0,0.2);">🎊🍀 እንኳን ደስ አለዎት!!! 🍀🎊</div>
+            <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)! 🏆</div>
+            <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner:.2f} ETB</div>
             <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
-            <div style="font-size:1rem;color:#FFD700;margin-top:5px;">🏅 {winning_pattern}</div>
+            <div style="font-size:1rem;color:#FFD700;margin-top:5px;text-shadow:0 0 20px rgba(255,215,0,0.2);">🏅 {winning_pattern}</div>
+            <div style="font-size:1.5rem;color:#FFD700;margin-top:10px;">🎊🎊🎊 CONGRATULATIONS! 🎊🎊🎊</div>
         </div>
         """, unsafe_allow_html=True)
         
         st.balloons()
         st.snow()
         
-        st.markdown("### 📋🎉የእርስዎ ካርቴላ")
+        st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
+        
+        # Show all player cards with winner highlighted
         for card_id in all_player_cards:
             is_winner = False
             winning_pattern_name = None
@@ -1724,6 +1771,14 @@ else:
                     winning_pattern_name = pattern_info.get("type", "BINGO!")
                     break
             display_selected_card(card_id, list(st.session_state.called_numbers), is_winner, winning_pattern_name)
+        
+        # Show winning pattern details for all winners
+        if st.session_state.winners_list:
+            st.markdown("### 🏆 አሸናፊዎች 🏆")
+            for idx, winner in enumerate(st.session_state.winners_list, 1):
+                pattern_info = winner.get("pattern", {})
+                pattern_type = pattern_info.get("type", "BINGO!")
+                st.success(f"🎉 Winner {idx}: Card #{winner.get('card_id')} - {pattern_type} 🎉")
         
         display_master_board()
         
@@ -1762,7 +1817,7 @@ else:
             display_master_board()
         
         with cards_col:
-            st.markdown("### 📋🍀የእርስዎ ካርቴላ/ዎች")
+            st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
             for card_id in all_player_cards:
                 display_selected_card(card_id, list(st.session_state.called_numbers), False)
         
