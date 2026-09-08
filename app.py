@@ -100,7 +100,7 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* CSS Grid - responsive columns */
+    /* CSS Grid - responsive columns - DYNAMIC via inline style */
     .cards-grid {
         display: grid !important;
         gap: 5px !important;
@@ -109,14 +109,21 @@ st.markdown("""
         width: 100% !important;
     }
     
-    /* Make card buttons fit properly */
-    .cards-grid .stButton {
+    /* Card wrapper - ensures buttons fit in grid cells */
+    .card-grid-item {
         width: 100% !important;
         min-width: 0 !important;
+        max-width: 100% !important;
     }
-    .cards-grid .stButton > button {
+    .card-grid-item .stButton {
         width: 100% !important;
         min-width: 0 !important;
+        max-width: 100% !important;
+    }
+    .card-grid-item .stButton > button {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
         padding: 4px 2px !important;
         font-size: 0.8rem !important;
         min-height: 36px !important;
@@ -125,24 +132,19 @@ st.markdown("""
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
+        margin: 0 !important;
     }
     
-    /* Card buttons in grid */
-    .card-btn-wrapper {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-    
-    /* Mobile adjustments */
+    /* Mobile adjustments - only font size, NOT columns */
     @media (max-width: 768px) {
         .cards-grid-wrapper {
             max-height: 500px !important;
         }
-        .cards-grid .stButton > button {
-            font-size: 0.75rem !important;
-            min-height: 32px !important;
-            height: 32px !important;
-            padding: 3px 2px !important;
+        .card-grid-item .stButton > button {
+            font-size: 0.7rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 2px 1px !important;
         }
     }
     
@@ -150,10 +152,10 @@ st.markdown("""
         .cards-grid-wrapper {
             max-height: 450px !important;
         }
-        .cards-grid .stButton > button {
-            font-size: 0.7rem !important;
-            min-height: 28px !important;
-            height: 28px !important;
+        .card-grid-item .stButton > button {
+            font-size: 0.6rem !important;
+            min-height: 26px !important;
+            height: 26px !important;
             padding: 2px 1px !important;
             border-radius: 4px !important;
         }
@@ -163,11 +165,11 @@ st.markdown("""
         .cards-grid-wrapper {
             max-height: 400px !important;
         }
-        .cards-grid .stButton > button {
-            font-size: 0.6rem !important;
-            min-height: 24px !important;
-            height: 24px !important;
-            padding: 2px 1px !important;
+        .card-grid-item .stButton > button {
+            font-size: 0.5rem !important;
+            min-height: 22px !important;
+            height: 22px !important;
+            padding: 1px 1px !important;
         }
     }
     
@@ -431,37 +433,6 @@ st.markdown("""
     .selected-cards-preview {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
-    }
-    
-    /* Card grid container for mobile */
-    .card-grid-container {
-        display: grid !important;
-        gap: 4px !important;
-        width: 100% !important;
-    }
-    .card-grid-container .stButton {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-    .card-grid-container .stButton > button {
-        width: 100% !important;
-        min-width: 0 !important;
-        padding: 4px 2px !important;
-        font-size: 0.8rem !important;
-        min-height: 36px !important;
-        height: 36px !important;
-        border-radius: 6px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-    @media (max-width: 480px) {
-        .card-grid-container .stButton > button {
-            font-size: 0.65rem !important;
-            min-height: 28px !important;
-            height: 28px !important;
-            padding: 2px 1px !important;
-        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1467,7 +1438,7 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
+    """Render card selection grid using CSS Grid - WORKS ON BOTH PC AND MOBILE"""
     
     # Sync with global data first - ALWAYS sync to get latest updates
     sync_global_cards()
@@ -1551,7 +1522,6 @@ def render_card_selection():
     # If columns changed, save to user's personal preference (NOT global)
     if selected_cols != st.session_state[user_cards_per_row_key]:
         st.session_state[user_cards_per_row_key] = selected_cols
-        # DO NOT save to global file - this is user-specific
         st.rerun()
     
     # Use the user's personal column preference
@@ -1604,37 +1574,29 @@ def render_card_selection():
         st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
     # ================================================================
-    # CREATE GRID WITH USER'S SELECTED COLUMNS USING HTML/CSS
+    # CREATE CSS GRID WITH USER'S SELECTED COLUMNS
     # ================================================================
     
-    # Use the user's personal column preference
-    cols_per_row = st.session_state[user_cards_per_row_key]
-    
-    # Create a grid using HTML with the user's column count
     st.markdown(f"""
     <div class="cards-grid-wrapper">
         <div class="cards-grid" style="grid-template-columns: repeat({cols_per_row}, 1fr) !important;">
     """, unsafe_allow_html=True)
     
-    # Generate cards using HTML divs with Streamlit buttons inside
+    # Generate cards using CSS grid
     for i in range(1, 202):
         is_clicked = i in st.session_state.clicked_numbers
         is_taken = i in st.session_state.taken_cards
         is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
         
-        # Determine button style
         if is_clicked:
-            btn_class = "selected"
             label = f"🟢 {i}"
         elif is_taken:
-            btn_class = "taken"
             label = str(i)
         else:
-            btn_class = ""
             label = str(i)
         
-        # Use Streamlit button inside a div
-        st.markdown(f'<div class="card-btn-wrapper">', unsafe_allow_html=True)
+        # Each card in its own grid cell
+        st.markdown(f'<div class="card-grid-item">', unsafe_allow_html=True)
         if st.button(
             label,
             key=f"card_{i}",
@@ -1643,7 +1605,7 @@ def render_card_selection():
             disabled=is_taken
         ):
             if i in st.session_state.clicked_numbers:
-                # DESELECT - Remove your card from global board
+                # DESELECT
                 st.session_state.clicked_numbers.remove(i)
                 if i in st.session_state.taken_cards:
                     st.session_state.taken_cards.remove(i)
@@ -1651,16 +1613,14 @@ def render_card_selection():
                     del st.session_state.card_owner[str(i)]
                 if st.session_state.selected_card == i:
                     st.session_state.selected_card = None
-                # Save to global file (preserve timer, but NOT columns_per_row)
                 save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, None, st.session_state.timer_start_time, st.session_state.card_selection_time)
                 st.rerun()
             else:
-                # SELECT - Add your card to global board
+                # SELECT
                 if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
                     st.session_state.clicked_numbers.add(i)
                     st.session_state.taken_cards.append(i)
                     st.session_state.card_owner[str(i)] = st.session_state.current_user
-                    # Save to global file (preserve timer, but NOT columns_per_row)
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, None, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
