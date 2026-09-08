@@ -1550,10 +1550,19 @@ def render_card_selection():
     timer_icon = "⏸️" if not enough_cards else "⏱️"
     
     # ================================================================
-    # FIX: FORCED DISPLAY - Shows Cards per row prominently
+    # USER-SPECIFIC CARDS PER ROW - Stored in session state only
     # ================================================================
     
+    # Use a user-specific key for storing cards per row preference
+    user_cards_per_row_key = f"user_cards_per_row_{st.session_state.current_user}"
+    
+    # Initialize user's preference if not exists
+    if user_cards_per_row_key not in st.session_state:
+        st.session_state[user_cards_per_row_key] = 4
+    
     # Display cards per row as a prominent header
+    current_user_cols = st.session_state[user_cards_per_row_key]
+    
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.05));
                 border:2px solid #FFD700;
@@ -1562,32 +1571,34 @@ def render_card_selection():
                 margin-bottom:12px;
                 text-align:center;
                 box-shadow:0 0 20px rgba(255,215,0,0.1);">
-        <span style="font-size:1.1rem;color:rgba(255,255,255,0.7);">📊 Cards per row:</span>
+        <span style="font-size:1.1rem;color:rgba(255,255,255,0.7);">👤 Your Cards per row:</span>
         <span style="font-size:1.8rem;font-weight:bold;color:#FFD700;margin-left:8px;text-shadow:0 0 30px rgba(255,215,0,0.3);">
-            {st.session_state.columns_per_row}
+            {current_user_cols}
         </span>
         <span style="font-size:0.9rem;color:rgba(255,255,255,0.4);margin-left:8px;">cards</span>
     </div>
     """, unsafe_allow_html=True)
     
-    # Column selection dropdown - save to global when changed
+    # Column selection dropdown - USER SPECIFIC (stored in session state only)
     col_options = [2, 3, 4, 5, 6, 8, 10]
-    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
+    current_value = current_user_cols if current_user_cols in col_options else 4
     
     # Show the selectbox with the current value in the label
     selected_cols = st.selectbox(
-        f"📊 Change cards per row (current: {current_value})",
+        f"👤 Change YOUR cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        help="Select how many cards to display per row"
+        help="Select how many cards to display per row (this is YOUR personal preference)"
     )
     
-    # If columns changed, save to global
-    if selected_cols != st.session_state.columns_per_row:
-        st.session_state.columns_per_row = selected_cols
-        # Save columns setting to global file
-        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols, st.session_state.timer_start_time, st.session_state.card_selection_time)
+    # If columns changed, save to user's personal preference (NOT global)
+    if selected_cols != st.session_state[user_cards_per_row_key]:
+        st.session_state[user_cards_per_row_key] = selected_cols
+        # DO NOT save to global file - this is user-specific
         st.rerun()
+    
+    # Use the user's personal column preference
+    cols_per_row = st.session_state[user_cards_per_row_key]
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
@@ -1612,6 +1623,9 @@ def render_card_selection():
         <span style="display:inline-block;padding:6px 15px;background:rgba(255,200,0,0.1);border-radius:8px;border:2px solid {'#4CAF50' if enough_cards else '#FF9800'};font-size:0.8rem;color:{'#4CAF50' if enough_cards else '#FF9800'};font-weight:bold;">
             {'✅' if enough_cards else '⚠️'} {total_selected}/{min_cards_required}
         </span>
+        <span style="display:inline-block;padding:4px 10px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.7rem;color:rgba(255,255,255,0.4);">
+            👤 {st.session_state.current_user}
+        </span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1632,8 +1646,7 @@ def render_card_selection():
         st.success(f"🟢 Your selected cards: {', '.join(map(str, your_cards_list))}")
         st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
-    # Create grid using selected number of columns
-    cols_per_row = st.session_state.columns_per_row
+    # Create grid using user's personal column preference
     cols = st.columns(cols_per_row)
     
     for i in range(1, 202):
@@ -1669,8 +1682,8 @@ def render_card_selection():
                         del st.session_state.card_owner[str(i)]
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
-                    # Save to global file (preserve timer and columns)
-                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                    # Save to global file (preserve timer, but NOT columns_per_row)
+                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, None, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
                 else:
                     # SELECT - Add your card to global board
@@ -1678,8 +1691,8 @@ def render_card_selection():
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
                         st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        # Save to global file (preserve timer and columns)
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        # Save to global file (preserve timer, but NOT columns_per_row)
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, None, st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
