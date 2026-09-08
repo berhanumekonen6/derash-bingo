@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = "8976887607:AAHPLbIKWkSr0Yjbab_Ebhk6V--cRwNi4Eo"
 GAME_LINK = "https://tinyurl.com/u8ctbvr6"
 TELEBIRR_NUMBER = "0905527481"
-ADMIN_USERNAME = "@berhanumekonen6"  # Change to your Telegram username
+ADMIN_USERNAME = "@berhanumekonen6"
 
 # === MAIN MENU ===
 def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("📝 Register", callback_data="register")],
         [InlineKeyboardButton("💰 Deposit / Pay", callback_data="deposit")],
-        [InlineKeyboardButton("🎯 Play Game", callback_data="play")],
+        [InlineKeyboardButton("🎯 Play Game", url=GAME_LINK)],  # Opens directly!
         [InlineKeyboardButton("❓ How to Play", callback_data="howto")],
         [InlineKeyboardButton("🆘 Support", callback_data="support")],
     ]
@@ -88,7 +88,7 @@ async def how_to_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ━━━━━━━━━━━━━━━━━━━
 🎯 STEP 3: PLAY
-   → Click "Play Game"
+   → Click "🎯 Play Game" to start playing!
    → Login with your username and password
    → Select 1-2 cards (10 ETB each)
    → Wait for numbers to be called
@@ -160,66 +160,39 @@ async def deposit_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
 
-# === PLAY GAME BUTTON ===
-async def play_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = f"""
-🎯 PLAY DERASH BINGO NOW!
-
-🔗 Click here to play:
-👉 {GAME_LINK}
-
-━━━━━━━━━━━━━━━━━━━
-📝 BEFORE PLAYING:
-✅ You must be registered
-✅ You must have balance (deposit first)
-✅ Login with your username and password
-
-━━━━━━━━━━━━━━━━━━━
-💰 HOW TO GET BALANCE:
-1️⃣ Click "Deposit / Pay"
-2️⃣ Send money via Telebirr: {TELEBIRR_NUMBER}
-3️⃣ Send payment proof to this bot
-4️⃣ Balance updated!
-
-━━━━━━━━━━━━━━━━━━━
-🎉 GOOD LUCK & HAVE FUN! 🎉
-"""
-    await update.callback_query.answer()
-    await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
-
-# === SUPPORT BUTTON ===
+# === SUPPORT BUTTON - AMHARIC ===
 async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
-🆘 SUPPORT
+🆘 ምን እናግዘዎ!?
 
 ━━━━━━━━━━━━━━━━━━━
-📞 Telebirr: {TELEBIRR_NUMBER}
-🤖 Bot: @DerashBingoPlayBot
-🎯 Game: {GAME_LINK}
+📞 ቴሌብር: {TELEBIRR_NUMBER}
+🤖 ቻትቦት: @DerashBingoPlayBot
+🎯 ጨዋታ: {GAME_LINK}
 
 ━━━━━━━━━━━━━━━━━━━
-❓ COMMON QUESTIONS:
+❓ ተዘውትረው የሚጠየቁ ጥያቄዎች:
 
-Q: How to register?
-A: Send: /register username FullName Phone Password
+ጥ: እንዴት መመዝገብ እንደሚቻል?
+መ: /register username FullName Phone Password ይላኩ
 
-Q: How to add balance?
-A: Send money via Telebirr to {TELEBIRR_NUMBER}
+ጥ: እንዴት ባላንስ መጨመር እንደሚቻል?
+መ: በቴሌብር ወደ {TELEBIRR_NUMBER} ገንዘብ ያስተላልፉ
 
-Q: How to play?
-A: After registering and depositing, click "Play Game"
+ጥ: እንዴት መጫወት እንደሚቻል?
+መ: ከተመዘገቡ እና ባላንስ ከጨመሩ በኋላ "Play Game" ይጫኑ
 
-Q: Can't login?
-A: Make sure you registered first!
+ጥ: መግባት አልቻልኩም?
+መ: መጀመሪያ መመዝገብዎን ያረጋግጡ!
 
-Q: Balance not updated?
-A: Send your payment screenshot to this bot
+ጥ: ባላንሴ አልታየም?
+መ: የክፍያ ማረጋገጫዎን ለዚህ ቻትቦት ይላኩ
 
 ━━━━━━━━━━━━━━━━━━━
-👤 Admin: {ADMIN_USERNAME}
-📞 Phone: {TELEBIRR_NUMBER}
+👤 አስተዳዳሪ: {ADMIN_USERNAME}
+📞 ስልክ: {TELEBIRR_NUMBER}
 
-💬 Send your question here! 😊
+💬 ጥያቄዎን እዚህ ይጠይቁ! 😊
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
@@ -237,15 +210,12 @@ async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # Handle different argument formats
     if len(args) >= 5:
-        # If full name has spaces: /register username First Last Phone Pass
         username = args[0]
         full_name = " ".join(args[1:-2])
         phone = args[-2]
         password = args[-1]
     else:
-        # If full name is one word: /register username FullName Phone Pass
         username = args[0]
         full_name = args[1]
         phone = args[2]
@@ -282,8 +252,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await register_button(update, context)
     elif query.data == "deposit":
         await deposit_button(update, context)
-    elif query.data == "play":
-        await play_game(update, context)
     elif query.data == "howto":
         await how_to_play(update, context)
     elif query.data == "support":
@@ -292,18 +260,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # === MAIN FUNCTION ===
 def main():
     """Start the bot."""
-    # Create the Application
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("register", register_command))
-    
-    # Add callback query handler for buttons
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    # Start the Bot
     print("=" * 50)
     print("✅ BOT IS RUNNING!")
     print("=" * 50)
