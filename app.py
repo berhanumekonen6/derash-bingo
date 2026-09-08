@@ -100,154 +100,6 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Card buttons - mobile responsive */
-    .card-btn {
-        width: 100% !important;
-        padding: 6px 4px !important;
-        font-size: 0.9rem !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        line-height: 1.2 !important;
-        border-radius: 8px !important;
-        margin: 0 !important;
-        text-align: center !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-weight: bold !important;
-        transition: all 0.2s ease !important;
-        cursor: pointer !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #FFFFFF !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-        text-overflow: ellipsis !important;
-        position: relative !important;
-        user-select: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        font-family: Arial, sans-serif !important;
-        box-sizing: border-box !important;
-    }
-    .card-btn:hover:not(.taken) {
-        transform: scale(1.05);
-        border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.2) !important;
-        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-        z-index: 10;
-    }
-    .card-btn:active {
-        transform: scale(0.95);
-    }
-    .card-btn.selected {
-        border-color: #4CAF50 !important;
-        background: rgba(76, 175, 80, 0.35) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-        border-width: 3px !important;
-    }
-    .card-btn.taken {
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        color: rgba(255, 255, 255, 0.3) !important;
-        cursor: not-allowed !important;
-        opacity: 0.5 !important;
-    }
-    .card-btn.taken:hover {
-        transform: none !important;
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        box-shadow: none !important;
-    }
-    
-    /* CSS Grid for card selection - RESPECTS USER'S COLUMN CHOICE */
-    .card-grid {
-        display: grid !important;
-        gap: 6px !important;
-        max-width: 100% !important;
-        margin: 10px 0 !important;
-    }
-    .card-grid .stButton {
-        width: 100% !important;
-    }
-    .card-grid .stButton button {
-        width: 100% !important;
-        padding: 8px 4px !important;
-        font-size: 0.85rem !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        border-radius: 8px !important;
-        text-align: center !important;
-        font-weight: bold !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #FFFFFF !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-        font-family: Arial, sans-serif !important;
-        box-sizing: border-box !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        line-height: 1.2 !important;
-    }
-    .card-grid .stButton button:hover:not(:disabled) {
-        transform: scale(1.05);
-        border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.2) !important;
-        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-        z-index: 10;
-    }
-    .card-grid .stButton button:active {
-        transform: scale(0.95);
-    }
-    .card-grid .stButton button:disabled {
-        opacity: 0.5 !important;
-        cursor: not-allowed !important;
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        color: rgba(255, 255, 255, 0.3) !important;
-    }
-    .card-grid .stButton button .selected-text {
-        border-color: #4CAF50 !important;
-        background: rgba(76, 175, 80, 0.35) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-        border-width: 3px !important;
-    }
-    
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-        .card-grid .stButton button {
-            font-size: 0.8rem !important;
-            min-height: 38px !important;
-            height: 38px !important;
-            padding: 4px 3px !important;
-        }
-    }
-    @media (max-width: 480px) {
-        .card-grid .stButton button {
-            font-size: 0.7rem !important;
-            min-height: 34px !important;
-            height: 34px !important;
-            padding: 3px 2px !important;
-            border-radius: 6px !important;
-        }
-    }
-    @media (max-width: 360px) {
-        .card-grid .stButton button {
-            font-size: 0.65rem !important;
-            min-height: 30px !important;
-            height: 30px !important;
-            padding: 2px 2px !important;
-        }
-    }
-    
     /* Winner Card Celebration */
     .winner-card {
         animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
@@ -587,6 +439,103 @@ st.markdown("""
     .selected-cards-preview {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
+    }
+    
+    /* ================================================================
+       CARD GRID - RESPECTS USER'S COLUMN CHOICE ON ALL DEVICES
+       ================================================================ */
+    .card-grid-container {
+        display: grid !important;
+        gap: 6px !important;
+        width: 100% !important;
+        margin: 10px 0 !important;
+    }
+    .card-grid-container .card-item {
+        width: 100% !important;
+    }
+    .card-grid-container .card-item .stButton {
+        width: 100% !important;
+    }
+    .card-grid-container .card-item .stButton button {
+        width: 100% !important;
+        padding: 8px 4px !important;
+        font-size: 0.85rem !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        font-weight: bold !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #FFFFFF !important;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+        font-family: Arial, sans-serif !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 1.2 !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+    }
+    .card-grid-container .card-item .stButton button:hover:not(:disabled) {
+        transform: scale(1.05);
+        border-color: #FFD700 !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+        z-index: 10;
+    }
+    .card-grid-container .card-item .stButton button:active {
+        transform: scale(0.95);
+    }
+    .card-grid-container .card-item .stButton button:disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+    }
+    .card-grid-container .card-item .stButton button[data-selected="true"] {
+        border-color: #4CAF50 !important;
+        background: rgba(76, 175, 80, 0.35) !important;
+        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+        border-width: 3px !important;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .card-grid-container .card-item .stButton button {
+            font-size: 0.8rem !important;
+            min-height: 38px !important;
+            height: 38px !important;
+            padding: 4px 3px !important;
+        }
+        .card-grid-container {
+            gap: 5px !important;
+        }
+    }
+    @media (max-width: 480px) {
+        .card-grid-container .card-item .stButton button {
+            font-size: 0.7rem !important;
+            min-height: 34px !important;
+            height: 34px !important;
+            padding: 3px 2px !important;
+            border-radius: 6px !important;
+        }
+        .card-grid-container {
+            gap: 4px !important;
+        }
+    }
+    @media (max-width: 360px) {
+        .card-grid-container .card-item .stButton button {
+            font-size: 0.65rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 2px 2px !important;
+        }
+        .card-grid-container {
+            gap: 3px !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1387,9 +1336,13 @@ def distribute_prizes(winners):
     if st.session_state.prize_distributed:
         return
     
+    # TOTAL PRIZE = ALL cards selected by ALL players × 8 ETB
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+    
+    # Calculate prize per winner (share equally)
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
+    # Distribute to each winner
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
@@ -1522,11 +1475,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - USING STREAMLIT BUTTONS WITH CSS GRID
+# CARD SELECTION FUNCTION - PROPER GRID WITH ROWS
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using Streamlit buttons with CSS Grid"""
+    """Render card selection grid - properly displays cards in rows"""
     
     sync_global_cards()
     
@@ -1620,27 +1573,27 @@ def render_card_selection():
         st.caption(f"💡 Click a selected card (🟢) to DESELECT it")
     
     # ============================================================
-    # USE CSS GRID WITH STREAMLIT BUTTONS
+    # USE CSS GRID WITH STREAMLIT BUTTONS - PROPER ROWS
     # ============================================================
     cols_per_row = st.session_state.columns_per_row
     
-    # Create the grid with Streamlit columns
+    # Create the grid with CSS
     st.markdown(f"""
     <style>
-        .card-grid-container-{cols_per_row} {{
+        .card-grid-{cols_per_row} {{
             display: grid !important;
             grid-template-columns: repeat({cols_per_row}, 1fr) !important;
             gap: 6px !important;
             margin: 10px 0 !important;
             width: 100% !important;
         }}
-        .card-grid-container-{cols_per_row} .card-item {{
+        .card-grid-{cols_per_row} .card-item {{
             width: 100% !important;
         }}
-        .card-grid-container-{cols_per_row} .card-item .stButton {{
+        .card-grid-{cols_per_row} .card-item .stButton {{
             width: 100% !important;
         }}
-        .card-grid-container-{cols_per_row} .card-item .stButton button {{
+        .card-grid-{cols_per_row} .card-item .stButton button {{
             width: 100% !important;
             padding: 8px 4px !important;
             font-size: 0.85rem !important;
@@ -1659,38 +1612,39 @@ def render_card_selection():
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             line-height: 1.2 !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
         }}
-        .card-grid-container-{cols_per_row} .card-item .stButton button:hover:not(:disabled) {{
+        .card-grid-{cols_per_row} .card-item .stButton button:hover:not(:disabled) {{
             transform: scale(1.05);
             border-color: #FFD700 !important;
             background: rgba(255, 215, 0, 0.2) !important;
             box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
             z-index: 10;
         }}
-        .card-grid-container-{cols_per_row} .card-item .stButton button:active {{
+        .card-grid-{cols_per_row} .card-item .stButton button:active {{
             transform: scale(0.95);
         }}
-        .card-grid-container-{cols_per_row} .card-item .stButton button:disabled {{
+        .card-grid-{cols_per_row} .card-item .stButton button:disabled {{
             opacity: 0.5 !important;
             cursor: not-allowed !important;
             border-color: rgba(255, 0, 0, 0.2) !important;
             background: rgba(255, 0, 0, 0.15) !important;
             color: rgba(255, 255, 255, 0.3) !important;
         }}
-        .card-grid-container-{cols_per_row} .card-item .selected-btn {{
+        .card-grid-{cols_per_row} .card-item .stButton button[data-selected="true"] {{
             border-color: #4CAF50 !important;
             background: rgba(76, 175, 80, 0.35) !important;
-            color: #FFFFFF !important;
             box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
             border-width: 3px !important;
         }}
-        /* Mobile responsive */
+        /* Mobile responsive - respect user's choice */
         @media (max-width: 768px) {{
-            .card-grid-container-{cols_per_row} {{
+            .card-grid-{cols_per_row} {{
                 grid-template-columns: repeat({min(cols_per_row, 4)}, 1fr) !important;
                 gap: 5px !important;
             }}
-            .card-grid-container-{cols_per_row} .card-item .stButton button {{
+            .card-grid-{cols_per_row} .card-item .stButton button {{
                 font-size: 0.8rem !important;
                 min-height: 38px !important;
                 height: 38px !important;
@@ -1698,11 +1652,11 @@ def render_card_selection():
             }}
         }}
         @media (max-width: 480px) {{
-            .card-grid-container-{cols_per_row} {{
+            .card-grid-{cols_per_row} {{
                 grid-template-columns: repeat({min(cols_per_row, 3)}, 1fr) !important;
                 gap: 4px !important;
             }}
-            .card-grid-container-{cols_per_row} .card-item .stButton button {{
+            .card-grid-{cols_per_row} .card-item .stButton button {{
                 font-size: 0.7rem !important;
                 min-height: 34px !important;
                 height: 34px !important;
@@ -1711,11 +1665,11 @@ def render_card_selection():
             }}
         }}
         @media (max-width: 360px) {{
-            .card-grid-container-{cols_per_row} {{
+            .card-grid-{cols_per_row} {{
                 grid-template-columns: repeat({min(cols_per_row, 3)}, 1fr) !important;
                 gap: 3px !important;
             }}
-            .card-grid-container-{cols_per_row} .card-item .stButton button {{
+            .card-grid-{cols_per_row} .card-item .stButton button {{
                 font-size: 0.65rem !important;
                 min-height: 30px !important;
                 height: 30px !important;
@@ -1723,7 +1677,7 @@ def render_card_selection():
             }}
         }}
     </style>
-    <div class="card-grid-container-{cols_per_row}">
+    <div class="card-grid-{cols_per_row}">
     """, unsafe_allow_html=True)
     
     # Add each card as a Streamlit button inside the grid
@@ -1734,14 +1688,16 @@ def render_card_selection():
         
         if is_clicked:
             label = f"🟢 {i}"
-            btn_class = "selected-btn"
+            btn_type = "secondary"
+        elif is_disabled:
+            label = str(i)
+            btn_type = "secondary"
         else:
             label = str(i)
-            btn_class = ""
+            btn_type = "primary"
         
-        # Use a container with the button
+        # Create a container for each card
         with st.container():
-            # This div wraps the button for grid positioning
             st.markdown(f'<div class="card-item">', unsafe_allow_html=True)
             
             # The actual Streamlit button
@@ -1749,10 +1705,9 @@ def render_card_selection():
                 label,
                 key=f"card_{i}",
                 use_container_width=True,
-                disabled=is_disabled,
-                type="secondary" if is_clicked else "primary"
+                type=btn_type,
+                disabled=is_disabled
             ):
-                # Handle click - toggle selection
                 if i in st.session_state.clicked_numbers:
                     # DESELECT
                     st.session_state.clicked_numbers.remove(i)
