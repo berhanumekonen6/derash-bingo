@@ -130,7 +130,7 @@ st.markdown("""
         .cards-grid-wrapper {
             max-height: 500px !important;
         }
-        .card-btn {
+        .grid-btn {
             font-size: 0.8rem !important;
             min-height: 36px !important;
             height: 36px !important;
@@ -151,7 +151,7 @@ st.markdown("""
         .cards-grid-wrapper {
             max-height: 450px !important;
         }
-        .card-btn {
+        .grid-btn {
             font-size: 0.7rem !important;
             min-height: 30px !important;
             height: 30px !important;
@@ -171,7 +171,7 @@ st.markdown("""
         .cards-grid-wrapper {
             max-height: 400px !important;
         }
-        .card-btn {
+        .grid-btn {
             font-size: 0.6rem !important;
             min-height: 26px !important;
             height: 26px !important;
@@ -180,8 +180,8 @@ st.markdown("""
         }
     }
     
-    /* Card buttons */
-    .card-btn {
+    /* Grid button styling */
+    .grid-btn {
         width: 100% !important;
         padding: 6px 4px !important;
         font-size: 0.9rem !important;
@@ -212,41 +212,35 @@ st.markdown("""
         font-family: Arial, sans-serif !important;
         box-sizing: border-box !important;
     }
-    .card-btn:hover:not(.taken) {
+    .grid-btn:hover:not(.taken) {
         transform: scale(1.05);
         border-color: #FFD700 !important;
         background: rgba(255, 215, 0, 0.2) !important;
         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
         z-index: 10;
     }
-    .card-btn:active {
+    .grid-btn:active {
         transform: scale(0.95);
     }
-    .card-btn.selected {
+    .grid-btn.selected {
         border-color: #4CAF50 !important;
         background: rgba(76, 175, 80, 0.35) !important;
         color: #FFFFFF !important;
         box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
         border-width: 3px !important;
     }
-    .card-btn.taken {
+    .grid-btn.taken {
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         color: rgba(255, 255, 255, 0.3) !important;
         cursor: not-allowed !important;
         opacity: 0.5 !important;
     }
-    .card-btn.taken:hover {
+    .grid-btn.taken:hover {
         transform: none !important;
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
-    }
-    .card-btn .tick-mark {
-        display: none;
-    }
-    .card-btn.selected .tick-mark {
-        display: inline;
     }
     
     /* Winner Card Celebration */
@@ -1510,11 +1504,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - FIXED: Uses CSS Classes to FORCE column count
+# CARD SELECTION FUNCTION - FIXED: Uses CSS Grid with FORCED columns
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using CSS Classes - FORCES the selected number of columns"""
+    """Render card selection grid using CSS Grid - FORCES selected number of columns"""
     
     # Sync with global data first - ALWAYS sync to get latest updates
     sync_global_cards()
@@ -1534,8 +1528,8 @@ def render_card_selection():
     balance = user.get("balance", 0)
     
     # === GLOBAL CARD COUNTS - SAME FOR ALL PLAYERS ===
-    total_selected = len(st.session_state.taken_cards)  # ALL cards from ALL players
-    your_cards = len(st.session_state.clicked_numbers)   # YOUR cards only
+    total_selected = len(st.session_state.taken_cards)
+    your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
@@ -1577,7 +1571,6 @@ def render_card_selection():
     col_options = [2, 3, 4, 5, 6, 8, 10]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
     
-    # Show the selectbox with the current value in the label
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
@@ -1585,10 +1578,8 @@ def render_card_selection():
         help="Select how many cards to display per row"
     )
     
-    # If columns changed, save to global and rerun
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
-        # Save columns setting to global file
         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols, st.session_state.timer_start_time, st.session_state.card_selection_time)
         st.rerun()
     
@@ -1694,7 +1685,6 @@ def render_card_selection():
                     del st.session_state.card_owner[str(i)]
                 if st.session_state.selected_card == i:
                     st.session_state.selected_card = None
-                # Save to global file (preserve timer and columns)
                 save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                 st.rerun()
             else:
@@ -1703,7 +1693,6 @@ def render_card_selection():
                     st.session_state.clicked_numbers.add(i)
                     st.session_state.taken_cards.append(i)
                     st.session_state.card_owner[str(i)] = st.session_state.current_user
-                    # Save to global file (preserve timer and columns)
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
     
@@ -1838,26 +1827,19 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # TIMER - GLOBAL SYNCED TIMER
 # ===================================================================
 
-# Check if timer should start or reset
 if st.session_state.game_started:
-    # Game is running, don't update timer
     pass
 else:
-    # Calculate remaining time based on global timer
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
     remaining = max(0, st.session_state.card_selection_time - elapsed)
-    
-    # Update session state with current remaining time
     st.session_state.card_selection_time = remaining
     
-    # When timer reaches 0, check if enough cards are selected
     if remaining <= 0 and not st.session_state.game_started:
         total_selected = len(st.session_state.taken_cards)
         min_cards_required = 3
         
         if total_selected >= min_cards_required:
-            # ENOUGH CARDS - START THE GAME
             st.session_state.card_selection_time = 0
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
@@ -1865,14 +1847,11 @@ else:
             if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
                 st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
             
-            # Save game state to global
             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 0)
             st.rerun()
         else:
-            # NOT ENOUGH CARDS - RESET TIMER AND WAIT
             st.session_state.timer_start_time = time.time()
             st.session_state.card_selection_time = 30
-            # Save reset timer to global
             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 30)
             st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
             st.rerun()
@@ -1881,7 +1860,6 @@ else:
 # AUTO-CALL NUMBERS
 # ===================================================================
 
-# Auto-call numbers every 2 seconds once game is started
 if st.session_state.game_started and not st.session_state.winner_declared:
     if not st.session_state.auto_call_started:
         st.session_state.auto_call_started = True
