@@ -257,6 +257,19 @@ st.markdown("""
         100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255, 215, 0, 0.7); }
     }
     
+    /* Winner cards grid */
+    .winner-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)) !important;
+        gap: 20px !important;
+        margin: 15px 0 !important;
+    }
+    @media (max-width: 768px) {
+        .winner-cards-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
     /* Scrollbar */
     ::-webkit-scrollbar {
         width: 6px;
@@ -1204,6 +1217,7 @@ BINGO_CARDS = [
     {"id": 200, "cells": [['6', '27', '43', '48', '62'], ['2', '26', '45', '54', '70'], ['5', '24', 'F', '47', '74'], ['10', '19', '40', '46', '65'], ['14', '30', '35', '52', '61']]},
     {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
 ]
+
 def get_card(card_id):
     for card in BINGO_CARDS:
         if card["id"] == card_id:
@@ -1957,44 +1971,60 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             st.balloons()
             st.snow()
             
+            # ============================================================
+            # DISPLAY ALL WINNER CARDS WITH CELEBRATION FOR EVERYONE
+            # ============================================================
             st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
             
+            # Get all winner card IDs
             winner_card_ids = set()
+            winner_details = {}
             for winner in st.session_state.winners_list:
-                winner_card_ids.add(winner.get("card_id"))
+                card_id = winner.get("card_id")
+                winner_card_ids.add(card_id)
+                winner_details[card_id] = {
+                    "username": winner.get("username", "Unknown"),
+                    "pattern": winner.get("pattern", {}).get("type", "BINGO!")
+                }
             
             if winner_card_ids:
                 st.markdown(f"""
-                <div style="text-align:center;padding:10px;margin-bottom:15px;background:rgba(255,215,0,0.1);border-radius:12px;border:2px solid #FFD700;">
-                    <span style="color:#FFD700;font-size:1.2rem;font-weight:bold;">🏆 {len(winner_card_ids)} Winner Card(s) 🏆</span>
+                <div style="text-align:center;padding:15px;margin-bottom:20px;background:rgba(255,215,0,0.15);border-radius:15px;border:2px solid #FFD700;">
+                    <span style="color:#FFD700;font-size:1.3rem;font-weight:bold;">🏆 {len(winner_card_ids)} Winner Card(s) - All Winners Displayed Below! 🏆</span>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                for card_id in winner_card_ids:
-                    winning_pattern_name = None
-                    for winner in st.session_state.winners_list:
-                        if winner.get("card_id") == card_id:
-                            pattern_info = winner.get("pattern", {})
-                            winning_pattern_name = pattern_info.get("type", "BINGO!")
-                            break
+                # Display ALL winner cards in a grid
+                st.markdown('<div class="winner-cards-grid">', unsafe_allow_html=True)
+                for card_id in sorted(winner_card_ids):
+                    winning_pattern_name = winner_details.get(card_id, {}).get("pattern", "BINGO!")
+                    username = winner_details.get(card_id, {}).get("username", "Unknown")
                     
+                    # Display the winner card with celebration
                     display_selected_card(
                         card_id, 
                         list(st.session_state.called_numbers), 
                         is_winner=True, 
                         winning_pattern=winning_pattern_name
                     )
+                    
+                    # Show owner info below each card
+                    st.markdown(f"""
+                    <div style="text-align:center;color:#FFD700;font-size:0.9rem;margin-top:-5px;margin-bottom:15px;">
+                        👤 Owner: <strong>{username}</strong> | 🏅 {winning_pattern_name}
+                    </div>
+                    """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
                 
-                st.markdown("### 🏆 አሸናፊዎች 🏆")
+                # Summary of all winners
+                st.markdown("### 🏆 አሸናፊዎች ማጠቃለያ / Winners Summary 🏆")
                 for idx, winner in enumerate(st.session_state.winners_list, 1):
-                    pattern_info = winner.get("pattern", {})
-                    pattern_type = pattern_info.get("type", "BINGO!")
                     card_id = winner.get("card_id")
                     username = winner.get("username", "Unknown")
+                    pattern_type = winner.get("pattern", {}).get("type", "BINGO!")
                     
-                    st.success(f"🎉 Winner {idx}: Card #{card_id} - {pattern_type} 🎉")
-                    st.info(f"👤 Owner: {username}")
-                    st.info(f"💰 Prize: {prize_per_winner:.2f} ETB")
+                    st.success(f"🎉 Winner {idx}: Card #{card_id} - {pattern_type}")
+                    st.info(f"👤 Owner: {username} | 💰 Prize: {prize_per_winner:.2f} ETB")
             
             display_master_board()
             
