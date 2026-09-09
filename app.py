@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # ===================================================================
-# CUSTOM CSS FOR GREEN BACKGROUND AND STYLING
+# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
 # ===================================================================
 
 st.markdown("""
@@ -79,17 +79,17 @@ st.markdown("""
     
     /* Card selection grid */
     .cards-grid-container {
-        max-height: 450px;
+        max-height: 500px;
         overflow-y: auto;
-        padding: 5px;
-        margin: 5px 0;
+        padding: 8px;
+        margin: 8px 0;
         background: rgba(0, 0, 0, 0.15);
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
     }
     .cards-grid-container::-webkit-scrollbar {
-        width: 4px;
+        width: 6px;
     }
     .cards-grid-container::-webkit-scrollbar-track {
         background: rgba(255,255,255,0.05);
@@ -104,90 +104,105 @@ st.markdown("""
     .cards-grid {
         display: grid !important;
         grid-template-columns: repeat(10, 1fr) !important;
-        gap: 3px !important;
+        gap: 5px !important;
         max-width: 100% !important;
         margin: 0 auto !important;
     }
     
-    /* Mobile responsive */
+    /* Mobile responsive - larger cards */
     @media (max-width: 768px) {
         .cards-grid {
-            grid-template-columns: repeat(10, 1fr) !important;
-            gap: 2px !important;
+            grid-template-columns: repeat(5, 1fr) !important;
+            gap: 8px !important;
         }
-        .card-btn {
-            font-size: 0.45rem !important;
-            min-height: 18px !important;
-            height: 18px !important;
-            padding: 1px 1px !important;
+        .cards-grid .stButton button {
+            font-size: 1rem !important;
+            min-height: 45px !important;
+            height: 45px !important;
+            padding: 8px 4px !important;
+            border-radius: 10px !important;
+            border-width: 2px !important;
         }
         .cards-grid-container {
-            max-height: 350px !important;
+            max-height: 500px !important;
         }
     }
     
     @media (max-width: 480px) {
         .cards-grid {
-            grid-template-columns: repeat(10, 1fr) !important;
-            gap: 1.5px !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 6px !important;
         }
-        .card-btn {
-            font-size: 0.35rem !important;
-            min-height: 14px !important;
-            height: 14px !important;
-            padding: 1px 1px !important;
-            border-radius: 2px !important;
+        .cards-grid .stButton button {
+            font-size: 0.9rem !important;
+            min-height: 40px !important;
+            height: 40px !important;
+            padding: 6px 3px !important;
+            border-radius: 8px !important;
         }
         .cards-grid-container {
-            max-height: 280px !important;
+            max-height: 450px !important;
         }
     }
     
     @media (max-width: 360px) {
         .cards-grid {
-            grid-template-columns: repeat(10, 1fr) !important;
-            gap: 1px !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 5px !important;
         }
-        .card-btn {
-            font-size: 0.3rem !important;
-            min-height: 12px !important;
-            height: 12px !important;
-            padding: 0px 0px !important;
-            border-radius: 2px !important;
-        }
-        .card-btn .card-price {
-            display: none !important;
+        .cards-grid .stButton button {
+            font-size: 0.8rem !important;
+            min-height: 35px !important;
+            height: 35px !important;
+            padding: 4px 2px !important;
+            border-radius: 6px !important;
         }
         .cards-grid-container {
-            max-height: 220px !important;
+            max-height: 400px !important;
         }
     }
     
-    @media (orientation: landscape) {
+    @media (orientation: landscape) and (max-width: 900px) {
+        .cards-grid {
+            grid-template-columns: repeat(8, 1fr) !important;
+            gap: 4px !important;
+        }
+        .cards-grid .stButton button {
+            font-size: 0.8rem !important;
+            min-height: 32px !important;
+            height: 32px !important;
+            padding: 4px 2px !important;
+        }
+    }
+    
+    @media (orientation: landscape) and (max-width: 600px) {
         .cards-grid {
             grid-template-columns: repeat(10, 1fr) !important;
             gap: 3px !important;
         }
-        .card-btn {
-            font-size: 0.5rem !important;
-            min-height: 20px !important;
-            height: 20px !important;
-            padding: 2px 2px !important;
-        }
-        .cards-grid-container {
-            max-height: 320px !important;
+        .cards-grid .stButton button {
+            font-size: 0.6rem !important;
+            min-height: 26px !important;
+            height: 26px !important;
+            padding: 2px 1px !important;
         }
     }
     
-    /* Card buttons - Green theme */
-    .card-btn {
+    /* Card buttons - Larger and clickable */
+    .cards-grid .stButton {
+        padding: 0 !important;
+        margin: 0 !important;
+        min-width: 0 !important;
         width: 100% !important;
-        padding: 2px 1px !important;
-        font-size: 0.55rem !important;
-        min-height: 22px !important;
-        height: 22px !important;
-        line-height: 1 !important;
-        border-radius: 4px !important;
+    }
+    .cards-grid .stButton button {
+        width: 100% !important;
+        padding: 6px 4px !important;
+        font-size: 0.9rem !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 1.2 !important;
+        border-radius: 8px !important;
         margin: 0 !important;
         text-align: center !important;
         display: flex !important;
@@ -197,8 +212,8 @@ st.markdown("""
         font-weight: bold !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
         color: #FFFFFF !important;
         overflow: hidden !important;
         white-space: nowrap !important;
@@ -206,58 +221,39 @@ st.markdown("""
         position: relative !important;
         user-select: none !important;
         -webkit-tap-highlight-color: transparent !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        font-family: Arial, sans-serif !important;
+        box-sizing: border-box !important;
     }
-    .card-btn:hover {
+    .cards-grid .stButton button:hover:not(:disabled) {
         transform: scale(1.05);
         border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.15) !important;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.15) !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+        z-index: 10;
     }
-    .card-btn:active {
+    .cards-grid .stButton button:active {
         transform: scale(0.95);
     }
-    .card-btn.selected {
+    .cards-grid .stButton button[kind="secondary"] {
         border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.2) !important;
+        background: rgba(255, 215, 0, 0.25) !important;
         color: #FFD700 !important;
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.2) !important;
+        box-shadow: 0 0 35px rgba(255, 215, 0, 0.25) !important;
     }
-    .card-btn.selected .tick-mark {
-        display: inline !important;
-    }
-    .card-btn.taken {
+    .cards-grid .stButton button:disabled {
         border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.1) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
         color: rgba(255, 255, 255, 0.3) !important;
         cursor: not-allowed !important;
-        opacity: 0.6 !important;
+        opacity: 0.5 !important;
     }
-    .card-btn.taken:hover {
+    .cards-grid .stButton button:disabled:hover {
         transform: none !important;
         border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.1) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
-    }
-    .card-btn .tick-mark {
-        display: none;
-        position: absolute;
-        top: -2px;
-        right: -2px;
-        font-size: 0.5rem;
-        color: #4CAF50;
-        background: #ffffff;
-        border-radius: 50%;
-        padding: 1px 3px;
-        border: 1px solid #4CAF50;
-        line-height: 1;
-    }
-    .card-btn .card-price {
-        font-size: 0.35rem !important;
-        opacity: 0.6;
-        margin-top: 1px;
-        line-height: 1;
-        color: rgba(255, 255, 255, 0.6);
     }
     
     /* Fix for mobile columns - override Streamlit */
@@ -291,9 +287,10 @@ st.markdown("""
     }
     
     .stInfo, .stSuccess, .stWarning, .stError {
-        background: rgba(0, 0, 0, 0.2) !important;
+        background: rgba(0, 0, 0, 0.25) !important;
         color: #FFFFFF !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
     }
     
     .stInfo {
@@ -342,7 +339,7 @@ st.markdown("""
         color: rgba(255, 255, 255, 0.7) !important;
     }
     
-    /* Responsive */
+    /* Responsive header */
     @media (max-width: 768px) {
         .main-header {
             flex-direction: column !important;
@@ -519,13 +516,6 @@ st.markdown("""
     .selected-cards-preview {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
-    }
-    
-    /* Game controls */
-    .game-controls .btn {
-        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
-        color: #1a1a2e !important;
-        font-weight: bold !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -918,7 +908,7 @@ def admin_panel():
             st.dataframe(user_list, use_container_width=True)
 
 # ===================================================================
-# ALL 201 BINGO CARDS - FULL LIST (truncated for space)
+# ALL 201 BINGO CARDS - FULL LIST (truncated for space - include all 201)
 # ===================================================================
 
 BINGO_CARDS = [
@@ -1239,6 +1229,97 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
+# CARD SELECTION FUNCTION
+# ===================================================================
+
+def render_card_selection():
+    """Render card selection grid using Streamlit buttons"""
+    
+    remaining = st.session_state.card_selection_time
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
+    time_str = f"{minutes:01d}:{seconds:02d}"
+    
+    if remaining <= 10:
+        color = "#E53935"
+    elif remaining <= 30:
+        color = "#FF9800"
+    else:
+        color = "#FFD700"
+    
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+            ⏱️ {time_str}
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
+            Select Card
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(0,0,0,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
+            Selected: {len(st.session_state.clicked_numbers)}/2
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
+            💰 {balance} ETB
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.card_selection_time <= 10:
+        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left!")
+    elif st.session_state.card_selection_time <= 30:
+        st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
+    
+    # Create grid using 10 columns
+    cols = st.columns(10)
+    
+    for i in range(1, 202):
+        col_idx = (i - 1) % 10
+        with cols[col_idx]:
+            is_clicked = i in st.session_state.clicked_numbers
+            is_taken = i in st.session_state.taken_cards
+            is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
+            
+            if is_clicked:
+                btn_type = "secondary"
+                label = "✓"
+            elif is_disabled:
+                btn_type = "secondary"
+                label = str(i)
+            else:
+                btn_type = "primary"
+                label = str(i)
+            
+            if st.button(
+                label,
+                key=f"card_{i}",
+                use_container_width=True,
+                type=btn_type,
+                disabled=is_disabled
+            ):
+                if i in st.session_state.clicked_numbers:
+                    # Deselect
+                    st.session_state.clicked_numbers.remove(i)
+                    if i in st.session_state.taken_cards:
+                        st.session_state.taken_cards.remove(i)
+                    if st.session_state.selected_card == i:
+                        st.session_state.selected_card = None
+                else:
+                    # Select
+                    if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
+                        st.session_state.clicked_numbers.add(i)
+                        st.session_state.taken_cards.append(i)
+                st.rerun()
+    
+    if len(st.session_state.clicked_numbers) >= 2:
+        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
+    else:
+        st.info("👆 Click a card to select it (max 2 cards)")
+    
+    progress = 1 - (st.session_state.card_selection_time / 60)
+    st.progress(progress)
+    st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)}s")
+
+# ===================================================================
 # MAIN APP
 # ===================================================================
 
@@ -1399,126 +1480,6 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
                 check_for_winners()
                 st.rerun()
-
-# ===================================================================
-# CARD SELECTION - USING HTML BUTTONS
-# ===================================================================
-
-def render_card_selection():
-    """Render card selection grid using HTML buttons for better mobile support"""
-    
-    remaining = st.session_state.card_selection_time
-    minutes = int(remaining // 60)
-    seconds = int(remaining % 60)
-    time_str = f"{minutes:01d}:{seconds:02d}"
-    
-    if remaining <= 10:
-        color = "#E53935"
-    elif remaining <= 30:
-        color = "#FF9800"
-    else:
-        color = "#FFD700"
-    
-    st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
-        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
-            ⏱️ {time_str}
-        </span>
-        <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
-            Select Card
-        </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(0,0,0,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
-            Selected: {len(st.session_state.clicked_numbers)}/2
-        </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
-            💰 {balance} ETB
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if st.session_state.card_selection_time <= 10:
-        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left!")
-    elif st.session_state.card_selection_time <= 30:
-        st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
-    
-    # Build HTML grid with buttons
-    html = '<div class="cards-grid-container"><div class="cards-grid">'
-    
-    for i in range(1, 202):
-        is_clicked = i in st.session_state.clicked_numbers
-        is_taken = i in st.session_state.taken_cards
-        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
-        
-        if is_taken:
-            html += f'<div class="card-btn taken" style="border-color:rgba(255,0,0,0.2);background:rgba(255,0,0,0.1);color:rgba(255,255,255,0.3);cursor:not-allowed;opacity:0.6;">{i}<span class="tick-mark">🔒</span></div>'
-        elif is_clicked:
-            html += f'<div class="card-btn selected" onclick="deselectCard({i})" style="cursor:pointer;"><span class="tick-mark">✓</span>{i}</div>'
-        else:
-            html += f'<div class="card-btn" onclick="selectCard({i})" style="cursor:pointer;">{i}</div>'
-    
-    html += '</div></div>'
-    
-    # Add JavaScript for card selection
-    html += """
-    <script>
-        function selectCard(cardId) {
-            fetch(window.location.pathname + '?select=' + cardId, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).then(function() {
-                location.reload();
-            }).catch(function() {
-                location.reload();
-            });
-        }
-        
-        function deselectCard(cardId) {
-            fetch(window.location.pathname + '?deselect=' + cardId, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).then(function() {
-                location.reload();
-            }).catch(function() {
-                location.reload();
-            });
-        }
-    </script>
-    """
-    
-    st.markdown(html, unsafe_allow_html=True)
-    
-    # Handle card selection via query params
-    if 'select' in st.query_params:
-        card_id = int(st.query_params['select'])
-        if len(st.session_state.clicked_numbers) < 2 and card_id not in st.session_state.taken_cards:
-            st.session_state.clicked_numbers.add(card_id)
-            st.session_state.taken_cards.append(card_id)
-        st.query_params.clear()
-        st.rerun()
-    
-    if 'deselect' in st.query_params:
-        card_id = int(st.query_params['deselect'])
-        if card_id in st.session_state.clicked_numbers:
-            st.session_state.clicked_numbers.remove(card_id)
-            if card_id in st.session_state.taken_cards:
-                st.session_state.taken_cards.remove(card_id)
-            if st.session_state.selected_card == card_id:
-                st.session_state.selected_card = None
-        st.query_params.clear()
-        st.rerun()
-    
-    if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
-    else:
-        st.info("👆 Click a card to select it (max 2 cards)")
-    
-    progress = 1 - (st.session_state.card_selection_time / 60)
-    st.progress(progress)
-    st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)}s")
 
 # ===================================================================
 # GAME LOOP
