@@ -759,7 +759,7 @@ def login_user(username, password):
         if username not in st.session_state.user_db:
             user_data = {
                 "password": hash_password("admin123"),
-                "balance": 0.0,
+                "balance": 0.0,  # ADMIN BALANCE ALWAYS 0
                 "role": "admin",
                 "name": "Admin",
                 "phone": "",
@@ -769,6 +769,10 @@ def login_user(username, password):
             st.session_state.user_db[username] = user_data
             save_local_users(st.session_state.user_db)
             load_all_data()
+        else:
+            # Ensure admin balance is always 0
+            st.session_state.user_db["admin"]["balance"] = 0.0
+            save_local_users(st.session_state.user_db)
         
         st.session_state.logged_in = True
         st.session_state.current_user = username
@@ -1280,11 +1284,31 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION
+# CARD SELECTION FUNCTION - ADMIN CANNOT PLAY
 # ===================================================================
 
 def render_card_selection():
     """Render card selection grid with Cards per row selector (default 4)"""
+    
+    # PREVENT ADMIN FROM PLAYING
+    if st.session_state.current_role == "admin":
+        st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
+        st.info("💡 Admin can only manage user balances and monitor the game.")
+        
+        # Show current game status for admin
+        total_selected = len(st.session_state.taken_cards)
+        st.markdown(f"""
+        <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
+            <h4 style="color:#FFD700;text-align:center;">📊 Game Status</h4>
+            <p style="color:rgba(255,255,255,0.8);text-align:center;">
+                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/201</strong>
+            </p>
+            <p style="color:rgba(255,255,255,0.6);text-align:center;font-size:0.9rem;">
+                Waiting for players to select cards...
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
     
     sync_global_cards()
     
@@ -1654,11 +1678,18 @@ if st.session_state.current_role == "admin":
     st.markdown("---")
 
 # ===================================================================
-# USER INFO
+# USER INFO - ADMIN BALANCE ALWAYS 0
 # ===================================================================
 
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
+
+# Ensure admin balance is always 0
+if st.session_state.current_user == "admin":
+    balance = 0.0
+    if "admin" in st.session_state.user_db:
+        st.session_state.user_db["admin"]["balance"] = 0.0
+        save_all_data()
 
 st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
@@ -1744,9 +1775,81 @@ if st.session_state.game_started and not st.session_state.winner_declared:
                 st.rerun()
 
 # ===================================================================
-# GAME LOOP
+# GAME LOOP - ADMIN CANNOT PLAY
 # ===================================================================
 
+# PREVENT ADMIN FROM PLAYING
+if st.session_state.current_role == "admin":
+    # Admin can only view the game, not play
+    st.info("🔧 Admin Mode - You can manage users and monitor the game.")
+    
+    # Show current game state for admin
+    if st.session_state.game_started:
+        display_master_board()
+        
+        if st.session_state.winner_declared:
+            total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+            prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+            
+            st.markdown("""
+            <div style="background:rgba(255,215,0,0.1);border:2px solid #FFD700;border-radius:15px;padding:20px;text-align:center;margin:20px 0;">
+                <h3 style="color:#FFD700;">🏆 Game Finished!</h3>
+                <p style="color:rgba(255,255,255,0.8);">Check the winners above.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Show winners for admin
+            if st.session_state.winners_list:
+                st.markdown("### 🏆 Winners")
+                for idx, winner in enumerate(st.session_state.winners_list, 1):
+                    patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
+                    cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
+                    st.success(f"🎉 Winner {idx}: {winner.get('username')} - Card(s): {cards} - {patterns}")
+        
+        if st.button("🔄 Start New Game", use_container_width=True):
+            st.session_state.selected_card = None
+            st.session_state.clicked_numbers = set()
+            st.session_state.called_numbers = set()
+            st.session_state.last_called_number = None
+            st.session_state.auto_called_count = 0
+            st.session_state.game_started = False
+            st.session_state.auto_call_started = False
+            st.session_state.winner_declared = False
+            st.session_state.game_over = False
+            st.session_state.winners_list = []
+            st.session_state.prize_distributed = False
+            st.session_state.card_selection_time = 60
+            st.session_state.timer_start_time = time.time()
+            st.session_state.taken_cards = []
+            st.session_state.card_owner = {}
+            save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
+            st.rerun()
+    else:
+        st.info("⏳ Waiting for game to start... Players are selecting cards.")
+        
+        # Show card selection status
+        total_selected = len(st.session_state.taken_cards)
+        st.markdown(f"""
+        <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
+            <h4 style="color:#FFD700;text-align:center;">📊 Card Selection Status</h4>
+            <p style="color:rgba(255,255,255,0.8);text-align:center;">
+                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/201</strong>
+            </p>
+            <p style="color:rgba(255,255,255,0.6);text-align:center;font-size:0.9rem;">
+                Need 3 cards to start the game. Currently: {total_selected}/3
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Also update the admin balance to always be 0
+    if st.session_state.current_user == "admin":
+        if "admin" in st.session_state.user_db:
+            st.session_state.user_db["admin"]["balance"] = 0.0
+            save_all_data()
+    
+    st.stop()
+
+# Continue with normal game logic for players
 if not st.session_state.selected_card and not st.session_state.game_started:
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
