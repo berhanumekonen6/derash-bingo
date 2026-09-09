@@ -2098,7 +2098,7 @@ if st.session_state.game_started:
             </div>
             <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:3px 0;">
                 <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">⭐</span>
-                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">🌟👇የዚህ ጨዋታ አሸናፊ ካርቴላ</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">🌟የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ👇</span>
                 <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">✨</span>
                 <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">⭐</span>
                 <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟</span>
