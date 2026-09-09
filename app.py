@@ -2160,8 +2160,7 @@ if not st.session_state.logged_in:
                         st.info("💡 Your balance starts at 0.00 ETB. Admin can add balance.")
                         st.balloons()
                         load_all_data()
-                        time.sleep(1)
-                        st.rerun()
+                        st.rerun()  # REMOVED time.sleep(1)
                     else:
                         st.error(message)
     st.stop()
@@ -2345,8 +2344,7 @@ if st.session_state.current_role == "admin":
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
             
             st.success("🔄 New game started! Select your cards for the next round.")
-            time.sleep(0.5)
-            st.rerun()
+            st.rerun()  # REMOVED time.sleep(0.5)
     else:
         st.info("⏳ Waiting for game to start... Players are selecting cards.")
         
@@ -2515,8 +2513,7 @@ if st.session_state.game_started:
             
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
             st.success("🔄 New game started! Select your cards for the next round.")
-            time.sleep(0.5)
-            st.rerun()
+            st.rerun()  # REMOVED time.sleep(0.5)
     else:
         # Game is running - show BINGO board and player cards side by side
         # CARD SELECTION (1-201) IS HIDDEN HERE - ONLY BINGO BOARD AND PLAYER CARDS SHOWN
@@ -2577,7 +2574,7 @@ else:
         st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
         st.rerun()
 
-# =================================================================== 
+# ===================================================================
 # FOOTER
 # ===================================================================
 
@@ -2588,10 +2585,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Auto-rerun
+# ===================================================================
+# AUTO-RERUN - INSTANT RESPONSE (ZERO DELAY)
+# ===================================================================
+
+# Check if we need to rerun for game state updates
 if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
-    time.sleep(0.5)
     st.rerun()
 elif st.session_state.selected_card is None and not st.session_state.game_started:
-    time.sleep(0.5)
     st.rerun()
