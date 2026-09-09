@@ -1502,7 +1502,7 @@ def display_master_board():
 def render_card_selection():
     """Render card selection grid with Cards per row selector (default 4)"""
     
-    # Sync with global data first - ALWAYS sync to get latest updates
+    # Sync with global data first
     sync_global_cards()
     
     # Calculate remaining time based on global timer start
@@ -1511,19 +1511,18 @@ def render_card_selection():
     remaining = max(0, st.session_state.card_selection_time - elapsed)
     st.session_state.card_selection_time = remaining
     
-    # FORMAT TIME: "0:44" (no leading zeros for minutes)
+    # FORMAT TIME: "0:44"
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes}:{seconds:02d}"
     
-    # Get balance from session state
+    # Get balance
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # === GLOBAL CARD COUNTS ===
+    # Global card counts
     total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
-    available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
     
@@ -1538,7 +1537,7 @@ def render_card_selection():
         color = "#FFD700"
     
     # ================================================================
-    # INFO BAR - FIRST ATTACHMENT STYLE
+    # INFO BAR
     # ================================================================
     
     st.markdown(f"""
@@ -1594,12 +1593,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # FIX: Added unique key to selectbox
+    # UNIQUE KEY for selectbox
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        key="cards_per_row_selector",  # UNIQUE KEY FIX
+        key=f"cards_per_row_{st.session_state.current_user}",
         help="Select how many cards to display per row"
     )
     
@@ -1609,7 +1608,7 @@ def render_card_selection():
         st.rerun()
     
     # ================================================================
-    # CREATE GRID USING SELECTED NUMBER OF COLUMNS
+    # CREATE GRID - CARDS WITH CIRCLE + CHECKMARK ON THE BUTTON
     # ================================================================
     
     cols_per_row = st.session_state.columns_per_row
@@ -1620,32 +1619,34 @@ def render_card_selection():
         with cols[col_idx]:
             is_clicked = i in st.session_state.clicked_numbers
             is_taken_by_others = i in st.session_state.taken_cards and not is_clicked
-            
-            # A card is disabled ONLY if it's taken by someone else (not you)
             is_disabled = is_taken_by_others
             
             # Determine button style based on state
             if is_clicked:
-                # SELECTED CARD - Green circle with checkmark
+                # SELECTED CARD - Green circle with checkmark inside the button
                 btn_type = "primary"
-                # Use HTML with circle and checkmark
                 button_html = f"""
                 <style>
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
-                        background: rgba(76, 175, 80, 0.3) !important;
+                        background: rgba(76, 175, 80, 0.25) !important;
                         border: 3px solid #4CAF50 !important;
                         color: #FFFFFF !important;
                         font-weight: bold !important;
-                        box-shadow: 0 0 30px rgba(76, 175, 80, 0.3) !important;
+                        box-shadow: 0 0 30px rgba(76, 175, 80, 0.25) !important;
                         transform: scale(1.02);
-                        position: relative !important;
-                        padding: 6px 4px !important;
+                        padding: 4px 2px !important;
+                        min-height: 44px !important;
+                        height: 44px !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .card-content {{
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
                         gap: 6px !important;
+                        width: 100% !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .circle-number {{
                         display: inline-flex !important;
@@ -1659,19 +1660,21 @@ def render_card_selection():
                         font-weight: bold !important;
                         font-size: 0.9rem !important;
                         border: 2px solid #2E7D32 !important;
+                        flex-shrink: 0 !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .checkmark {{
                         display: inline-flex !important;
                         align-items: center !important;
                         justify-content: center !important;
                         color: #4CAF50 !important;
-                        font-size: 1.2rem !important;
+                        font-size: 1.3rem !important;
                         font-weight: bold !important;
+                        flex-shrink: 0 !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
-                        background: rgba(255, 80, 80, 0.3) !important;
+                        background: rgba(255, 80, 80, 0.25) !important;
                         border: 3px solid #FF4444 !important;
-                        box-shadow: 0 0 30px rgba(255, 68, 68, 0.3) !important;
+                        box-shadow: 0 0 30px rgba(255, 68, 68, 0.25) !important;
                         transform: scale(1.05);
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover .circle-number {{
@@ -1684,7 +1687,7 @@ def render_card_selection():
                 </style>
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
-                # Custom label with circle and checkmark
+                # Label with circle + number + checkmark
                 label = f'<span class="card-content"><span class="circle-number">{i}</span><span class="checkmark">✓</span></span>'
                 
             elif is_disabled:
@@ -1710,7 +1713,7 @@ def render_card_selection():
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
             else:
-                # AVAILABLE CARD - Normal (no circle, just number)
+                # AVAILABLE CARD - Normal
                 btn_type = "primary"
                 label = str(i)
                 button_html = f"""
@@ -1719,6 +1722,7 @@ def render_card_selection():
                         background: rgba(255, 255, 255, 0.08) !important;
                         border: 2px solid rgba(255, 255, 255, 0.15) !important;
                         color: #FFFFFF !important;
+                        font-weight: bold !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
                         border-color: #FFD700 !important;
@@ -1748,7 +1752,6 @@ def render_card_selection():
                         del st.session_state.card_owner[str(i)]
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
-                    # Save - timer continues running
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
             else:
@@ -1765,10 +1768,10 @@ def render_card_selection():
                         st.session_state.clicked_numbers.add(i)
                         st.session_state.taken_cards.append(i)
                         st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        # Save - timer continues running
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.rerun()
     
+    # Status messages
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Click a ✅ CHECKED card to DESELECT it. Waiting for other players... ⏳")
     elif len(st.session_state.clicked_numbers) > 0:
@@ -1776,37 +1779,7 @@ def render_card_selection():
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
-    # Show selected cards preview with deselect buttons
-    if len(st.session_state.clicked_numbers) > 0:
-        st.markdown("### 📋 Your Selected Cards")
-        selected_list = list(st.session_state.clicked_numbers)
-        selected_cols = st.columns(min(len(selected_list), 4))
-        for idx, card_id in enumerate(selected_list):
-            col_idx = idx % 4
-            with selected_cols[col_idx]:
-                st.markdown(f"""
-                <div style="background:rgba(76,175,80,0.15);border:2px solid #4CAF50;border-radius:10px;padding:10px;text-align:center;margin-bottom:5px;">
-                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-                        <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#4CAF50;color:white;font-weight:bold;font-size:1rem;border:2px solid #2E7D32;">{card_id}</span>
-                        <span style="color:#4CAF50;font-size:1.3rem;font-weight:bold;">✓</span>
-                    </div>
-                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:4px;">Card #{card_id}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("✖ Deselect", key=f"deselect_btn_{card_id}", use_container_width=True):
-                    # Deselect this card - timer continues
-                    if card_id in st.session_state.clicked_numbers:
-                        st.session_state.clicked_numbers.remove(card_id)
-                        if card_id in st.session_state.taken_cards:
-                            st.session_state.taken_cards.remove(card_id)
-                        if str(card_id) in st.session_state.card_owner:
-                            del st.session_state.card_owner[str(card_id)]
-                        if st.session_state.selected_card == card_id:
-                            st.session_state.selected_card = None
-                        # IMPORTANT: Timer continues - NO timer reset!
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                        st.rerun()
-    
+    # Progress bar
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
     
