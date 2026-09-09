@@ -1711,7 +1711,7 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
-        st.info(f"📝 Click a number to SELECT. Click 🟢 GREEN number again to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
+        st.info(f"📝 Click a number to SELECT (green). Click GREEN number again to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
     
     cols_per_row = st.session_state.columns_per_row
     
@@ -1896,15 +1896,17 @@ def render_card_selection():
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             
-            # Card is disabled if taken by someone else OR if player already has 2 cards and this isn't one of theirs
+            # A card is disabled if:
+            # 1. Taken by someone else (taken AND not clicked by current user)
+            # 2. Player already has 2 cards AND this card is NOT one of theirs
             # IMPORTANT: When is_clicked is True, the card should NOT be disabled (so user can deselect it)
             is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
             has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
             
             if is_clicked:
+                # SELECTED CARD - Green with DESELECT option
                 btn_type = "secondary"
-                # SHOW: Selected card with DESELECT option
-                label = f"🟢{i} ✖"
+                label = f"🟢 {i} ✓"
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
@@ -1915,7 +1917,7 @@ def render_card_selection():
                         border-width: 3px !important;
                         cursor: pointer !important;
                         transition: all 0.1s ease !important;
-                        font-size: 0.5rem !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
                         min-height: 24px !important;
                         height: 24px !important;
@@ -1940,8 +1942,9 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             elif is_taken:
+                # Card taken by someone else - DISABLED
                 btn_type = "secondary"
-                label = str(i)
+                label = f"🔒 {i}"
                 owner_name = st.session_state.card_owner.get(str(i), "Unknown")
                 st.markdown(f"""
                 <style>
@@ -1951,7 +1954,7 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.3) !important;
                         cursor: not-allowed !important;
                         opacity: 0.5 !important;
-                        font-size: 0.45rem !important;
+                        font-size: 0.5rem !important;
                         padding: 2px 1px !important;
                         min-height: 22px !important;
                         height: 22px !important;
@@ -1966,10 +1969,12 @@ def render_card_selection():
                     }}
                 </style>
                 """, unsafe_allow_html=True)
+                # Show owner name as caption
                 st.caption(f"Taken by: {owner_name}")
             elif has_insufficient_balance:
+                # Insufficient balance - DISABLED
                 btn_type = "secondary"
-                label = str(i)
+                label = f"⛔ {i}"
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
@@ -1978,7 +1983,7 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.4) !important;
                         cursor: not-allowed !important;
                         opacity: 0.6 !important;
-                        font-size: 0.5rem !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
                         min-height: 24px !important;
                         height: 24px !important;
@@ -1994,12 +1999,13 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             else:
+                # AVAILABLE CARD - Click to select
                 btn_type = "primary"
-                label = str(i)
+                label = f"⬜ {i}"
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                        font-size: 0.5rem !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
                         min-height: 24px !important;
                         height: 24px !important;
@@ -2024,7 +2030,7 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             
-            # Button is clickable for both SELECT and DESELECT at its own location
+            # ONE BUTTON per card - Click to SELECT or DESELECT (toggle)
             if st.button(
                 label,
                 key=f"card_{i}_{st.session_state.current_user}",
@@ -2033,7 +2039,7 @@ def render_card_selection():
                 disabled=is_disabled or has_insufficient_balance
             ):
                 if is_clicked:
-                    # DESELECT - Clicking a selected card deselects it with refund
+                    # DESELECT - Clicking a selected card deselects it (refund)
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -2067,9 +2073,9 @@ def render_card_selection():
                             st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Click a 🟢 GREEN card with ✖ to DESELECT it (refund 10 ETB).")
+        st.success("✅ Maximum 2 cards selected! Click a 🟢 GREEN card to DESELECT it (refund 10 ETB).")
     elif len(st.session_state.clicked_numbers) > 0:
-        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 GREEN card with ✖ to DESELECT it (refund 10 ETB)")
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 GREEN card to DESELECT it (refund 10 ETB)")
     else:
         if balance < 10:
             st.warning("⚠️ Insufficient balance! You need at least 10 ETB to select a card.")
