@@ -2175,7 +2175,7 @@ if st.session_state.game_started:
         
         with cards_col:
             if all_player_cards:
-                st.markdown("### 📋🍀 የእርስዎ ካርቶች")
+                st.markdown("### 📋🍀 የእርስዎ ካርቴላ")
                 # Display each player card
                 for card_id in all_player_cards:
                     display_selected_card(card_id, list(st.session_state.called_numbers), False)
