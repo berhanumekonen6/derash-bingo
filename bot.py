@@ -15,6 +15,7 @@ BOT_TOKEN = "8976887607:AAHPLbIKWkSr0Yjbab_Ebhk6V--cRwNi4Eo"
 GAME_LINK = "https://tinyurl.com/u8ctbvr6"
 TELEBIRR_NUMBER = "0905527481"
 ADMIN_USERNAME = "@berhanumekonen6"
+BOT_USERNAME = "@DerashBingoPlayBot"
 
 # === MAIN MENU ===
 def get_main_menu():
@@ -24,7 +25,7 @@ def get_main_menu():
         [InlineKeyboardButton("💸 Withdraw (ወጪ)", callback_data="withdraw")],
         [InlineKeyboardButton("🎯 Play Game", url=GAME_LINK)],
         [InlineKeyboardButton("❓ How to Play", callback_data="howto")],
-        [InlineKeyboardButton("🆘 Support", callback_data="support")],
+        [InlineKeyboardButton("🆘 Support / መረጃ", callback_data="support")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -79,7 +80,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
    → Click "🎯 Play Game" button
 
 🆘 Need more help?
-   → Click "Support" or contact {ADMIN_USERNAME}
+   → Click "Support / መረጃ" or contact {ADMIN_USERNAME}
 ━━━━━━━━━━━━━━━━━━━
 """
     await update.message.reply_text(help_text)
@@ -170,7 +171,7 @@ async def deposit_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ━━━━━━━━━━━━━━━━━━━
 📸 After payment, send screenshot here:
-👉 @DerashBingoPlayBot
+👉 {BOT_USERNAME}
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
@@ -305,7 +306,7 @@ async def withdraw_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Send confirmation to user
     await update.message.reply_text(confirmation_text, reply_markup=get_main_menu())
     
-    # Send notification to admin (you can enable this for admin notifications)
+    # Send notification to admin
     admin_notification = f"""
 🔔 NEW WITHDRAWAL REQUEST!
 
@@ -339,38 +340,53 @@ async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_main_menu()
     )
 
-# === SUPPORT BUTTON - AMHARIC ===
+# === SUPPORT BUTTON - UPDATED WITH FULL AMHARIC INFORMATION ===
 async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
-🆘 ምን እናግዘዎ!?
+🆘 መረጃ እና ድጋፍ (Information & Support)
+
+━━━━━━━━━━━━━━━━━━━
+📌 ለመረጃ (ለምሳሌ ለመመዝገብ፤ ለመጫዎት፤ ወጭና ገቢ): {BOT_USERNAME}
+
+━━━━━━━━━━━━━━━━━━━
+📋 አጭር መመሪያ:
+
+📝 ለመመዝገብ:
+   → "📝 Register" ይጫኑ
+
+💰 ገንዘብ ለመጨመር (Deposit):
+   → "💰 Deposit / Pay" ይጫኑ
+   → በቴሌብር ወደ {TELEBIRR_NUMBER} ይላኩ
+   → ማረጋገጫ ስክሪንሾት ይላኩ
+
+💸 ገንዘብ ለማውጣት (Withdraw):
+   → "💸 Withdraw (ወጪ)" ይጫኑ
+   → /withdraw amount ይላኩ
+   ምሳሌ: /withdraw 50
+
+🎯 ለመጫወት:
+   → "🎯 Play Game" ይጫኑ
+   → በስምዎ እና ይለፍቃድዎ ይግቡ
+   → ካርድ ይምረጡ (እስከ 2)
+   → ቁጥሮች ሲጠሩ ይጠብቁ
+   → ቢንጎ ሲሆን ያሸንፉ! 🎉
+
+━━━━━━━━━━━━━━━━━━━
+📌 ህጎች:
+✅ በአንድ ተጫዋች እስከ 2 ካርዶች
+✅ አንድ ካርድ: 10 ETB
+✅ ሽልማት: 8 ETB በአንድ ካርድ
+✅ 201 ካርዶች ይገኛሉ
+✅ በየ2 ሰከንድ አውቶማቲክ ቁጥር ይጠራል
 
 ━━━━━━━━━━━━━━━━━━━
 📞 ቴሌብር: {TELEBIRR_NUMBER}
-🤖 ቻትቦት: @DerashBingoPlayBot
+🤖 ቻትቦት: {BOT_USERNAME}
+👤 አስተዳዳሪ: {ADMIN_USERNAME}
 🎯 ጨዋታ: {GAME_LINK}
 
 ━━━━━━━━━━━━━━━━━━━
-❓ ተዘውትረው የሚጠየቁ ጥያቄዎች:
-
-ጥ: እንዴት መመዝገብ እንደሚቻል?
-መ: "📝 Register" ይጫኑ
-
-ጥ: እንዴት ባላንስ መጨመር እንደሚቻል?
-መ: "💰 Deposit / Pay" ይጫኑ
-
-ጥ: እንዴት ገንዘብ ማውጣት (withdraw) እንደሚቻል?
-መ: "💸 Withdraw (ወጪ)" ይጫኑ
-ወይም /withdraw amount ይላኩ
-ምሳሌ: /withdraw 50
-
-ጥ: እንዴት መጫወት እንደሚቻል?
-መ: "🎯 Play Game" ይጫኑ
-
-━━━━━━━━━━━━━━━━━━━
-👤 አስተዳዳሪ: {ADMIN_USERNAME}
-📞 ስልክ: {TELEBIRR_NUMBER}
-
-💬 ጥያቄዎን እዚህ ይጠይቁ! 😊
+💬 ማንኛውም ጥያቄ ካለዎት እዚህ ይጠይቁ! 😊
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
@@ -384,7 +400,8 @@ async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📝 Format: /register username FullName Phone Password\n"
             f"📌 Example: /register john 'John Doe' 0912345678 mypassword\n\n"
             f"💰 After registration, deposit to get balance!\n"
-            f"📞 Telebirr: {TELEBIRR_NUMBER}"
+            f"📞 Telebirr: {TELEBIRR_NUMBER}\n\n"
+            f"📌 ለመረጃ: {BOT_USERNAME}"
         )
         return
     
@@ -418,6 +435,8 @@ async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💰 Telebirr: {TELEBIRR_NUMBER}
 
 🎉 Welcome to Derash BINGO! 🎉
+
+📌 ለመረጃ: {BOT_USERNAME}
 """,
         reply_markup=get_main_menu()
     )
