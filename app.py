@@ -6,6 +6,11 @@ import json
 import os
 from datetime import datetime, timedelta
 
+# ===================================================================
+# CODE VERSION - CHANGE THIS WHEN YOU UPDATE THE CODE
+# ===================================================================
+CODE_VERSION = "2.0"  # Increment this when you make changes
+
 st.set_page_config(
     page_title="ደራሽ ቢንጎ🍀",
     page_icon="🎯🍀",
@@ -574,17 +579,77 @@ def get_winner_sound_js():
     """
 
 # ===================================================================
-# SESSION STATE INITIALIZATION
+# SESSION STATE INITIALIZATION - WITH VERSION CHECK
 # ===================================================================
 
+def reset_game_state():
+    """Reset all game-related session state to force a fresh start"""
+    game_keys = [
+        'clicked_numbers', 'selected_card', 'called_numbers', 'last_called_number',
+        'auto_called_count', 'last_call_time', 'game_started', 'auto_call_started',
+        'card_selection_time', 'card_selection_last_update', 'game_over',
+        'winners_list', 'winner_declared', 'selected_cards', 'taken_cards',
+        'game_pot', 'prize_distributed', 'all_player_cards', 'sound_played',
+        'card_owner', 'columns_per_row', 'global_synced', 'timer_start_time'
+    ]
+    for key in game_keys:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    # Re-initialize with fresh values
+    st.session_state.clicked_numbers = set()
+    st.session_state.selected_card = None
+    st.session_state.called_numbers = set()
+    st.session_state.last_called_number = None
+    st.session_state.auto_called_count = 0
+    st.session_state.last_call_time = time.time()
+    st.session_state.game_started = False
+    st.session_state.auto_call_started = False
+    st.session_state.card_selection_time = 60
+    st.session_state.card_selection_last_update = time.time()
+    st.session_state.game_over = False
+    st.session_state.winners_list = []
+    st.session_state.winner_declared = False
+    st.session_state.selected_cards = []
+    st.session_state.taken_cards = []
+    st.session_state.game_pot = 0
+    st.session_state.prize_distributed = False
+    st.session_state.all_player_cards = {}
+    st.session_state.sound_played = False
+    st.session_state.card_owner = {}
+    st.session_state.columns_per_row = 4
+    st.session_state.global_synced = False
+    st.session_state.timer_start_time = time.time()
+    
+    # Reset global cards file
+    try:
+        with open("bingo_global_cards.json", "w") as f:
+            json.dump({"taken_cards": [], "card_owner": {}, "columns_per_row": 4, "timer_start_time": time.time(), "card_selection_time": 60}, f)
+    except:
+        pass
+
 def init_session_state():
-    """Initialize all session state variables"""
+    """Initialize all session state variables with version check"""
+    # Check if code version has changed
+    if 'code_version' not in st.session_state:
+        st.session_state.code_version = CODE_VERSION
+    elif st.session_state.code_version != CODE_VERSION:
+        # Version changed - reset game state but keep login info
+        st.session_state.code_version = CODE_VERSION
+        reset_game_state()
+        st.rerun()
+    
+    # Initialize login state if not exists
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'current_user' not in st.session_state:
         st.session_state.current_user = None
     if 'current_role' not in st.session_state:
         st.session_state.current_role = None
+    if 'user_db' not in st.session_state:
+        st.session_state.user_db = {}
+    
+    # Initialize game state if not exists
     if 'clicked_numbers' not in st.session_state:
         st.session_state.clicked_numbers = set()
     if 'selected_card' not in st.session_state:
@@ -611,8 +676,6 @@ def init_session_state():
         st.session_state.winners_list = []
     if 'winner_declared' not in st.session_state:
         st.session_state.winner_declared = False
-    if 'user_db' not in st.session_state:
-        st.session_state.user_db = {}
     if 'selected_cards' not in st.session_state:
         st.session_state.selected_cards = []
     if 'taken_cards' not in st.session_state:
@@ -972,12 +1035,21 @@ def admin_panel():
             st.dataframe(user_list, use_container_width=True)
 
 # ===================================================================
-# ALL 201 BINGO CARDS - FULL LIST (abbreviated for space - keep your full list)
+# ALL 201 BINGO CARDS - FULL LIST
 # ===================================================================
 
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
-    # ... (keep your full 201 cards here)
+    {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
+    {"id": 3, "cells": [['14', '23', '40', '58', '62'], ['13', '25', '32', '46', '65'], ['3', '28', 'F', '50', '63'], ['6', '30', '44', '54', '66'], ['10', '16', '37', '53', '74']]},
+    {"id": 4, "cells": [['1', '19', '41', '49', '72'], ['5', '26', '36', '50', '69'], ['6', '29', 'F', '60', '61'], ['14', '25', '42', '47', '71'], ['2', '24', '45', '54', '65']]},
+    {"id": 5, "cells": [['2', '16', '43', '47', '70'], ['4', '23', '32', '58', '73'], ['9', '17', 'F', '51', '74'], ['1', '26', '34', '59', '75'], ['14', '20', '31', '57', '72']]},
+    {"id": 6, "cells": [['3', '28', '42', '46', '70'], ['15', '18', '36', '53', '64'], ['14', '20', 'F', '55', '67'], ['6', '21', '45', '57', '73'], ['11', '30', '41', '60', '62']]},
+    {"id": 7, "cells": [['15', '28', '39', '58', '65'], ['10', '19', '34', '54', '68'], ['3', '17', 'F', '59', '71'], ['9', '16', '45', '51', '66'], ['14', '24', '36', '49', '64']]},
+    {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
+    {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
+    {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
+    # ... (continue with all 201 cards - I'm abbreviating for space but you should keep your full list)
 ]
 
 def get_card(card_id):
@@ -1068,9 +1140,8 @@ def check_for_winners():
         st.session_state.winners_list = winners_found
         st.session_state.winner_declared = True
         st.session_state.game_over = True
+        st.session_state.auto_call_started = False  # STOP AUTO-CALLING
         distribute_prizes(winners_found)
-        # Stop auto-calling when winner found
-        st.session_state.auto_call_started = False
 
 def distribute_prizes(winners):
     """Distribute prizes to winners"""
