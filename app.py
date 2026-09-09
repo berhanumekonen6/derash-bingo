@@ -1,28 +1,6 @@
 
 
-# ===================================================================
-# CODE VERSION - CHANGE THIS WHEN YOU UPDATE THE CODE
-# ===================================================================
-CODE_VERSION = "2.3"
 
-st.set_page_config(
-    page_title="ደራሽ ቢንጎ🍀",
-    page_icon="🎯🍀",
-    layout="wide"
-)
-
-# ===================================================================
-# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
-# ===================================================================
-
-st.markdown("""
-<style>
-    /* Green Gradient Background */
-    .stApp {
-        background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50);
-        background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
-    }
     @keyframes gradientBG {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
