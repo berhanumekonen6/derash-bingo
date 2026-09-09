@@ -1570,7 +1570,7 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
-        st.info(f"📝 Select your cards (max 2). Click 🟢 GREEN card to DESELECT. {int(remaining)} seconds remaining ⏳")
+        st.info(f"📝 Select your cards (max 2). Click ✅ CHECKED card to DESELECT. {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
     # CARDS PER ROW DROPDOWN
@@ -1622,31 +1622,69 @@ def render_card_selection():
             # A card is disabled ONLY if it's taken by someone else (not you)
             is_disabled = is_taken_by_others
             
-            # Determine button style
+            # Determine button style based on state
             if is_clicked:
-                # SELECTED CARD - Green highlight with bold border
+                # SELECTED CARD - Green circle with checkmark
                 btn_type = "primary"
-                label = str(i)
-                # Use st.button with custom CSS through markdown
+                # Use HTML with circle and checkmark
                 button_html = f"""
                 <style>
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
-                        background: rgba(76, 175, 80, 0.4) !important;
+                        background: rgba(76, 175, 80, 0.3) !important;
                         border: 3px solid #4CAF50 !important;
                         color: #FFFFFF !important;
                         font-weight: bold !important;
-                        box-shadow: 0 0 30px rgba(76, 175, 80, 0.4) !important;
+                        box-shadow: 0 0 30px rgba(76, 175, 80, 0.3) !important;
                         transform: scale(1.02);
+                        position: relative !important;
+                        padding: 6px 4px !important;
+                    }}
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .card-content {{
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        gap: 6px !important;
+                    }}
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .circle-number {{
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        width: 32px !important;
+                        height: 32px !important;
+                        border-radius: 50% !important;
+                        background: #4CAF50 !important;
+                        color: white !important;
+                        font-weight: bold !important;
+                        font-size: 0.9rem !important;
+                        border: 2px solid #2E7D32 !important;
+                    }}
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] .checkmark {{
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        color: #4CAF50 !important;
+                        font-size: 1.2rem !important;
+                        font-weight: bold !important;
                     }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
-                        background: rgba(255, 80, 80, 0.4) !important;
+                        background: rgba(255, 80, 80, 0.3) !important;
                         border: 3px solid #FF4444 !important;
-                        box-shadow: 0 0 30px rgba(255, 68, 68, 0.4) !important;
+                        box-shadow: 0 0 30px rgba(255, 68, 68, 0.3) !important;
                         transform: scale(1.05);
+                    }}
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover .circle-number {{
+                        background: #FF4444 !important;
+                        border-color: #B71C1C !important;
+                    }}
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover .checkmark {{
+                        color: #FF4444 !important;
                     }}
                 </style>
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
+                # Custom label with circle and checkmark
+                label = f'<span class="card-content"><span class="circle-number">{i}</span><span class="checkmark">✓</span></span>'
+                
             elif is_disabled:
                 # DISABLED CARD - Taken by someone else (grayed out)
                 btn_type = "secondary"
@@ -1670,11 +1708,16 @@ def render_card_selection():
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
             else:
-                # AVAILABLE CARD - Normal
+                # AVAILABLE CARD - Normal (no circle, just number)
                 btn_type = "primary"
                 label = str(i)
                 button_html = f"""
                 <style>
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
+                        background: rgba(255, 255, 255, 0.08) !important;
+                        border: 2px solid rgba(255, 255, 255, 0.15) !important;
+                        color: #FFFFFF !important;
+                    }}
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
                         border-color: #FFD700 !important;
                         background: rgba(255, 215, 0, 0.2) !important;
@@ -1716,26 +1759,27 @@ def render_card_selection():
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Click a 🟢 GREEN card to DESELECT it. Waiting for other players... ⏳")
+        st.success("✅ Maximum 2 cards selected! Click a ✅ CHECKED card to DESELECT it. Waiting for other players... ⏳")
     elif len(st.session_state.clicked_numbers) > 0:
-        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 GREEN card to DESELECT it")
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a ✅ CHECKED card to DESELECT it")
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
     # Show selected cards preview with deselect buttons
     if len(st.session_state.clicked_numbers) > 0:
         st.markdown("### 📋 Your Selected Cards")
-        # Display selected cards in a row
         selected_list = list(st.session_state.clicked_numbers)
         selected_cols = st.columns(min(len(selected_list), 4))
         for idx, card_id in enumerate(selected_list):
             col_idx = idx % 4
             with selected_cols[col_idx]:
                 st.markdown(f"""
-                <div style="background:rgba(76,175,80,0.2);border:2px solid #4CAF50;border-radius:8px;padding:8px 12px;text-align:center;color:#4CAF50;font-weight:bold;margin-bottom:5px;">
-                    🃏 Card #{card_id}
-                    <br>
-                    <span style="font-size:0.7rem;color:rgba(255,255,255,0.5);">(Click to deselect)</span>
+                <div style="background:rgba(76,175,80,0.15);border:2px solid #4CAF50;border-radius:10px;padding:10px;text-align:center;margin-bottom:5px;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#4CAF50;color:white;font-weight:bold;font-size:1rem;border:2px solid #2E7D32;">{card_id}</span>
+                        <span style="color:#4CAF50;font-size:1.3rem;font-weight:bold;">✓</span>
+                    </div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:4px;">Card #{card_id}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("✖ Deselect", key=f"deselect_btn_{card_id}", use_container_width=True):
