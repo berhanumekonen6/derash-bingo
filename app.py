@@ -1713,12 +1713,122 @@ def render_card_selection():
     else:
         st.info(f"📝 Click a number to SELECT. Click 🟢 GREEN number to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
     
-    # Use a container with higher rerun threshold - only rerun when user interacts
+    # FORCE EXACT COLUMNS ON ALL DEVICES - NO MEDIA QUERY OVERRIDES
     cols_per_row = st.session_state.columns_per_row
-    cols = st.columns(cols_per_row)
     
-    # Track if any action was taken
-    action_taken = False
+    # Use CSS Grid with !important to force exact columns on ALL devices
+    st.markdown(f"""
+    <style>
+        /* FORCE EXACT COLUMNS ON ALL DEVICES - NO EXCEPTIONS */
+        .card-grid-container {{
+            display: grid !important;
+            grid-template-columns: repeat({cols_per_row}, 1fr) !important;
+            gap: 4px !important;
+            padding: 4px 0 !important;
+            width: 100% !important;
+        }}
+        .card-grid-container .card-item {{
+            width: 100% !important;
+            min-width: 0 !important;
+        }}
+        .card-grid-container .card-item button {{
+            width: 100% !important;
+            padding: 4px 2px !important;
+            font-size: 0.65rem !important;
+            min-height: 28px !important;
+            height: 28px !important;
+            border-radius: 6px !important;
+            margin: 0 !important;
+            text-align: center !important;
+            font-weight: bold !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #FFFFFF !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            font-family: Arial, sans-serif !important;
+            box-sizing: border-box !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1 !important;
+        }}
+        .card-grid-container .card-item button:hover:not(:disabled) {{
+            border-color: #FFD700 !important;
+            background: rgba(255, 215, 0, 0.2) !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+            transform: scale(1.05) !important;
+            z-index: 10 !important;
+        }}
+        .card-grid-container .card-item button:active {{
+            transform: scale(0.95) !important;
+        }}
+        .card-grid-container .card-item .selected-btn {{
+            border-color: #4CAF50 !important;
+            background: rgba(76, 175, 80, 0.35) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+            border-width: 3px !important;
+        }}
+        .card-grid-container .card-item .selected-btn:hover {{
+            border-color: #FF6B6B !important;
+            background: rgba(255, 80, 80, 0.3) !important;
+            box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
+        }}
+        .card-grid-container .card-item .taken-btn {{
+            border-color: rgba(255, 0, 0, 0.2) !important;
+            background: rgba(255, 0, 0, 0.15) !important;
+            color: rgba(255, 255, 255, 0.3) !important;
+            cursor: not-allowed !important;
+            opacity: 0.5 !important;
+        }}
+        .card-grid-container .card-item .taken-btn:hover {{
+            transform: none !important;
+            border-color: rgba(255, 0, 0, 0.2) !important;
+            background: rgba(255, 0, 0, 0.15) !important;
+            box-shadow: none !important;
+        }}
+        .card-grid-container .card-item .insufficient-btn {{
+            border-color: rgba(255, 165, 0, 0.3) !important;
+            background: rgba(255, 165, 0, 0.15) !important;
+            color: rgba(255, 255, 255, 0.4) !important;
+            cursor: not-allowed !important;
+            opacity: 0.6 !important;
+        }}
+        .card-grid-container .card-item .insufficient-btn:hover {{
+            transform: none !important;
+            border-color: rgba(255, 165, 0, 0.3) !important;
+            background: rgba(255, 165, 0, 0.15) !important;
+            box-shadow: none !important;
+        }}
+        .card-grid-container .card-item .available-btn:hover {{
+            border-color: #FFD700 !important;
+            background: rgba(255, 215, 0, 0.2) !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+            transform: scale(1.05) !important;
+        }}
+        /* OVERRIDE ANY MOBILE MEDIA QUERIES - FORCE EXACT COLUMNS */
+        @media (max-width: 768px), (max-width: 480px), (max-width: 360px) {{
+            .card-grid-container {{
+                grid-template-columns: repeat({cols_per_row}, 1fr) !important;
+                gap: 3px !important;
+            }}
+            .card-grid-container .card-item button {{
+                font-size: 0.5rem !important;
+                min-height: 22px !important;
+                height: 22px !important;
+                padding: 1px 1px !important;
+                border-width: 1.5px !important;
+            }}
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Build the grid with actual Streamlit buttons using columns
+    # We need to use st.columns with the exact number
+    cols = st.columns(cols_per_row)
     
     for i in range(1, 202):
         col_idx = (i - 1) % cols_per_row
@@ -1731,10 +1841,11 @@ def render_card_selection():
             
             if is_clicked:
                 btn_type = "secondary"
-                label = f"🟢 {i}"
+                label = f"🟢{i}"
+                # Use custom styling to make it green
                 st.markdown(f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
                         border-color: #4CAF50 !important;
                         background: rgba(76, 175, 80, 0.35) !important;
                         color: #FFFFFF !important;
@@ -1742,15 +1853,16 @@ def render_card_selection():
                         border-width: 3px !important;
                         cursor: pointer !important;
                         transition: all 0.3s ease !important;
-                        font-size: 0.7rem !important;
-                        padding: 2px 2px !important;
-                        min-height: 30px !important;
-                        height: 30px !important;
+                        font-size: 0.5rem !important;
+                        padding: 2px 1px !important;
+                        min-height: 22px !important;
+                        height: 22px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
+                        line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
                         border-color: #FF6B6B !important;
                         background: rgba(255, 80, 80, 0.3) !important;
                         box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
@@ -1764,21 +1876,22 @@ def render_card_selection():
                 label = str(i)
                 st.markdown(f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
                         border-color: rgba(255, 0, 0, 0.2) !important;
                         background: rgba(255, 0, 0, 0.15) !important;
                         color: rgba(255, 255, 255, 0.3) !important;
                         cursor: not-allowed !important;
                         opacity: 0.5 !important;
-                        font-size: 0.6rem !important;
-                        padding: 2px 2px !important;
-                        min-height: 24px !important;
-                        height: 24px !important;
+                        font-size: 0.45rem !important;
+                        padding: 2px 1px !important;
+                        min-height: 20px !important;
+                        height: 20px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
+                        line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
                         transform: none !important;
                         border-color: rgba(255, 0, 0, 0.2) !important;
                         background: rgba(255, 0, 0, 0.15) !important;
@@ -1791,21 +1904,22 @@ def render_card_selection():
                 label = str(i)
                 st.markdown(f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
                         border-color: rgba(255, 165, 0, 0.3) !important;
                         background: rgba(255, 165, 0, 0.15) !important;
                         color: rgba(255, 255, 255, 0.4) !important;
                         cursor: not-allowed !important;
                         opacity: 0.6 !important;
-                        font-size: 0.7rem !important;
-                        padding: 2px 2px !important;
-                        min-height: 30px !important;
-                        height: 30px !important;
+                        font-size: 0.5rem !important;
+                        padding: 2px 1px !important;
+                        min-height: 22px !important;
+                        height: 22px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
+                        line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
                         transform: none !important;
                         border-color: rgba(255, 165, 0, 0.3) !important;
                         background: rgba(255, 165, 0, 0.15) !important;
@@ -1818,16 +1932,17 @@ def render_card_selection():
                 label = str(i)
                 st.markdown(f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
-                        font-size: 0.7rem !important;
-                        padding: 2px 2px !important;
-                        min-height: 30px !important;
-                        height: 30px !important;
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
+                        font-size: 0.5rem !important;
+                        padding: 2px 1px !important;
+                        min-height: 22px !important;
+                        height: 22px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
+                        line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
                         border-color: #FFD700 !important;
                         background: rgba(255, 215, 0, 0.2) !important;
                         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
@@ -1836,7 +1951,6 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             
-            # Use a unique key that doesn't change with time
             if st.button(
                 label,
                 key=f"card_{i}_{st.session_state.current_user}",
@@ -1859,7 +1973,7 @@ def render_card_selection():
                         save_all_data()
                     
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                    action_taken = True
+                    st.rerun()
                 else:
                     if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
@@ -1872,13 +1986,9 @@ def render_card_selection():
                             st.session_state.card_owner[str(i)] = st.session_state.current_user
                             
                             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                            action_taken = True
+                            st.rerun()
                         else:
                             st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
-    
-    # Only rerun if action was taken, otherwise just update display without rerun
-    if action_taken:
-        st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB).")
