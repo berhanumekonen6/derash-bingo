@@ -13,6 +13,588 @@ st.set_page_config(
 )
 
 # ===================================================================
+# CUSTOM CSS FOR GREEN BACKGROUND AND STYLING
+# ===================================================================
+
+st.markdown("""
+<style>
+    /* Green Gradient Background */
+    .stApp {
+        background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+    }
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    /* Main content background - glass effect */
+    .main-content {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 25px;
+        margin: 10px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Glass morphism effect */
+    .glass-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Motivational quotes */
+    .motivation-box {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.06));
+        border-left: 4px solid #FFD700;
+        padding: 12px 18px;
+        border-radius: 10px;
+        margin: 10px 0;
+        backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 215, 0, 0.1);
+    }
+    .motivation-box .quote {
+        font-size: 1rem;
+        color: #FFD700;
+        font-style: italic;
+        font-family: 'Noto Sans Ethiopic', Arial, sans-serif;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+    }
+    .motivation-box .author {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        margin-top: 3px;
+    }
+    
+    /* Card selection grid */
+    .cards-grid-container {
+        max-height: 450px;
+        overflow-y: auto;
+        padding: 5px;
+        margin: 5px 0;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        width: 100%;
+    }
+    .cards-grid-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    .cards-grid-container::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+    }
+    .cards-grid-container::-webkit-scrollbar-thumb {
+        background: #FFD700;
+        border-radius: 10px;
+    }
+    
+    /* Cards grid - DEFAULT 4 COLUMNS */
+    .cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 4px !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 3px !important;
+        }
+        .card-btn {
+            font-size: 0.55rem !important;
+            min-height: 24px !important;
+            height: 24px !important;
+            padding: 2px 2px !important;
+        }
+        .cards-grid-container {
+            max-height: 350px !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 2px !important;
+        }
+        .card-btn {
+            font-size: 0.45rem !important;
+            min-height: 20px !important;
+            height: 20px !important;
+            padding: 2px 1px !important;
+            border-radius: 3px !important;
+        }
+        .cards-grid-container {
+            max-height: 280px !important;
+        }
+    }
+    
+    @media (max-width: 360px) {
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 2px !important;
+        }
+        .card-btn {
+            font-size: 0.4rem !important;
+            min-height: 18px !important;
+            height: 18px !important;
+            padding: 1px 1px !important;
+            border-radius: 2px !important;
+        }
+        .card-btn .card-price {
+            display: none !important;
+        }
+        .cards-grid-container {
+            max-height: 220px !important;
+        }
+    }
+    
+    @media (orientation: landscape) {
+        .cards-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 4px !important;
+        }
+        .card-btn {
+            font-size: 0.6rem !important;
+            min-height: 26px !important;
+            height: 26px !important;
+            padding: 3px 2px !important;
+        }
+        .cards-grid-container {
+            max-height: 320px !important;
+        }
+    }
+    
+    /* Card buttons - Green theme */
+    .card-btn {
+        width: 100% !important;
+        padding: 3px 2px !important;
+        font-size: 0.65rem !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        line-height: 1 !important;
+        border-radius: 4px !important;
+        margin: 0 !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: bold !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #FFFFFF !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        position: relative !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .card-btn:hover {
+        transform: scale(1.05);
+        border-color: #FFD700 !important;
+        background: rgba(255, 215, 0, 0.15) !important;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.15) !important;
+    }
+    .card-btn:active {
+        transform: scale(0.95);
+    }
+    .card-btn.selected {
+        border-color: #FFD700 !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        color: #FFD700 !important;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.2) !important;
+    }
+    .card-btn.selected .tick-mark {
+        display: inline !important;
+    }
+    .card-btn.taken {
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.1) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+        cursor: not-allowed !important;
+        opacity: 0.6 !important;
+    }
+    .card-btn.taken:hover {
+        transform: none !important;
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.1) !important;
+        box-shadow: none !important;
+    }
+    .card-btn .tick-mark {
+        display: none;
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        font-size: 0.5rem;
+        color: #4CAF50;
+        background: #ffffff;
+        border-radius: 50%;
+        padding: 1px 3px;
+        border: 1px solid #4CAF50;
+        line-height: 1;
+    }
+    .card-btn .card-price {
+        font-size: 0.35rem !important;
+        opacity: 0.6;
+        margin-top: 1px;
+        line-height: 1;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    /* Fix for mobile columns - override Streamlit */
+    .stColumn {
+        padding: 0 !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+    }
+    
+    /* Hide Streamlit's column wrappers for the grid */
+    .row-widget.stColumns {
+        display: none !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #FFD700, #FFA500);
+        border-radius: 10px;
+    }
+    
+    /* Text colors for green theme */
+    h1, h2, h3, h4, p, label, .stMarkdown {
+        color: #FFFFFF !important;
+    }
+    
+    .stInfo, .stSuccess, .stWarning, .stError {
+        background: rgba(0, 0, 0, 0.2) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .stInfo {
+        border-left: 4px solid #2196F3 !important;
+    }
+    .stSuccess {
+        border-left: 4px solid #4CAF50 !important;
+    }
+    .stWarning {
+        border-left: 4px solid #FF9800 !important;
+    }
+    .stError {
+        border-left: 4px solid #F44336 !important;
+    }
+    
+    /* Winner celebration */
+    .winner-glow {
+        animation: winnerPulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes winnerPulse {
+        0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg, .css-1adrfps {
+        background: rgba(0, 0, 0, 0.3) !important;
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    /* Timer display */
+    .header-timer-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid rgba(255, 215, 0, 0.2) !important;
+        border-radius: 15px;
+        padding: 10px 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .timer-display {
+        color: #FFD700 !important;
+        font-weight: bold;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+    .timer-label {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .main-header {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+        }
+        .logo-text h1 {
+            font-size: 1.5rem !important;
+            color: #FFFFFF !important;
+        }
+        .header-timer-container {
+            width: 100% !important;
+            max-width: 300px !important;
+        }
+        .timer-display {
+            font-size: 1.8rem !important;
+        }
+    }
+    
+    /* Card display in game */
+    .card-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* BINGO Board */
+    .board-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 15px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    .board-title {
+        color: #FFD700 !important;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+    }
+    .board-number {
+        color: #FFFFFF !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    .board-number.called {
+        background: rgba(255, 152, 0, 0.25) !important;
+        color: #FFD700 !important;
+        border-color: #FF9800 !important;
+        box-shadow: 0 0 15px rgba(255, 152, 0, 0.15);
+    }
+    .board-number.last-called {
+        background: rgba(229, 57, 53, 0.2) !important;
+        color: #FF6B6B !important;
+        border-color: #E53935 !important;
+        box-shadow: 0 0 20px rgba(229, 57, 53, 0.2);
+    }
+    .board-stats {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    .board-stats strong {
+        color: #FFD700 !important;
+    }
+    
+    /* Called numbers */
+    .called-numbers-container {
+        background: rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+    }
+    .called-numbers-header {
+        color: #FFD700 !important;
+    }
+    .called-number {
+        background: rgba(255, 215, 0, 0.15) !important;
+        color: #FFD700 !important;
+        border: 1px solid rgba(255, 215, 0, 0.1);
+    }
+    .called-number.latest {
+        background: rgba(255, 215, 0, 0.3) !important;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+    
+    /* Game status */
+    .game-status {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border-left: 4px solid #FFD700 !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        margin-top: 15px !important;
+    }
+    .status-message {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Game state indicator */
+    .game-state-indicator {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid rgba(255, 255, 255, 0.1) !important;
+        color: #FFFFFF !important;
+        border-radius: 10px !important;
+        padding: 10px 20px !important;
+        text-align: center !important;
+        font-weight: bold !important;
+    }
+    .game-state-waiting { border-color: #FF9800 !important; color: #FFB74D !important; }
+    .game-state-running { border-color: #4CAF50 !important; color: #81C784 !important; }
+    .game-state-finished { border-color: #FFD700 !important; color: #FFD700 !important; }
+    
+    /* Stat boxes */
+    .stat-box {
+        background: rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+    }
+    .stat-value {
+        color: #FFD700 !important;
+        font-weight: bold !important;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+    }
+    .stat-label {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #1a1a2e !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
+    }
+    
+    /* Sidebar user info */
+    .user-info {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    .user-details h3 {
+        color: #FFFFFF !important;
+    }
+    .user-balance {
+        color: #FFD700 !important;
+    }
+    
+    /* Winner celebration text */
+    .winner-name {
+        color: #FFFFFF !important;
+    }
+    .winner-prize {
+        color: #FFD700 !important;
+    }
+    
+    /* Logo text */
+    .logo-text h1 {
+        -webkit-text-fill-color: #FFFFFF !important;
+        background: none !important;
+        color: #FFFFFF !important;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+    }
+    .logo-text p {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    
+    /* Selected cards preview */
+    .selected-cards-preview {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 215, 0, 0.15) !important;
+    }
+    
+    /* Game controls */
+    .game-controls .btn {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #1a1a2e !important;
+        font-weight: bold !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ===================================================================
+# AUDIO FUNCTIONS - Web Audio API for sound effects
+# ===================================================================
+
+def get_number_sound_js(number):
+    if 1 <= number <= 15:
+        freq = 440
+    elif 16 <= number <= 30:
+        freq = 523
+    elif 31 <= number <= 45:
+        freq = 659
+    elif 46 <= number <= 60:
+        freq = 784
+    else:
+        freq = 880
+    
+    return f"""
+    <script>
+        (function() {{
+            try {{
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.value = {freq};
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            }} catch(e) {{
+                console.log('Audio play failed:', e);
+            }}
+        }})();
+    </script>
+    """
+
+def get_winner_sound_js():
+    return """
+    <script>
+        (function() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [523, 659, 784, 1047];
+                notes.forEach((freq, index) => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime + index * 0.15);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + index * 0.15 + 0.2);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.start(audioCtx.currentTime + index * 0.15);
+                    oscillator.stop(audioCtx.currentTime + index * 0.15 + 0.2);
+                });
+            } catch(e) {
+                console.log('Audio play failed:', e);
+            }
+        })();
+    </script>
+    """
+
+# ===================================================================
 # SESSION STATE INITIALIZATION
 # ===================================================================
 
@@ -56,8 +638,73 @@ def init_session_state():
         st.session_state.selected_cards = []
     if 'taken_cards' not in st.session_state:
         st.session_state.taken_cards = []
+    if 'game_pot' not in st.session_state:
+        st.session_state.game_pot = 0
+    if 'prize_distributed' not in st.session_state:
+        st.session_state.prize_distributed = False
+    if 'all_player_cards' not in st.session_state:
+        st.session_state.all_player_cards = {}
+    if 'sound_played' not in st.session_state:
+        st.session_state.sound_played = False
+    if 'card_owner' not in st.session_state:
+        st.session_state.card_owner = {}
 
 init_session_state()
+
+# ===================================================================
+# GAME CONSTANTS
+# ===================================================================
+
+CARD_PRICE = 10
+PRIZE_PER_CARD = 8
+
+# ===================================================================
+# MOTIVATIONAL QUOTES
+# ===================================================================
+
+MOTIVATIONAL_QUOTES = [
+    {"am": "የቢንጎ ጨዋታ ዕድል እና ተስፋ ነው! 🎯", "en": "BINGO is a game of luck and hope!", "author": "ደራሽ ቢንጎ"},
+    {"am": "እያንዳንዱ ቁጥር ወደ ድል አንድ እርምጃ ነው! 💪", "en": "Every number is a step closer to victory!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ቢንጎ! ማለት ድል ማለት ነው! 🏆", "en": "BINGO means victory!", "author": "ደራሽ ቢንጎ"},
+    {"am": "በትዕግስት እና በእምነት ያሸንፉ! 🌟", "en": "Win with patience and faith!", "author": "ደራሽ ቢንጎ"},
+    {"am": "ዕድላችሁ ይምራላችሁ! 🍀", "en": "May luck be on your side!", "author": "ደራሽ ቢንጎ"},
+    {"am": "አንድ ቁጥር ሕይወትን ይለውጣል! ✨", "en": "One number can change everything!", "author": "ደራሽ ቢንጎ"},
+]
+
+def get_random_quote():
+    return random.choice(MOTIVATIONAL_QUOTES)
+
+def get_amharic_number(num):
+    amharic_numbers = {
+        1: "አንድ", 2: "ሁለት", 3: "ሶስት", 4: "አራት", 5: "አምስት",
+        6: "ስድስት", 7: "ሰባት", 8: "ስምንት", 9: "ዘጠኝ", 10: "አስር",
+        11: "አስራ አንድ", 12: "አስራ ሁለት", 13: "አስራ ሶስት", 14: "አስራ አራት", 15: "አስራ አምስት",
+        16: "አስራ ስድስት", 17: "አስራ ሰባት", 18: "አስራ ስምንት", 19: "አስራ ዘጠኝ", 20: "ሃያ",
+        21: "ሃያ አንድ", 22: "ሃያ ሁለት", 23: "ሃያ ሶስት", 24: "ሃያ አራት", 25: "ሃያ አምስት",
+        26: "ሃያ ስድስት", 27: "ሃያ ሰባት", 28: "ሃያ ስምንት", 29: "ሃያ ዘጠኝ", 30: "ሰላሳ",
+        31: "ሰላሳ አንድ", 32: "ሰላሳ ሁለት", 33: "ሰላሳ ሶስት", 34: "ሰላሳ አራት", 35: "ሰላሳ አምስት",
+        36: "ሰላሳ ስድስት", 37: "ሰላሳ ሰባት", 38: "ሰላሳ ስምንት", 39: "ሰላሳ ዘጠኝ", 40: "አርባ",
+        41: "አርባ አንድ", 42: "አርባ ሁለት", 43: "አርባ ሶስት", 44: "አርባ አራት", 45: "አርባ አምስት",
+        46: "አርባ ስድስት", 47: "አርባ ሰባት", 48: "አርባ ስምንት", 49: "አርባ ዘጠኝ", 50: "ሃምሳ",
+        51: "ሃምሳ አንድ", 52: "ሃምሳ ሁለት", 53: "ሃምሳ ሶስት", 54: "ሃምሳ አራት", 55: "ሃምሳ አምስት",
+        56: "ሃምሳ ስድስት", 57: "ሃምሳ ሰባት", 58: "ሃምሳ ስምንት", 59: "ሃምሳ ዘጠኝ", 60: "ስድሳ",
+        61: "ስድሳ አንድ", 62: "ስድሳ ሁለት", 63: "ስድሳ ሶስት", 64: "ስድሳ አራት", 65: "ስድሳ አምስት",
+        66: "ስድሳ ስድስት", 67: "ስድሳ ሰባት", 68: "ስድሳ ስምንት", 69: "ስድሳ ዘጠኝ", 70: "ሰባ",
+        71: "ሰባ አንድ", 72: "ሰባ ሁለት", 73: "ሰባ ሶስት", 74: "ሰባ አራት", 75: "ሰባ አምስት"
+    }
+    return amharic_numbers.get(num, str(num))
+
+def get_letter_for_number(num):
+    if 1 <= num <= 15:
+        return "ቢ"
+    elif 16 <= num <= 30:
+        return "አይ"
+    elif 31 <= num <= 45:
+        return "ኤን"
+    elif 46 <= num <= 60:
+        return "ጂ"
+    else:
+        return "ኦ"
 
 # ===================================================================
 # LOCAL FILE STORAGE
@@ -115,11 +762,12 @@ def login_user(username, password):
         if username not in st.session_state.user_db:
             user_data = {
                 "password": hash_password("admin123"),
-                "balance": 1000,
+                "balance": 0,
                 "role": "admin",
                 "name": "Admin",
                 "phone": "",
-                "game_played": 0
+                "game_played": 0,
+                "wins": 0
             }
             st.session_state.user_db[username] = user_data
             save_local_users(st.session_state.user_db)
@@ -157,11 +805,12 @@ def register_user(username, password, name, phone=""):
     
     user_data = {
         "password": hash_password(password),
-        "balance": 100,
+        "balance": 0,
         "role": "player",
         "name": name,
         "phone": phone,
-        "game_played": 0
+        "game_played": 0,
+        "wins": 0
     }
     
     st.session_state.user_db[username] = user_data
@@ -181,8 +830,12 @@ def logout_user():
 
 def admin_panel():
     """Admin panel for managing user balances"""
-    st.markdown("### 🔧 Admin Panel")
-    st.markdown("Manage user balances, view all users.")
+    st.markdown("""
+    <div class="glass-container">
+        <h3 style="color:#FFD700;text-align:center;">🔧 Admin Panel</h3>
+        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances, view all users.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     users = list(st.session_state.user_db.keys())
     users = [u for u in users if u != "admin"]
@@ -197,15 +850,18 @@ def admin_panel():
         user_data = st.session_state.user_db.get(selected_user, {})
         current_balance = user_data.get("balance", 0)
         game_played = user_data.get("game_played", 0)
+        wins = user_data.get("wins", 0)
         name = user_data.get("name", selected_user)
         phone = user_data.get("phone", "")
         
         st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1rem;border-radius:12px;color:white;border:1px solid rgba(255,255,255,0.1);margin-bottom:15px;">
-            <p style="margin:0;font-weight:600;">👤 {name}</p>
-            <p style="margin:5px 0;font-size:0.85rem;">📱 {phone}</p>
+        <div style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,165,0,0.05));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.15);margin-bottom:15px;">
+            <p style="margin:0;font-weight:600;color:#FFD700;">👤 {name}</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 <strong style="color:#FFD700;">{phone if phone else 'Not provided'}</strong></p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">👤 Username: <strong style="color:#FFD700;">{selected_user}</strong></p>
             <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 Current Balance: {current_balance} ETB</p>
-            <p style="margin:5px 0;font-size:0.85rem;">🎮 Games Played: {game_played}</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games Played: {game_played}</p>
+            <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🏆 Wins: {wins}</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -255,6 +911,7 @@ def admin_panel():
                     "Phone": data.get("phone", ""),
                     "Balance": data.get("balance", 0),
                     "Games Played": data.get("game_played", 0),
+                    "Wins": data.get("wins", 0)
                 })
         
         if user_list:
@@ -481,11 +1138,11 @@ def get_card_data(card_id):
     return None
 
 # ===================================================================
-# GAME FUNCTIONS
+# ENHANCED WINNER DETECTION
 # ===================================================================
 
 def check_winning_pattern(card_data, called_numbers):
-    """Check if a card has a winning pattern"""
+    """Check rows, columns, diagonals, and corners"""
     if not called_numbers or not card_data:
         return None
     
@@ -499,22 +1156,35 @@ def check_winning_pattern(card_data, called_numbers):
     # Check rows
     for row in range(5):
         if all(is_marked(card_data[row][col]) for col in range(5)):
-            return {'type': 'row', 'index': row + 1}
+            return {'type': f"Row {row + 1}", 'cells': [card_data[row][col] for col in range(5)]}
     
     # Check columns
     for col in range(5):
         if all(is_marked(card_data[row][col]) for row in range(5)):
             letters = ['B', 'I', 'N', 'G', 'O']
-            return {'type': 'column', 'letter': letters[col]}
+            return {'type': f"Column {letters[col]}", 'cells': [card_data[row][col] for row in range(5)]}
     
     # Check diagonals
     if all(is_marked(card_data[i][i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'main'}
-    
+        return {'type': "Diagonal Main", 'cells': [card_data[i][i] for i in range(5)]}
     if all(is_marked(card_data[i][4 - i]) for i in range(5)):
-        return {'type': 'diagonal', 'direction': 'anti'}
+        return {'type': "Diagonal Anti", 'cells': [card_data[i][4 - i] for i in range(5)]}
+    
+    # Check larger corners
+    large_corners = [card_data[0][0], card_data[0][4], card_data[4][0], card_data[4][4]]
+    if all(is_marked(cell) for cell in large_corners):
+        return {'type': "Large Corners", 'cells': large_corners}
+    
+    # Check smaller corners
+    small_corners = [card_data[1][1], card_data[1][3], card_data[3][1], card_data[3][3]]
+    if all(is_marked(cell) for cell in small_corners):
+        return {'type': "Small Corners", 'cells': small_corners}
     
     return None
+
+# ===================================================================
+# GAME FUNCTIONS
+# ===================================================================
 
 def check_for_winners():
     """Check all selected cards for winning patterns"""
@@ -522,29 +1192,50 @@ def check_for_winners():
         return
     
     called_numbers = list(st.session_state.called_numbers)
+    winners_found = []
     
-    # Check all cards in the game
     for card_id in st.session_state.clicked_numbers:
         card_data = get_card_data(card_id)
         if card_data:
             pattern = check_winning_pattern(card_data, called_numbers)
             if pattern:
-                st.session_state.winners_list.append({
+                winners_found.append({
                     "card_id": card_id,
                     "username": st.session_state.current_user,
                     "pattern": pattern,
                     "card_data": card_data
                 })
-                st.session_state.winner_declared = True
-                st.session_state.game_over = True
-                return
+    
+    if winners_found:
+        st.session_state.winners_list = winners_found
+        st.session_state.winner_declared = True
+        st.session_state.game_over = True
+        distribute_prizes(winners_found)
+
+def distribute_prizes(winners):
+    """Distribute prizes to winners"""
+    if st.session_state.prize_distributed:
+        return
+    
+    total_prize = len(st.session_state.clicked_numbers) * PRIZE_PER_CARD
+    prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
+    
+    for winner in winners:
+        username = winner.get("username")
+        if username in st.session_state.user_db:
+            st.session_state.user_db[username]["balance"] = st.session_state.user_db[username].get("balance", 0) + prize_per_winner
+            st.session_state.user_db[username]["wins"] = st.session_state.user_db[username].get("wins", 0) + 1
+            st.session_state.user_db[username]["game_played"] = st.session_state.user_db[username].get("game_played", 0) + 1
+            save_all_data()
+    
+    st.session_state.prize_distributed = True
 
 # ===================================================================
 # DISPLAY FUNCTIONS
 # ===================================================================
 
-def display_selected_card(card_id, called_numbers=None):
-    """Display a BINGO card with circular cells"""
+def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
+    """Display a BINGO card"""
     if called_numbers is None:
         called_numbers = []
     
@@ -554,129 +1245,21 @@ def display_selected_card(card_id, called_numbers=None):
     
     cells = card["cells"]
     
-    st.markdown(f"""
-    <style>
-        .selected-card-container {{
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
-            border: 2px solid #2E7D32;
-        }}
-        .selected-card-title {{
-            text-align: center;
-            color: #1B5E20;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }}
-        .selected-table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        .selected-table td {{
-            border: 1px solid #333;
-            padding: 6px 4px;
-            text-align: center;
-            min-width: 35px;
-        }}
-        .selected-table .row-label {{
-            background: #2E7D32;
-            color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
-            min-width: 30px;
-        }}
-        .selected-circle {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #E8F5E9;
-            color: #1A237E;
-            font-weight: bold;
-            font-size: 0.9rem;
-            border: 2px solid #2E7D32;
-            transition: all 0.3s ease;
-        }}
-        .selected-circle.called {{
-            background: #FF9800;
-            color: white;
-            border-color: #E65100;
-            transform: scale(1.1);
-        }}
-        .selected-circle.ticked {{
-            background: #4CAF50;
-            color: white;
-            border-color: #1B5E20;
-            transform: scale(1.05);
-        }}
-        .selected-circle.ticked-and-called {{
-            background: #4CAF50;
-            color: white;
-            border-color: #E65100;
-            transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
-        }}
-        .selected-circle.free {{
-            background: #FFEB3B;
-            color: #E53935;
-            font-size: 1.3rem;
-            border-color: #F57F17;
-        }}
-        .selected-card-winning {{
-            border-color: #FFD700 !important;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5) !important;
-        }}
-        .selected-footer {{
-            text-align: center;
-            color: #333;
-            font-size: 0.7rem;
-            font-weight: bold;
-            margin-top: 6px;
-            letter-spacing: 1px;
-            font-family: Arial, sans-serif;
-        }}
-        @media (max-width: 600px) {{
-            .selected-circle {{
-                width: 32px;
-                height: 32px;
-                font-size: 0.75rem;
-            }}
-            .selected-table td {{
-                padding: 4px 2px;
-                min-width: 25px;
-            }}
-        }}
-    </style>
-    """, unsafe_allow_html=True)
+    border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
+    title_color = '#FFD700' if is_winner else '#FFFFFF'
     
-    # Check if this card is a winner
-    is_winner = False
-    for winner in st.session_state.winners_list:
-        if winner.get('card_id') == card_id:
-            is_winner = True
-            break
-    
-    container_class = "selected-card-container"
-    if is_winner:
-        container_class += " selected-card-winning"
-    
-    html = f'<div class="{container_class}">'
-    html += f'<div class="selected-card-title">🎯 Card #{card_id}</div>'
-    
-    html += '<table class="selected-table">'
-    html += '<tr>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">B</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">I</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">N</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">G</td>'
-    html += '<td class="row-label" style="background:#2E7D32;color:white;font-weight:bold;text-align:center;border:1px solid #1B5E20;padding:6px;">O</td>'
-    html += '</tr>'
+    html = f"""
+    <div style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">🎯 Card #{card_id}</div>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">O</td>
+            </tr>
+    """
     
     for row_idx in range(5):
         html += '<tr>'
@@ -684,163 +1267,35 @@ def display_selected_card(card_id, called_numbers=None):
             value = cells[row_idx][col_idx]
             
             if value == 'F':
-                html += f'<td><div class="selected-circle free">★</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
             else:
                 num = int(value)
                 is_called = num in called_numbers
-                is_ticked = num in st.session_state.clicked_numbers
-                
-                circle_class = "selected-circle"
-                if is_ticked and is_called:
-                    circle_class += " ticked-and-called"
+                style = ''
+                if is_called and is_winner:
+                    style = 'background:rgba(255,215,0,0.2);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
                 elif is_called:
-                    circle_class += " called"
-                elif is_ticked:
-                    circle_class += " ticked"
+                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;transform:scale(1.05);'
+                else:
+                    style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
                 
-                html += f'<td><div class="{circle_class}">{value}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;{style}font-weight:bold;font-size:0.8rem;border:2px solid;">{value}</div></td>'
         html += '</tr>'
     
     html += '</table>'
     
-    # Stats footer
-    total_called_on_card = 0
-    total_ticked = 0
-    for row in cells:
-        for val in row:
-            if val != 'F':
-                num = int(val)
-                if num in called_numbers:
-                    total_called_on_card += 1
-                if num in st.session_state.clicked_numbers:
-                    total_ticked += 1
+    total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     
-    if is_winner:
-        html += f'<div class="selected-footer" style="color:#FFD700;font-size:0.9rem;">🏆 WINNER! 🏆</div>'
+    if is_winner and winning_pattern:
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:4px;">🏆 WINNER! ({winning_pattern}) 🏆</div>'
     else:
-        html += f'<div class="selected-footer">✅ {total_called_on_card}/24 called | ⭐ {total_ticked} ticked</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    """Display the BINGO board with all letters and numbers in circles"""
-    st.markdown("""
-    <style>
-        .master-board-container {
-            max-width: 950px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .master-board-title {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: bold;
-            color: #1B5E20;
-            margin-bottom: 15px;
-        }
-        .master-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .master-table td {
-            border: 1px solid #333;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 0.95rem;
-            font-weight: bold;
-            min-width: 35px;
-        }
-        .master-table .row-label {
-            background: #2E7D32;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 50px;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: auto;
-        }
-        .circle-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            background: #E8F5E9;
-            color: #1A237E;
-            font-weight: bold;
-            font-size: 0.9rem;
-            border: 2px solid #2E7D32;
-            transition: all 0.3s ease;
-        }
-        .circle-number.called {
-            background: #FF9800;
-            color: white;
-            border-color: #E65100;
-            transform: scale(1.1);
-        }
-        .circle-number.last-called {
-            background: #E53935;
-            color: white;
-            border-color: #B71C1C;
-            transform: scale(1.2);
-            animation: pulse 0.5s ease-in-out;
-            box-shadow: 0 0 20px rgba(229, 57, 53, 0.5);
-        }
-        .circle-letter {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #2E7D32;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            border: 3px solid #1B5E20;
-            margin: auto;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-        @media (max-width: 600px) {
-            .master-table td {
-                padding: 4px 2px;
-                font-size: 0.7rem;
-                min-width: 20px;
-            }
-            .circle-number {
-                width: 28px;
-                height: 28px;
-                font-size: 0.7rem;
-            }
-            .circle-letter {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
-            }
-            .master-table .row-label {
-                width: 35px;
-                height: 35px;
-                font-size: 1rem;
-            }
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Create master board data
+    """Display the BINGO board"""
     master_board = {
         'B': list(range(1, 16)),
         'I': list(range(16, 31)),
@@ -851,50 +1306,291 @@ def display_master_board():
     
     called_numbers = list(st.session_state.called_numbers)
     
-    html = '<div class="master-board-container">'
-    html += '<div class="master-board-title">🎯 BINGO Board</div>'
+    html = '''
+    <style>
+        .board-container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .board-title {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 12px;
+            text-shadow: 0 0 30px rgba(255,215,0,0.1);
+        }
+        .board-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .board-table td {
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            min-width: 30px;
+        }
+        .board-table .header-cell {
+            background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1));
+            color: #FFD700;
+            font-size: 1.5rem;
+            font-weight: 900;
+            padding: 10px 4px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.1);
+            letter-spacing: 3px;
+        }
+        .board-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.3s ease;
+        }
+        .board-number.called {
+            background: rgba(255, 152, 0, 0.2);
+            color: #FFD700;
+            border-color: #FF9800;
+            transform: scale(1.08);
+            box-shadow: 0 0 15px rgba(255,152,0,0.15);
+        }
+        .board-number.last-called {
+            background: rgba(229, 57, 53, 0.2);
+            color: #FF6B6B;
+            border-color: #E53935;
+            transform: scale(1.15);
+            animation: lastPulse 0.5s ease-in-out;
+            box-shadow: 0 0 20px rgba(229,57,53,0.2);
+        }
+        @keyframes lastPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.25); }
+            100% { transform: scale(1.15); }
+        }
+        .board-stats {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.5);
+            padding: 8px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 8px;
+        }
+        .board-stats strong {
+            color: #FFD700;
+        }
+        @media (max-width: 600px) {
+            .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
+            .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
+            .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
+        }
+    </style>
+    <div class="board-container">
+        <div class="board-title">🎯 BINGO Board</div>
+    '''
     
-    # Show last called number if exists
     if st.session_state.last_called_number:
-        html += f'<div style="text-align:center;font-size:1.5rem;font-weight:bold;color:#E53935;margin-bottom:10px;">🎯 Last Called: <span style="background:#E53935;color:white;padding:5px 15px;border-radius:20px;display:inline-block;">{st.session_state.last_called_number}</span></div>'
+        letter = get_letter_for_number(st.session_state.last_called_number)
+        amharic = get_amharic_number(st.session_state.last_called_number)
+        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     
-    html += '<table class="master-table">'
-    
+    html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<td class="header-cell">{letter}</td>'
+    html += '</tr>'
+    
+    for row in range(15):
         html += '<tr>'
-        html += f'<td><div class="circle-letter">{letter}</div></td>'
-        for num in master_board[letter]:
+        for letter in ['B', 'I', 'N', 'G', 'O']:
+            num = master_board[letter][row]
             is_called = num in called_numbers
             is_last = num == st.session_state.last_called_number
             
             if is_last:
-                html += f'<td><div class="circle-number last-called">{num}</div></td>'
+                html += f'<td><div class="board-number last-called">{num}</div></td>'
             elif is_called:
-                html += f'<td><div class="circle-number called">{num}</div></td>'
+                html += f'<td><div class="board-number called">{num}</div></td>'
             else:
-                html += f'<td><div class="circle-number">{num}</div></td>'
+                html += f'<td><div class="board-number">{num}</div></td>'
         html += '</tr>'
     
     html += '</table>'
-    
-    # Show count of called numbers
-    html += f'<div style="text-align:center;margin-top:15px;font-size:1rem;color:#333;padding:10px;background:#F5F5F5;border-radius:8px;">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
-    
+    html += f'<div class="board-stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
     html += '</div>'
     
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
+# CARD SELECTION - USING HTML BUTTONS WITH DEFAULT 4 COLUMNS
+# ===================================================================
+
+def render_card_selection():
+    """Render card selection grid using HTML buttons - DEFAULT 4 COLUMNS"""
+    
+    remaining = st.session_state.card_selection_time
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
+    time_str = f"{minutes:01d}:{seconds:02d}"
+    
+    if remaining <= 10:
+        color = "#E53935"
+    elif remaining <= 30:
+        color = "#FF9800"
+    else:
+        color = "#FFD700"
+    
+    # Get user balance
+    user = st.session_state.user_db.get(st.session_state.current_user, {})
+    balance = user.get("balance", 0)
+    
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+            ⏱️ {time_str}
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
+            Select Card
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(0,0,0,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
+            Selected: {len(st.session_state.clicked_numbers)}/2
+        </span>
+        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
+            💰 {balance} ETB
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.card_selection_time <= 10:
+        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left!")
+    elif st.session_state.card_selection_time <= 30:
+        st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
+    
+    # Build HTML grid with buttons - DEFAULT 4 COLUMNS
+    html = '<div class="cards-grid-container"><div class="cards-grid">'
+    
+    for i in range(1, 202):
+        is_clicked = i in st.session_state.clicked_numbers
+        is_taken = i in st.session_state.taken_cards
+        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
+        
+        if is_taken:
+            html += f'<div class="card-btn taken" style="border-color:rgba(255,0,0,0.2);background:rgba(255,0,0,0.1);color:rgba(255,255,255,0.3);cursor:not-allowed;opacity:0.6;">{i}<span class="tick-mark">🔒</span></div>'
+        elif is_clicked:
+            html += f'<div class="card-btn selected" onclick="deselectCard({i})" style="cursor:pointer;"><span class="tick-mark">✓</span>{i}</div>'
+        else:
+            html += f'<div class="card-btn" onclick="selectCard({i})" style="cursor:pointer;">{i}</div>'
+    
+    html += '</div></div>'
+    
+    # Add JavaScript for card selection
+    html += """
+    <script>
+        function selectCard(cardId) {
+            fetch(window.location.pathname + '?select=' + cardId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function() {
+                location.reload();
+            }).catch(function() {
+                location.reload();
+            });
+        }
+        
+        function deselectCard(cardId) {
+            fetch(window.location.pathname + '?deselect=' + cardId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function() {
+                location.reload();
+            }).catch(function() {
+                location.reload();
+            });
+        }
+    </script>
+    """
+    
+    st.markdown(html, unsafe_allow_html=True)
+    
+    # Handle card selection via query params
+    if 'select' in st.query_params:
+        card_id = int(st.query_params['select'])
+        if len(st.session_state.clicked_numbers) < 2 and card_id not in st.session_state.taken_cards:
+            # Check if user has enough balance
+            user = st.session_state.user_db.get(st.session_state.current_user, {})
+            if user.get("balance", 0) >= 10:
+                st.session_state.clicked_numbers.add(card_id)
+                st.session_state.taken_cards.append(card_id)
+                # Deduct balance
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user.get("balance", 0) - 10
+                save_all_data()
+            else:
+                st.error("❌ Insufficient balance! You need 10 ETB to select a card.")
+        st.query_params.clear()
+        st.rerun()
+    
+    if 'deselect' in st.query_params:
+        card_id = int(st.query_params['deselect'])
+        if card_id in st.session_state.clicked_numbers:
+            st.session_state.clicked_numbers.remove(card_id)
+            if card_id in st.session_state.taken_cards:
+                st.session_state.taken_cards.remove(card_id)
+            if st.session_state.selected_card == card_id:
+                st.session_state.selected_card = None
+            # Refund balance
+            if st.session_state.current_user in st.session_state.user_db:
+                st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                save_all_data()
+        st.query_params.clear()
+        st.rerun()
+    
+    if len(st.session_state.clicked_numbers) >= 2:
+        st.success("✅ Maximum 2 cards selected! Waiting for timer...")
+    else:
+        st.info("👆 Click a card to select it (max 2 cards) - 10 ETB each")
+    
+    progress = 1 - (st.session_state.card_selection_time / 60)
+    st.progress(progress)
+    st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)}s")
+
+# ===================================================================
 # MAIN APP
 # ===================================================================
 
-# Header with Title
+# Display motivational quote
+quote = get_random_quote()
+st.markdown(f"""
+<div class="motivation-box">
+    <div class="quote">"{quote['am']}"</div>
+    <div class="author">{quote['en']} — {quote['author']}</div>
+</div>
+""", unsafe_allow_html=True)
+
+# Header
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
-    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2rem;color:#1B5E20;text-shadow:2px 2px 4px rgba(0,0,0,0.1);letter-spacing:5px;margin:0;">
+    <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s ease-in-out infinite;letter-spacing:6px;margin:0;text-shadow:0 0 40px rgba(255,215,0,0.1);">
         🎯 ደራሽ ቢንጎ
     </h1>
-    <p style="font-family:'Orbitron',sans-serif;color:#555;font-weight:400;letter-spacing:2px;font-size:0.8rem;margin:5px 0;">
+    <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
         Derash BINGO - 201 Cards
     </p>
 </div>
@@ -927,7 +1623,7 @@ if not st.session_state.logged_in:
         with st.form("register_form"):
             full_name = st.text_input("👤 Full Name", placeholder="Your full name")
             username = st.text_input("👤 Username", placeholder="Choose a username")
-            phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX")
+            phone = st.text_input("📱 Phone Number", placeholder="09XXXXXXXX (for TeleBirr)")
             password = st.text_input("🔑 Password", type="password", placeholder="Create password (min 6 chars)")
             confirm = st.text_input("✅ Confirm Password", type="password", placeholder="Confirm password")
             submitted = st.form_submit_button("📝 Register")
@@ -942,6 +1638,7 @@ if not st.session_state.logged_in:
                     success, message = register_user(username, password, full_name, phone)
                     if success:
                         st.success(message)
+                        st.info("💡 Your balance starts at 0 ETB. Admin can add balance.")
                         st.balloons()
                         load_all_data()
                         time.sleep(1)
@@ -966,10 +1663,11 @@ user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
 
 st.sidebar.markdown(f"""
-<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1rem;border-radius:12px;color:white;border:1px solid rgba(255,255,255,0.1);">
-    <p style="margin:0;font-weight:600;">👤 {user.get('name', st.session_state.current_user)}</p>
-    <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {balance} ETB</p>
-    <p style="margin:5px 0;font-size:0.85rem;">⭐ {st.session_state.current_role.title()}</p>
+<div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
+    <p style="margin:0;font-weight:600;color:#FFD700;">👤 {user.get('name', st.session_state.current_user)}</p>
+    <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">📱 {user.get('phone', 'No phone')}</p>
+    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance} ETB</p>
+    <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">⭐ {st.session_state.current_role.title()} | 🏆 {user.get('wins', 0)} wins</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1009,7 +1707,6 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
     if not st.session_state.auto_call_started:
         st.session_state.auto_call_started = True
         st.session_state.last_call_time = time.time()
-        # Call first number immediately
         if len(st.session_state.called_numbers) < 75:
             available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
             if available:
@@ -1018,11 +1715,10 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 st.session_state.last_called_number = called_num
                 st.session_state.auto_called_count += 1
                 st.session_state.last_call_time = time.time()
-                # Check for winners after first call
+                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
                 check_for_winners()
                 st.rerun()
     
-    # Continue calling every 2 seconds
     if len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
         current_time = time.time()
         if current_time - st.session_state.last_call_time >= 2.0:
@@ -1033,8 +1729,7 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
                 st.session_state.last_called_number = called_num
                 st.session_state.auto_called_count += 1
                 st.session_state.last_call_time = current_time
-                
-                # Check for winners after each call
+                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
                 check_for_winners()
                 st.rerun()
 
@@ -1043,107 +1738,62 @@ if st.session_state.selected_card is not None and st.session_state.game_started:
 # ===================================================================
 
 if not st.session_state.selected_card:
-    # Card Selection Phase
     st.markdown("## 📋 Select Your Card (1 - 201)")
     
-    # Timer display
-    remaining = st.session_state.card_selection_time
-    minutes = int(remaining // 60)
-    seconds = int(remaining % 60)
-    time_str = f"{minutes:01d}:{seconds:02d}"
+    # Check if we should auto-select
+    if st.session_state.card_selection_time <= 0 and len(st.session_state.clicked_numbers) > 0:
+        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        st.rerun()
     
-    if remaining <= 10:
-        color = "#E53935"
-    elif remaining <= 30:
-        color = "#FF9800"
-    else:
-        color = "#2E7D32"
-    
-    st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;flex-wrap:wrap;">
-        <span style="display:inline-block;padding:10px 25px;background:#f8f9fa;border-radius:10px;border:2px solid {color};font-size:1.5rem;font-weight:bold;color:{color};font-family:monospace;">
-            ⏱️ {time_str}
-        </span>
-        <span style="display:inline-block;padding:8px 20px;background:#2E7D32;border-radius:10px;font-size:1rem;font-weight:bold;color:white;">
-            Select Card
-        </span>
-        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid #2E7D32;font-size:0.9rem;color:#333;">
-            Selected: {len(st.session_state.clicked_numbers)}/2 cards
-        </span>
-        <span style="display:inline-block;padding:8px 20px;background:#f8f9fa;border-radius:10px;border:2px solid #FFD700;font-size:0.9rem;color:#333;">
-            💰 Balance: {balance} ETB
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if st.session_state.card_selection_time <= 10:
-        st.warning(f"⚠️ Only {int(st.session_state.card_selection_time)} seconds left to select a card!")
-    elif st.session_state.card_selection_time <= 30:
-        st.info(f"⏱️ Hurry! {int(st.session_state.card_selection_time)} seconds remaining...")
-    
-    # Numbers grid
-    cols = st.columns(8)
-    for i in range(1, 202):
-        col_idx = (i - 1) % 8
-        with cols[col_idx]:
-            is_clicked = i in st.session_state.clicked_numbers
-            is_disabled = len(st.session_state.clicked_numbers) >= 2 and not is_clicked
-            
-            if is_clicked:
-                btn_type = "secondary"
-            elif is_disabled:
-                btn_type = "secondary"
-            else:
-                btn_type = "primary"
-            
-            if st.button(
-                str(i),
-                key=f"num_{i}",
-                use_container_width=True,
-                type=btn_type,
-                disabled=is_disabled
-            ):
-                if i in st.session_state.clicked_numbers:
-                    st.session_state.clicked_numbers.remove(i)
-                    if st.session_state.selected_card == i:
-                        st.session_state.selected_card = None
-                else:
-                    if len(st.session_state.clicked_numbers) < 2:
-                        st.session_state.clicked_numbers.add(i)
-                st.rerun()
-    
-    if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Waiting for timer to reach 0:00...")
-    else:
-        st.info("👆 Click a card number above to select it (max 2 cards)")
-    
-    progress = 1 - (st.session_state.card_selection_time / 60)
-    st.progress(progress)
-    st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)} seconds")
+    render_card_selection()
 
 # ===================================================================
 # GAME PLAYING PHASE
 # ===================================================================
 
 else:
-    card_display = st.session_state.selected_card
+    all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
-        # Show winner celebration
-        st.markdown("""
-        <div style="text-align:center;padding:40px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;border:3px solid #FFD700;margin:20px 0;">
-            <div style="font-size:4rem;color:#FFD700;">🎉 BINGO! 🎉</div>
-            <div style="font-size:2.5rem;color:#FFD700;margin:10px 0;">🎉 እንኳን ደስ አለዎት! 🎉</div>
-            <div style="font-size:1.5rem;color:white;">Winner!</div>
-            <div style="font-size:1.2rem;color:#00C9B7;">Card #{card_display}</div>
+        total_prize = len(all_player_cards) * PRIZE_PER_CARD
+        prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+        
+        winning_pattern = ""
+        if st.session_state.winners_list:
+            pattern_info = st.session_state.winners_list[0].get("pattern", {})
+            winning_pattern = pattern_info.get("type", "BINGO!")
+        
+        st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));border-radius:20px;border:2px solid #FFD700;margin:15px 0;box-shadow:0 0 50px rgba(255,215,0,0.1);">
+            <div style="font-size:3.5rem;color:#FFD700;">🎉</div>
+            <div style="font-size:2.5rem;color:#FFD700;margin:8px 0;">🎉 ቢንጎ! 🎉</div>
+            <div style="font-size:1.8rem;color:#FFD700;margin:5px 0;">🎊 እንኳን ደስ አለዎት! 🎊</div>
+            <div style="font-size:1.2rem;color:#FFFFFF;">🏆 {len(st.session_state.winners_list)} Winner(s)!</div>
+            <div style="font-size:1rem;color:#4CAF50;">💰 Prize per winner: {prize_per_winner} ETB</div>
+            <div style="font-size:0.9rem;color:rgba(255,255,255,0.5);">Total: {len(all_player_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB</div>
+            <div style="font-size:1rem;color:#FFD700;margin-top:5px;">🏅 {winning_pattern}</div>
         </div>
         """, unsafe_allow_html=True)
         
         st.balloons()
         st.snow()
         
-        # Show winning card
-        display_selected_card(card_display, list(st.session_state.called_numbers))
+        st.markdown("### 📋 Your Cards")
+        for card_id in all_player_cards:
+            is_winner = False
+            winning_pattern_name = None
+            for winner in st.session_state.winners_list:
+                if winner.get("card_id") == card_id:
+                    is_winner = True
+                    pattern_info = winner.get("pattern", {})
+                    winning_pattern_name = pattern_info.get("type", "BINGO!")
+                    break
+            display_selected_card(card_id, list(st.session_state.called_numbers), is_winner, winning_pattern_name)
+        
         display_master_board()
         
         if st.button("🔄 New Game", use_container_width=True):
@@ -1157,36 +1807,35 @@ else:
             st.session_state.winner_declared = False
             st.session_state.game_over = False
             st.session_state.winners_list = []
+            st.session_state.prize_distributed = False
             st.session_state.card_selection_time = 60
             st.session_state.card_selection_last_update = time.time()
+            st.session_state.taken_cards = []
             st.rerun()
     else:
-        # Game in progress
         st.markdown(f"""
-        <div style="background:linear-gradient(145deg,#4CAF50,#2E7D32);color:white;padding:10px 20px;border-radius:10px;text-align:center;margin-bottom:20px;font-family:'Orbitron',sans-serif;">
-            🎯 Playing with Card #{card_display}
-            <span style="margin-left:15px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+        <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
+            🎯 Playing with {len(all_player_cards)} Card(s)
+            <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
                 {len(st.session_state.called_numbers)}/75 Called
             </span>
-            <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
-                Cards: {len(st.session_state.clicked_numbers)}/2
-            </span>
-            <span style="margin-left:10px;font-size:0.8rem;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:15px;">
+            <span style="margin-left:8px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;border:1px solid rgba(255,215,0,0.08);">
                 🎯 Auto-calls: {st.session_state.auto_called_count}
             </span>
         </div>
         """, unsafe_allow_html=True)
         
-        # Display board and card
-        board_col, card_col = st.columns([2, 1])
+        board_col, cards_col = st.columns([2, 1])
         
         with board_col:
             display_master_board()
         
-        with card_col:
-            display_selected_card(card_display, list(st.session_state.called_numbers))
+        with cards_col:
+            st.markdown("### 📋 Your Cards")
+            for card_id in all_player_cards:
+                display_selected_card(card_id, list(st.session_state.called_numbers), False)
         
-        st.info(f"🎯 Auto-calling every 2 seconds... (Called: {len(st.session_state.called_numbers)}/75 numbers)")
+        st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 # ===================================================================
 # FOOTER
@@ -1194,14 +1843,12 @@ else:
 
 st.markdown("---")
 st.markdown(f"""
-<div style="text-align: center; color: #2d6a4f; padding: 20px; margin-top: 20px; border-top: 2px solid #2d6a4f;">
-    Total: 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 cards | Called: {len(st.session_state.called_numbers)}/75 numbers
-    {' | 🎯 Auto-calls: ' + str(st.session_state.auto_called_count) if st.session_state.auto_called_count > 0 else ''}
-    {' | ⏱️ Auto-join in ' + str(int(st.session_state.card_selection_time)) + 's' if st.session_state.selected_card is None else ''}
+<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;border-top:1px solid rgba(255,255,255,0.05);">
+    🎯 Derash BINGO | 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
 </div>
 """, unsafe_allow_html=True)
 
-# Auto-rerun for continuous updates
+# Auto-rerun
 if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
     time.sleep(0.5)
     st.rerun()
