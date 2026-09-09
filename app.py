@@ -1570,7 +1570,7 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
-        st.info(f"📝 Select your cards (max 2). Click 🟢 green card to DESELECT. {int(remaining)} seconds remaining ⏳")
+        st.info(f"📝 Select your cards (max 2). Click 🟢 GREEN card to DESELECT. {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
     # CARDS PER ROW DROPDOWN
@@ -1620,69 +1620,72 @@ def render_card_selection():
             is_taken_by_others = i in st.session_state.taken_cards and not is_clicked
             
             # A card is disabled ONLY if it's taken by someone else (not you)
-            # YOUR selected cards are ALWAYS clickable to deselect
             is_disabled = is_taken_by_others
             
             # Determine button style
             if is_clicked:
-                # SELECTED CARD - Green highlight (YOUR card) - Clickable to DESELECT
-                btn_type = "secondary"
+                # SELECTED CARD - Green highlight with bold border
+                btn_type = "primary"
                 label = str(i)
-                st.markdown(f"""
+                # Use st.button with custom CSS through markdown
+                button_html = f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
-                        border-color: #4CAF50 !important;
-                        background: rgba(76, 175, 80, 0.35) !important;
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
+                        background: rgba(76, 175, 80, 0.4) !important;
+                        border: 3px solid #4CAF50 !important;
                         color: #FFFFFF !important;
-                        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-                        border-width: 3px !important;
-                        cursor: pointer !important;
+                        font-weight: bold !important;
+                        box-shadow: 0 0 30px rgba(76, 175, 80, 0.4) !important;
+                        transform: scale(1.02);
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
-                        border-color: #FF6B6B !important;
-                        background: rgba(255, 107, 107, 0.3) !important;
-                        box-shadow: 0 0 35px rgba(255, 107, 107, 0.3) !important;
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
+                        background: rgba(255, 80, 80, 0.4) !important;
+                        border: 3px solid #FF4444 !important;
+                        box-shadow: 0 0 30px rgba(255, 68, 68, 0.4) !important;
                         transform: scale(1.05);
-                        color: #FFFFFF !important;
                     }}
                 </style>
-                """, unsafe_allow_html=True)
+                """
+                st.markdown(button_html, unsafe_allow_html=True)
             elif is_disabled:
                 # DISABLED CARD - Taken by someone else (grayed out)
                 btn_type = "secondary"
                 label = str(i)
-                st.markdown(f"""
+                button_html = f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                    div[data-testid="stButton"] button[kind="secondary"][key="card_{i}"] {{
                         border-color: rgba(255, 0, 0, 0.2) !important;
                         background: rgba(255, 0, 0, 0.15) !important;
                         color: rgba(255, 255, 255, 0.3) !important;
                         cursor: not-allowed !important;
-                        opacity: 0.5 !important;
+                        opacity: 0.4 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[kind="secondary"][key="card_{i}"]:hover {{
                         transform: none !important;
                         border-color: rgba(255, 0, 0, 0.2) !important;
                         background: rgba(255, 0, 0, 0.15) !important;
                         box-shadow: none !important;
                     }}
                 </style>
-                """, unsafe_allow_html=True)
+                """
+                st.markdown(button_html, unsafe_allow_html=True)
             else:
-                # AVAILABLE CARD - Normal (not taken by anyone)
+                # AVAILABLE CARD - Normal
                 btn_type = "primary"
                 label = str(i)
-                st.markdown(f"""
+                button_html = f"""
                 <style>
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                    div[data-testid="stButton"] button[kind="primary"][key="card_{i}"]:hover {{
                         border-color: #FFD700 !important;
                         background: rgba(255, 215, 0, 0.2) !important;
                         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
                         transform: scale(1.05);
                     }}
                 </style>
-                """, unsafe_allow_html=True)
+                """
+                st.markdown(button_html, unsafe_allow_html=True)
             
+            # Create the button
             if st.button(
                 label,
                 key=f"card_{i}",
@@ -1691,7 +1694,7 @@ def render_card_selection():
                 disabled=is_disabled
             ):
                 if is_clicked:
-                    # DESELECT - Remove YOUR card from global board (timer continues)
+                    # DESELECT - Remove YOUR card from global board
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1713,40 +1716,41 @@ def render_card_selection():
                         st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it. Waiting for other players... ⏳")
+        st.success("✅ Maximum 2 cards selected! Click a 🟢 GREEN card to DESELECT it. Waiting for other players... ⏳")
     elif len(st.session_state.clicked_numbers) > 0:
-        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 highlighted card to DESELECT it")
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 GREEN card to DESELECT it")
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
     # Show selected cards preview with deselect buttons
     if len(st.session_state.clicked_numbers) > 0:
         st.markdown("### 📋 Your Selected Cards")
-        selected_cols = st.columns(min(len(st.session_state.clicked_numbers), 4))
-        for idx, card_id in enumerate(list(st.session_state.clicked_numbers)):
+        # Display selected cards in a row
+        selected_list = list(st.session_state.clicked_numbers)
+        selected_cols = st.columns(min(len(selected_list), 4))
+        for idx, card_id in enumerate(selected_list):
             col_idx = idx % 4
             with selected_cols[col_idx]:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.markdown(f"""
-                    <div style="background:rgba(76,175,80,0.15);border:2px solid #4CAF50;border-radius:8px;padding:8px 12px;text-align:center;color:#4CAF50;font-weight:bold;">
-                        🃏 #{card_id}
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    if st.button("✖", key=f"deselect_{card_id}"):
-                        # Deselect this card - timer continues
-                        if card_id in st.session_state.clicked_numbers:
-                            st.session_state.clicked_numbers.remove(card_id)
-                            if card_id in st.session_state.taken_cards:
-                                st.session_state.taken_cards.remove(card_id)
-                            if str(card_id) in st.session_state.card_owner:
-                                del st.session_state.card_owner[str(card_id)]
-                            if st.session_state.selected_card == card_id:
-                                st.session_state.selected_card = None
-                            # IMPORTANT: Timer continues - NO timer reset!
-                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                            st.rerun()
+                st.markdown(f"""
+                <div style="background:rgba(76,175,80,0.2);border:2px solid #4CAF50;border-radius:8px;padding:8px 12px;text-align:center;color:#4CAF50;font-weight:bold;margin-bottom:5px;">
+                    🃏 Card #{card_id}
+                    <br>
+                    <span style="font-size:0.7rem;color:rgba(255,255,255,0.5);">(Click to deselect)</span>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("✖ Deselect", key=f"deselect_btn_{card_id}", use_container_width=True):
+                    # Deselect this card - timer continues
+                    if card_id in st.session_state.clicked_numbers:
+                        st.session_state.clicked_numbers.remove(card_id)
+                        if card_id in st.session_state.taken_cards:
+                            st.session_state.taken_cards.remove(card_id)
+                        if str(card_id) in st.session_state.card_owner:
+                            del st.session_state.card_owner[str(card_id)]
+                        if st.session_state.selected_card == card_id:
+                            st.session_state.selected_card = None
+                        # IMPORTANT: Timer continues - NO timer reset!
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        st.rerun()
     
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
