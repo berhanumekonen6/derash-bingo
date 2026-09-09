@@ -100,7 +100,7 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Card buttons - from first attachment */
+    /* Card buttons - first attachment style (simple numbers) */
     .card-btn {
         width: 100% !important;
         padding: 6px 4px !important;
@@ -161,12 +161,6 @@ st.markdown("""
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
-    }
-    .card-btn .tick-mark {
-        display: none;
-    }
-    .card-btn.selected .tick-mark {
-        display: inline;
     }
     
     /* Winner Card Celebration */
@@ -235,13 +229,14 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    /* Timer display */
+    /* Timer display - FIRST ATTACHMENT STYLE */
     .header-timer-container {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 2px solid rgba(255, 215, 0, 0.2) !important;
         border-radius: 15px;
         padding: 10px 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        display: inline-block;
     }
     .timer-display {
         color: #FFD700 !important;
@@ -429,6 +424,77 @@ st.markdown("""
     .selected-cards-preview {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
+    }
+    
+    /* FIRST ATTACHMENT STYLE - Info bar with timer, select card, selected, balance */
+    .info-bar {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        padding: 8px 15px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 15px;
+    }
+    .info-bar .timer-box {
+        display: inline-block;
+        padding: 6px 20px;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        border: 2px solid #FFD700;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #FFD700;
+        font-family: monospace;
+    }
+    .info-bar .label-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        background: linear-gradient(135deg, #2E7D32, #1B5E20);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: #FFD700;
+    }
+    .info-bar .stat-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+    .info-bar .balance-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        background: rgba(255, 215, 0, 0.08);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 215, 0, 0.08);
+        font-size: 0.8rem;
+        color: #FFD700;
+    }
+    .info-bar .status-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        background: rgba(76, 175, 80, 0.15);
+        border-radius: 8px;
+        border: 2px solid #4CAF50;
+        font-size: 0.8rem;
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .info-bar .warning-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        background: rgba(255, 152, 0, 0.15);
+        border-radius: 8px;
+        border: 2px solid #FF9800;
+        font-size: 0.8rem;
+        color: #FF9800;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1245,9 +1311,10 @@ def render_card_selection():
     remaining = max(0, st.session_state.card_selection_time - elapsed)
     st.session_state.card_selection_time = remaining
     
+    # FORMAT TIME LIKE FIRST ATTACHMENT: "0:44" (no leading zeros for minutes)
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
-    time_str = f"{minutes:01d}:{seconds:02d}"
+    time_str = f"{minutes}:{seconds:02d}"  # Minutes without leading zero, seconds with 2 digits
     
     # Get balance from session state
     user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1270,38 +1337,40 @@ def render_card_selection():
     else:
         color = "#FFD700"
     
-    timer_display = time_str
-    timer_icon = "⏸️" if not enough_cards else "⏱️"
-    
     # ================================================================
-    # CARDS PER ROW SELECTOR - DEFAULT 4 (from second attachment)
+    # INFO BAR - FIRST ATTACHMENT STYLE
     # ================================================================
     
     st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
-        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
-            {timer_icon} {timer_display}
+    <div class="info-bar">
+        <span class="timer-box" style="border-color:{color};color:{color};">
+            ⏱️ {time_str}
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
-            Select Card
+        <span class="label-badge">
+            📋 Select Card
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(76,175,80,0.2);border-radius:8px;border:1px solid rgba(76,175,80,0.3);font-size:0.8rem;color:#4CAF50;">
-            🟢 Your Cards: {your_cards}/2
+        <span class="stat-badge">
+            Selected: {your_cards}/2 cards
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.15);border-radius:8px;border:2px solid #FFD700;font-size:0.85rem;color:#FFD700;font-weight:bold;">
-            📊 Global Board: {total_selected}/201
+        <span class="balance-badge">
+            💰 {balance:.1f} ETB
         </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;color:rgba(255,255,255,0.5);">
-            ⬜ Available: {available}
-        </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,215,0,0.08);border-radius:8px;border:1px solid rgba(255,215,0,0.08);font-size:0.8rem;color:#FFD700;">
-            💰 {balance:.2f} ETB
-        </span>
-        <span style="display:inline-block;padding:6px 15px;background:rgba(255,200,0,0.1);border-radius:8px;border:2px solid {'#4CAF50' if enough_cards else '#FF9800'};font-size:0.8rem;color:{'#4CAF50' if enough_cards else '#FF9800'};font-weight:bold;">
-            {'✅' if enough_cards else '⚠️'} {total_selected}/{min_cards_required}
+        <span class="{'status-badge' if enough_cards else 'warning-badge'}">
+            {total_selected}/{min_cards_required} cards
         </span>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Status Messages
+    if not enough_cards:
+        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start the game! 🎯")
+        st.info(f"👥 {total_selected} cards selected globally. Keep selecting! 🃏")
+    elif remaining <= 10:
+        st.warning(f"⚠️ Only {int(remaining)} seconds left! Game will start soon! ⏰")
+    elif remaining <= 30:
+        st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
+    else:
+        st.info(f"📝 Select your cards (max 2). {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
     # CARDS PER ROW DROPDOWN - FROM SECOND ATTACHMENT (DEFAULT 4)
@@ -1339,17 +1408,6 @@ def render_card_selection():
         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, selected_cols, st.session_state.timer_start_time, st.session_state.card_selection_time)
         st.rerun()
     
-    # Status Messages
-    if not enough_cards:
-        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start the game! 🎯")
-        st.info(f"👥 {total_selected} cards selected globally. Keep selecting! 🃏")
-    elif remaining <= 10:
-        st.warning(f"⚠️ Only {int(remaining)} seconds left! Game will start soon! ⏰")
-    elif remaining <= 30:
-        st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
-    else:
-        st.info(f"📝 Select your cards (max 2). {int(remaining)} seconds remaining ⏳")
-    
     # ================================================================
     # CREATE GRID USING SELECTED NUMBER OF COLUMNS
     # ================================================================
@@ -1364,12 +1422,42 @@ def render_card_selection():
             is_taken = i in st.session_state.taken_cards
             is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
             
+            # Determine button style - FIRST ATTACHMENT STYLE (plain numbers, no emojis)
             if is_clicked:
                 btn_type = "secondary"
-                label = f"🟢 {i}"
+                label = str(i)
+                # Add visual indicator for selected
+                st.markdown(f"""
+                <style>
+                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                        border-color: #4CAF50 !important;
+                        background: rgba(76, 175, 80, 0.35) !important;
+                        color: #FFFFFF !important;
+                        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+                        border-width: 3px !important;
+                    }}
+                </style>
+                """, unsafe_allow_html=True)
             elif is_disabled:
                 btn_type = "secondary"
                 label = str(i)
+                st.markdown(f"""
+                <style>
+                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                        border-color: rgba(255, 0, 0, 0.2) !important;
+                        background: rgba(255, 0, 0, 0.15) !important;
+                        color: rgba(255, 255, 255, 0.3) !important;
+                        cursor: not-allowed !important;
+                        opacity: 0.5 !important;
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                        transform: none !important;
+                        border-color: rgba(255, 0, 0, 0.2) !important;
+                        background: rgba(255, 0, 0, 0.15) !important;
+                        box-shadow: none !important;
+                    }}
+                </style>
+                """, unsafe_allow_html=True)
             else:
                 btn_type = "primary"
                 label = str(i)
@@ -1406,7 +1494,7 @@ def render_card_selection():
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for other players... ⏳")
     elif len(st.session_state.clicked_numbers) > 0:
-        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 green card to DESELECT")
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a highlighted card to DESELECT")
     else:
         st.info("👆 Click a card to select it (max 2 cards)")
     
@@ -1503,7 +1591,7 @@ if st.session_state.current_role == "admin":
     st.markdown("---")
 
 # ===================================================================
-# USER INFO - UPDATED: Shows balance with 2 decimal places
+# USER INFO - UPDATED: Shows balance with 1 decimal place (like first attachment: 0.0)
 # ===================================================================
 
 user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -1513,7 +1601,7 @@ st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
     <p style="margin:0;font-weight:600;color:#FFD700;">👤 {user.get('name', st.session_state.current_user)}</p>
     <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">📱 {user.get('phone', 'No phone')}</p>
-    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance:.2f} ETB</p>
+    <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">💰 {balance:.1f} ETB</p>
     <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">⭐ {st.session_state.current_role.title() if st.session_state.current_role else 'Player'} | 🏆 {user.get('wins', 0)} wins</p>
 </div>
 """, unsafe_allow_html=True)
