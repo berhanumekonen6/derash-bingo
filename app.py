@@ -1796,7 +1796,7 @@ st.markdown("""
         ደራሽ ቢንጎ -Derash BINGO 
     </h1>
     <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
-        
+    @2026 
     </p>
 </div>
 """, unsafe_allow_html=True)
