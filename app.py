@@ -1286,7 +1286,7 @@ def render_card_selection():
         color = "#FFD700"
     
     timer_display = time_str
-    timer_icon = "⌚"  # WATCH EMOJI FOR TIMER
+    timer_icon = "⌚"
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
@@ -1364,8 +1364,12 @@ def render_card_selection():
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             
-            has_insufficient_balance = balance < 10 and not is_clicked
-            is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or has_insufficient_balance
+            # A card is disabled if it's taken by ANYONE (including this player)
+            # This ensures once a card is selected by any player, it cannot be selected again
+            is_disabled = is_taken or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
+            
+            # Check balance only for available cards (not already taken)
+            has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
             
             if is_clicked:
                 btn_type = "secondary"
@@ -1389,45 +1393,30 @@ def render_card_selection():
                     }}
                 </style>
                 """, unsafe_allow_html=True)
-            elif is_disabled:
+            elif is_taken:
+                # Card is taken by someone else - DISABLED
                 btn_type = "secondary"
                 label = str(i)
-                if has_insufficient_balance:
-                    st.markdown(f"""
-                    <style>
-                        div[data-testid="stButton"] button[key="card_{i}"] {{
-                            border-color: rgba(255, 165, 0, 0.3) !important;
-                            background: rgba(255, 165, 0, 0.15) !important;
-                            color: rgba(255, 255, 255, 0.4) !important;
-                            cursor: not-allowed !important;
-                            opacity: 0.6 !important;
-                        }}
-                        div[data-testid="stButton"] button[key="card_{i}"]:hover {{
-                            transform: none !important;
-                            border-color: rgba(255, 165, 0, 0.3) !important;
-                            background: rgba(255, 165, 0, 0.15) !important;
-                            box-shadow: none !important;
-                        }}
-                    </style>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <style>
-                        div[data-testid="stButton"] button[key="card_{i}"] {{
-                            border-color: rgba(255, 0, 0, 0.2) !important;
-                            background: rgba(255, 0, 0, 0.15) !important;
-                            color: rgba(255, 255, 255, 0.3) !important;
-                            cursor: not-allowed !important;
-                            opacity: 0.5 !important;
-                        }}
-                        div[data-testid="stButton"] button[key="card_{i}"]:hover {{
-                            transform: none !important;
-                            border-color: rgba(255, 0, 0, 0.2) !important;
-                            background: rgba(255, 0, 0, 0.15) !important;
-                            box-shadow: none !important;
-                        }}
-                    </style>
-                    """, unsafe_allow_html=True)
+                owner_name = st.session_state.card_owner.get(str(i), "Unknown")
+                st.markdown(f"""
+                <style>
+                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                        border-color: rgba(255, 0, 0, 0.2) !important;
+                        background: rgba(255, 0, 0, 0.15) !important;
+                        color: rgba(255, 255, 255, 0.3) !important;
+                        cursor: not-allowed !important;
+                        opacity: 0.5 !important;
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                        transform: none !important;
+                        border-color: rgba(255, 0, 0, 0.2) !important;
+                        background: rgba(255, 0, 0, 0.15) !important;
+                        box-shadow: none !important;
+                    }}
+                </style>
+                """, unsafe_allow_html=True)
+                # Show tooltip with owner name
+                st.caption(f"Taken by: {owner_name}")
             else:
                 btn_type = "primary"
                 label = str(i)
@@ -1450,6 +1439,7 @@ def render_card_selection():
                 disabled=is_disabled
             ):
                 if i in st.session_state.clicked_numbers:
+                    # DESELECT - Remove your card
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1458,6 +1448,7 @@ def render_card_selection():
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                     
+                    # Refund 10 ETB
                     if st.session_state.current_user in st.session_state.user_db:
                         st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
                         save_all_data()
@@ -1465,7 +1456,8 @@ def render_card_selection():
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
                 else:
-                    if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
+                    # SELECT - Add your card
+                    if len(st.session_state.clicked_numbers) < 2 and not is_taken:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         if current_balance >= 10:
                             st.session_state.user_db[st.session_state.current_user]["balance"] = current_balance - 10
@@ -1478,15 +1470,15 @@ def render_card_selection():
                             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                             st.rerun()
                         else:
-                            st.error("❌ Insufficient balance! You need at least 10 ETB to select a card. Please ask admin to add balance.")
+                            st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB). Waiting for other players... ⏳")
+        st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB).")
     elif len(st.session_state.clicked_numbers) > 0:
         st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 green card to DESELECT it (refund 10 ETB)")
     else:
         if balance < 10:
-            st.warning("⚠️ Insufficient balance! You need at least 10 ETB to select a card. Please ask admin to add balance.")
+            st.warning("⚠️ Insufficient balance! You need at least 10 ETB to select a card.")
         else:
             st.info("👆 Click a card to select it (max 2 cards). Each card costs 10 ETB.")
     
@@ -1633,7 +1625,7 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# TIMER - GLOBAL SYNCED TIMER
+# TIMER
 # ===================================================================
 
 if st.session_state.game_started:
@@ -1754,13 +1746,16 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
             
             winning_patterns = []
+            winner_names = []
             for winner in st.session_state.winners_list:
                 winning_patterns.extend(winner.get("patterns", []))
+                winner_names.append(winner.get("username", "Unknown"))
             winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
+            winner_names_str = ", ".join(winner_names)
             
             st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
             
-            # Winner Celebration with Emojis
+            # Winner Celebration with Emojis for ALL players to see
             st.markdown(f"""
             <div class="winner-celebration">
                 <div style="font-size:4rem;color:#FFD700;">
@@ -1770,7 +1765,10 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
                     🎉 ቢንጎ!!! አሸናፊ ታወቀ!!! 🎉
                 </div>
                 <div style="font-size:2rem;color:#FFD700;margin:10px 0;text-shadow:0 0 30px rgba(255,215,0,0.3);">
-                    🎊🍀🥳 እንኳን ደስ አላችሁ!!! 🥳🍀🎊
+                    🎊🍀🥳 እንኳን ደስ አለዎት!!! 🥳🍀🎊
+                </div>
+                <div style="font-size:1.5rem;color:#FFFFFF;margin:10px 0;">
+                    🏆 <span style="color:#FFD700;">{winner_names_str}</span> 🏆
                 </div>
                 <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:15px 0;">
                     <span class="emoji-rain">🎉</span>
@@ -1780,14 +1778,14 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
                     <span class="emoji-rain" style="animation-delay:0.8s;">🥳</span>
                     <span class="emoji-rain" style="animation-delay:1s;">🎉</span>
                 </div>
-                <div style="font-size:1.5rem;color:#FFFFFF;">
+                <div style="font-size:1.3rem;color:#FFFFFF;">
                     🏆 {len(st.session_state.winners_list)} Winner(s)! 🏆
                 </div>
-                <div style="font-size:1.3rem;color:#4CAF50;">
-                    💰 Prize per winner: {prize_per_winner:.2f} ETB
+                <div style="font-size:1.2rem;color:#4CAF50;">
+                    💰 Prize per winner: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
                 </div>
                 <div style="font-size:1rem;color:rgba(255,255,255,0.6);">
-                    Total Cards: {len(st.session_state.taken_cards)} × {PRIZE_PER_CARD} ETB = {total_prize} ETB
+                    Total Cards: <strong style="color:#FFD700;">{len(st.session_state.taken_cards)}</strong> × {PRIZE_PER_CARD} ETB = <strong style="color:#FFD700;">{total_prize} ETB</strong>
                 </div>
                 <div style="font-size:1.2rem;color:#FFD700;margin-top:10px;text-shadow:0 0 20px rgba(255,215,0,0.3);">
                     🏅 {winning_pattern}
@@ -1810,7 +1808,10 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             
             st.markdown("### 🎉🏆 የአሸናፊዎች ካርቶች 🏆🎉")
             
-            for card_id in all_player_cards:
+            # Display ALL cards from ALL players with winner highlighting
+            # Get all cards from all players
+            all_cards_in_game = st.session_state.taken_cards
+            for card_id in all_cards_in_game:
                 is_winner = False
                 winning_pattern_name = None
                 for winner in st.session_state.winners_list:
