@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 # ===================================================================
 # CODE VERSION - CHANGE THIS WHEN YOU UPDATE THE CODE
 # ===================================================================
-CODE_VERSION = "2.2"
+CODE_VERSION = "2.5"
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ🍀",
