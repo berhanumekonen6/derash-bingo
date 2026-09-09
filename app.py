@@ -1896,6 +1896,8 @@ def render_card_selection():
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             
+            # FIX: Card is disabled if taken by someone else OR if player already has 2 cards and this isn't one of theirs
+            # IMPORTANT: When is_clicked is True, the card should NOT be disabled (so user can deselect it)
             is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
             has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
             
@@ -1932,6 +1934,7 @@ def render_card_selection():
             elif is_taken:
                 btn_type = "secondary"
                 label = str(i)
+                owner_name = st.session_state.card_owner.get(str(i), "Unknown")
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
@@ -1955,6 +1958,7 @@ def render_card_selection():
                     }}
                 </style>
                 """, unsafe_allow_html=True)
+                st.caption(f"Taken by: {owner_name}")
             elif has_insufficient_balance:
                 btn_type = "secondary"
                 label = str(i)
@@ -2006,15 +2010,17 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             
+            # FIX: The button should NOT be disabled when is_clicked is True
+            # Only disable if it's taken by someone else OR insufficient balance
             if st.button(
                 label,
                 key=f"card_{i}_{st.session_state.current_user}",
                 use_container_width=True,
                 type=btn_type,
-                disabled=is_disabled or has_insufficient_balance or is_taken
+                disabled=is_disabled or has_insufficient_balance  # REMOVED the extra "or is_taken"
             ):
                 if is_clicked:
-                    # DESELECT
+                    # DESELECT - Remove your card and refund
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -2023,6 +2029,7 @@ def render_card_selection():
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                     
+                    # Refund 10 ETB
                     if st.session_state.current_user in st.session_state.user_db:
                         st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
                         save_all_data()
@@ -2030,6 +2037,7 @@ def render_card_selection():
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
                 else:
+                    # SELECT - Add your card
                     if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         if current_balance >= 10:
@@ -2091,7 +2099,6 @@ def render_card_selection():
         st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
         st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... {total_selected} selected 🃏")
-
 # ===================================================================
 # MAIN APP
 # ===================================================================
