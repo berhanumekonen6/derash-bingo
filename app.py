@@ -2160,7 +2160,8 @@ if not st.session_state.logged_in:
                         st.info("💡 Your balance starts at 0.00 ETB. Admin can add balance.")
                         st.balloons()
                         load_all_data()
-                        st.rerun()  # REMOVED time.sleep(1)
+                        time.sleep(1)
+                        st.rerun()
                     else:
                         st.error(message)
     st.stop()
@@ -2344,7 +2345,8 @@ if st.session_state.current_role == "admin":
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
             
             st.success("🔄 New game started! Select your cards for the next round.")
-            st.rerun()  # REMOVED time.sleep(0.5)
+            time.sleep(0.5)
+            st.rerun()
     else:
         st.info("⏳ Waiting for game to start... Players are selecting cards.")
         
@@ -2513,7 +2515,8 @@ if st.session_state.game_started:
             
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
             st.success("🔄 New game started! Select your cards for the next round.")
-            st.rerun()  # REMOVED time.sleep(0.5)
+            time.sleep(0.5)
+            st.rerun()
     else:
         # Game is running - show BINGO board and player cards side by side
         # CARD SELECTION (1-201) IS HIDDEN HERE - ONLY BINGO BOARD AND PLAYER CARDS SHOWN
@@ -2585,12 +2588,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ===================================================================
-# AUTO-RERUN - INSTANT RESPONSE (ZERO DELAY)
-# ===================================================================
-
-# Check if we need to rerun for game state updates
+# Auto-rerun
 if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
+    time.sleep(0.5)
     st.rerun()
 elif st.session_state.selected_card is None and not st.session_state.game_started:
+    time.sleep(0.5)
     st.rerun()
