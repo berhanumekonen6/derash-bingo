@@ -1149,7 +1149,6 @@ BINGO_CARDS = [
     {"id": 200, "cells": [['6', '27', '43', '48', '62'], ['2', '26', '45', '54', '70'], ['5', '24', 'F', '47', '74'], ['10', '19', '40', '46', '65'], ['14', '30', '35', '52', '61']]},
     {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
 ]
-
 def get_card(card_id):
     for card in BINGO_CARDS:
         if card["id"] == card_id:
@@ -1990,9 +1989,10 @@ if st.session_state.current_role == "admin":
                     st.success(f"🎉 Winner {idx}: {winner.get('username')} - Card(s): {cards} - {patterns}")
         
         if st.button("🔄 Start New Game", use_container_width=True):
+            # COMPLETE RESET FOR NEW GAME
             st.session_state.selected_card = None
-            st.session_state.clicked_numbers = set()
-            st.session_state.called_numbers = set()
+            st.session_state.clicked_numbers = set()  # Clear player's selected cards
+            st.session_state.called_numbers = set()  # Clear called BINGO numbers
             st.session_state.last_called_number = None
             st.session_state.auto_called_count = 0
             st.session_state.game_started = False
@@ -2003,9 +2003,15 @@ if st.session_state.current_role == "admin":
             st.session_state.prize_distributed = False
             st.session_state.card_selection_time = 60
             st.session_state.timer_start_time = time.time()
-            st.session_state.taken_cards = []
-            st.session_state.card_owner = {}
+            st.session_state.taken_cards = []  # Clear all cards taken by all players
+            st.session_state.card_owner = {}  # Clear card ownership
+            st.session_state.clicked_numbers = set()  # Clear player's selected cards
+            
+            # Save empty state to global file
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
+            
+            st.success("🔄 New game started! Select your cards for the next round.")
+            time.sleep(0.5)
             st.rerun()
     else:
         st.info("⏳ Waiting for game to start... Players are selecting cards.")
@@ -2133,6 +2139,7 @@ if st.session_state.game_started:
         # NO BINGO BOARD DISPLAYED HERE
         
         if st.button("🔄 New Game", use_container_width=True):
+            # COMPLETE RESET FOR NEW GAME
             st.session_state.selected_card = None
             st.session_state.clicked_numbers = set()
             st.session_state.called_numbers = set()
@@ -2148,7 +2155,10 @@ if st.session_state.game_started:
             st.session_state.timer_start_time = time.time()
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
+            st.session_state.clicked_numbers = set()
             save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
+            st.success("🔄 New game started! Select your cards for the next round.")
+            time.sleep(0.5)
             st.rerun()
     else:
         # Game is running - show BINGO board and player cards side by side
