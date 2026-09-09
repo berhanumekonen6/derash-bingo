@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # === YOUR BOT INFORMATION ===
 BOT_TOKEN = "8976887607:AAHPLbIKWkSr0Yjbab_Ebhk6V--cRwNi4Eo"
-GAME_LINK = "https://tinyurl.com/u8ctbvr6"
+GAME_LINK = "https://tinyurl.com/yc4y6ktk"
 TELEBIRR_NUMBER = "0905527481"
 ADMIN_USERNAME = "@berhanumekonen6"
 BOT_USERNAME = "@DerashBingoPlayBot"
