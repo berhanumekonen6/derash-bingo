@@ -1715,36 +1715,34 @@ def render_card_selection():
     
     cols_per_row = st.session_state.columns_per_row
     
-    # Add CSS for HIGHLY ACTIVE touch-responsive buttons
+    # ============================================================
+    # JAVASCRIPT FOR INSTANT FEEDBACK ON ALL BUTTONS
+    # ============================================================
     st.markdown("""
     <style>
-        /* MAKE BUTTONS EXTREMELY RESPONSIVE AND ACTIVE */
+        /* INSTANT FEEDBACK - SUPER FAST RESPONSE */
         .stButton > button {
-            transition: all 0.1s ease !important;
+            transition: transform 0.05s ease, box-shadow 0.05s ease, border-color 0.05s ease !important;
             -webkit-tap-highlight-color: transparent !important;
             touch-action: manipulation !important;
             cursor: pointer !important;
             user-select: none !important;
             -webkit-user-select: none !important;
+            will-change: transform !important;
+            position: relative !important;
         }
         .stButton > button:active {
-            transform: scale(0.92) !important;
-            transition: all 0.05s ease !important;
-            box-shadow: 0 0 30px rgba(255,215,0,0.4) !important;
+            transform: scale(0.88) !important;
+            box-shadow: 0 0 60px rgba(255,215,0,0.7) !important;
+            border-color: #FFD700 !important;
+            transition: transform 0.02s ease !important;
         }
-        .stButton > button:focus {
-            outline: none !important;
-        }
-        /* Disabled buttons should not scale */
         .stButton > button:disabled:active {
             transform: none !important;
+            box-shadow: none !important;
+            border-color: inherit !important;
         }
-        /* Specific styles for selected cards - more active feedback */
-        div[data-testid="stButton"] button:active {
-            transform: scale(0.90) !important;
-            transition: all 0.05s ease !important;
-        }
-        /* Ensure touch targets are large enough */
+        /* Mobile specific */
         @media (max-width: 480px) {
             .stButton > button {
                 min-height: 30px !important;
@@ -1754,7 +1752,8 @@ def render_card_selection():
                 border-radius: 6px !important;
             }
             .stButton > button:active {
-                transform: scale(0.88) !important;
+                transform: scale(0.85) !important;
+                box-shadow: 0 0 50px rgba(255,215,0,0.8) !important;
             }
         }
         @media (max-width: 360px) {
@@ -1765,20 +1764,128 @@ def render_card_selection():
                 font-size: 0.45rem !important;
             }
         }
-        /* Make card buttons more touch-friendly */
-        .stButton {
-            width: 100% !important;
-        }
-        /* Flash effect on click */
-        .stButton > button:active {
-            animation: buttonFlash 0.2s ease !important;
-        }
-        @keyframes buttonFlash {
-            0% { box-shadow: 0 0 0px rgba(255,215,0,0); }
-            50% { box-shadow: 0 0 40px rgba(255,215,0,0.8); }
-            100% { box-shadow: 0 0 0px rgba(255,215,0,0); }
-        }
     </style>
+    
+    <script>
+        // ============================================================
+        // INSTANT BUTTON FEEDBACK - FIRES BEFORE PAGE RELOAD
+        // ============================================================
+        (function() {
+            'use strict';
+            
+            // Function to add instant feedback to a button
+            function addInstantFeedback(button) {
+                // Skip if already processed
+                if (button.dataset.feedbackAdded === 'true') return;
+                button.dataset.feedbackAdded = 'true';
+                
+                // Skip disabled buttons
+                if (button.disabled) return;
+                
+                // Mouse events - PC
+                button.addEventListener('mousedown', function(e) {
+                    if (this.disabled) return;
+                    this.style.transform = 'scale(0.88)';
+                    this.style.transition = 'transform 0.02s ease';
+                    this.style.boxShadow = '0 0 60px rgba(255,215,0,0.8)';
+                    this.style.borderColor = '#FFD700';
+                    this.style.borderWidth = '3px';
+                }, { passive: true });
+                
+                button.addEventListener('mouseup', function(e) {
+                    if (this.disabled) return;
+                    this.style.transform = 'scale(1)';
+                    this.style.transition = 'transform 0.1s ease';
+                    this.style.boxShadow = '';
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }, { passive: true });
+                
+                button.addEventListener('mouseleave', function(e) {
+                    if (this.disabled) return;
+                    this.style.transform = 'scale(1)';
+                    this.style.transition = 'transform 0.1s ease';
+                    this.style.boxShadow = '';
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }, { passive: true });
+                
+                // Touch events - Mobile (fires INSTANTLY on touch)
+                button.addEventListener('touchstart', function(e) {
+                    if (this.disabled) return;
+                    // INSTANT visual feedback - fires immediately on finger touch
+                    this.style.transform = 'scale(0.85)';
+                    this.style.transition = 'transform 0.01s ease';
+                    this.style.boxShadow = '0 0 70px rgba(255,215,0,0.9)';
+                    this.style.borderColor = '#FFD700';
+                    this.style.borderWidth = '3px';
+                }, { passive: true });
+                
+                button.addEventListener('touchend', function(e) {
+                    if (this.disabled) return;
+                    this.style.transform = 'scale(1)';
+                    this.style.transition = 'transform 0.1s ease';
+                    this.style.boxShadow = '';
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }, { passive: true });
+                
+                button.addEventListener('touchcancel', function(e) {
+                    if (this.disabled) return;
+                    this.style.transform = 'scale(1)';
+                    this.style.transition = 'transform 0.1s ease';
+                    this.style.boxShadow = '';
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }, { passive: true });
+            }
+            
+            // Function to find and setup all buttons
+            function setupAllButtons() {
+                // Find all buttons in the page
+                const buttons = document.querySelectorAll('button[data-testid="baseButton-secondary"], button[data-testid="baseButton-primary"], .stButton > button');
+                
+                buttons.forEach(function(button) {
+                    addInstantFeedback(button);
+                });
+            }
+            
+            // Run immediately
+            setupAllButtons();
+            
+            // Run after short delays (for dynamically loaded content)
+            setTimeout(setupAllButtons, 100);
+            setTimeout(setupAllButtons, 300);
+            setTimeout(setupAllButtons, 500);
+            setTimeout(setupAllButtons, 1000);
+            
+            // Use MutationObserver to watch for new buttons
+            if (window.MutationObserver) {
+                const observer = new MutationObserver(function(mutations) {
+                    let shouldSetup = false;
+                    for (let i = 0; i < mutations.length; i++) {
+                        if (mutations[i].addedNodes.length > 0) {
+                            shouldSetup = true;
+                            break;
+                        }
+                    }
+                    if (shouldSetup) {
+                        setTimeout(setupAllButtons, 50);
+                    }
+                });
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: false
+                });
+            }
+            
+            // Also run on Streamlit's DOM update event
+            document.addEventListener('DOMContentLoaded', setupAllButtons);
+            
+            console.log('✅ Instant feedback active on all buttons!');
+        })();
+    </script>
     """, unsafe_allow_html=True)
     
     cols = st.columns(cols_per_row)
@@ -1814,17 +1921,10 @@ def render_card_selection():
                         text-overflow: ellipsis !important;
                         line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
-                        border-color: #FF6B6B !important;
-                        background: rgba(255, 80, 80, 0.3) !important;
-                        box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
-                        transform: scale(1.05);
-                        color: #FFFFFF !important;
-                    }}
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
-                        transform: scale(0.90) !important;
-                        transition: all 0.05s ease !important;
-                        box-shadow: 0 0 50px rgba(76, 175, 80, 0.6) !important;
+                        transform: scale(0.88) !important;
+                        transition: transform 0.02s ease !important;
+                        box-shadow: 0 0 60px rgba(76, 175, 80, 0.7) !important;
                         border-color: #FFD700 !important;
                     }}
                 </style>
@@ -1849,14 +1949,9 @@ def render_card_selection():
                         text-overflow: ellipsis !important;
                         line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
-                        transform: none !important;
-                        border-color: rgba(255, 0, 0, 0.2) !important;
-                        background: rgba(255, 0, 0, 0.15) !important;
-                        box-shadow: none !important;
-                    }}
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
                         transform: none !important;
+                        box-shadow: none !important;
                     }}
                 </style>
                 """, unsafe_allow_html=True)
@@ -1880,14 +1975,9 @@ def render_card_selection():
                         text-overflow: ellipsis !important;
                         line-height: 1 !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
-                        transform: none !important;
-                        border-color: rgba(255, 165, 0, 0.3) !important;
-                        background: rgba(255, 165, 0, 0.15) !important;
-                        box-shadow: none !important;
-                    }}
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
                         transform: none !important;
+                        box-shadow: none !important;
                     }}
                 </style>
                 """, unsafe_allow_html=True)
@@ -1907,16 +1997,10 @@ def render_card_selection():
                         line-height: 1 !important;
                         transition: all 0.1s ease !important;
                     }}
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
-                        border-color: #FFD700 !important;
-                        background: rgba(255, 215, 0, 0.2) !important;
-                        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-                        transform: scale(1.05);
-                    }}
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
-                        transform: scale(0.90) !important;
-                        transition: all 0.05s ease !important;
-                        box-shadow: 0 0 40px rgba(255, 215, 0, 0.5) !important;
+                        transform: scale(0.88) !important;
+                        transition: transform 0.02s ease !important;
+                        box-shadow: 0 0 60px rgba(255,215,0,0.7) !important;
                         border-color: #FFD700 !important;
                     }}
                 </style>
