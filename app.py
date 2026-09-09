@@ -77,7 +77,7 @@ st.markdown("""
         margin-top: 3px;
     }
     
-    /* Card selection grid wrapper */
+    /* Card selection grid wrapper - HIDDEN WHEN GAME STARTS */
     .cards-grid-wrapper {
         max-height: 500px;
         overflow-y: auto;
@@ -247,21 +247,33 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    /* Timer display */
+    /* Timer display - ENHANCED */
     .header-timer-container {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 2px solid rgba(255, 215, 0, 0.2) !important;
         border-radius: 15px;
         padding: 10px 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        text-align: center;
     }
     .timer-display {
         color: #FFD700 !important;
         font-weight: bold;
         text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        font-size: 2.5rem !important;
+        font-family: monospace !important;
     }
     .timer-label {
         color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.9rem !important;
+    }
+    .timer-warning {
+        color: #FF6B6B !important;
+        animation: timerPulse 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes timerPulse {
+        0% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0.6; transform: scale(1.05); }
     }
     
     /* Responsive header */
@@ -592,6 +604,8 @@ def init_session_state():
         st.session_state.timer_start_time = time.time()
     if 'celebration_shown' not in st.session_state:
         st.session_state.celebration_shown = False
+    if 'selection_phase_ended' not in st.session_state:
+        st.session_state.selection_phase_ended = False
 
 init_session_state()
 
@@ -2251,6 +2265,7 @@ else:
             st.session_state.card_selection_time = 0
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
+            st.session_state.selection_phase_ended = True
             
             if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
                 st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
@@ -2364,6 +2379,7 @@ if st.session_state.current_role == "admin":
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
             st.session_state.clicked_numbers = set()
+            st.session_state.selection_phase_ended = False
             
             # Clear global winners file
             clear_global_winners()
@@ -2536,6 +2552,7 @@ if st.session_state.game_started:
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
             st.session_state.clicked_numbers = set()
+            st.session_state.selection_phase_ended = False
             
             # Clear global winners file
             clear_global_winners()
@@ -2581,28 +2598,45 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # GAME NOT STARTED - Show card selection (1-201)
-    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-    
-    # Check if game should start (timer reached 0 and enough cards)
-    if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
+    # GAME NOT STARTED - Show card selection (1-201) ONLY IF SELECTION PHASE NOT ENDED
+    if not st.session_state.selection_phase_ended:
+        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        # Check if game should start (timer reached 0 and enough cards)
+        if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            st.session_state.selection_phase_ended = True
+            
+            if len(st.session_state.clicked_numbers) > 0:
+                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+            else:
+                st.warning("⚠️ You don't have any cards selected! The game has started without you.")
+                st.session_state.selected_card = -1
+            
+            st.rerun()
+        
+        # Show card selection interface (1-201) ONLY IF GAME NOT STARTED
+        if not st.session_state.game_started:
+            render_card_selection()
         else:
-            st.warning("⚠️ You don't have any cards selected! The game has started without you.")
-            st.session_state.selected_card = -1
-        
-        st.rerun()
-    
-    # Show card selection interface (1-201)
-    if not st.session_state.game_started:
-        render_card_selection()
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
+            st.rerun()
     else:
-        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
-        st.rerun()
+        # Selection phase ended - show waiting message
+        st.info("⏳ Card selection phase has ended. Waiting for game to start...")
+        st.markdown("""
+        <div style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
+            <h3 style="color:#FFD700;">🔄 Game is starting...</h3>
+            <p style="color:rgba(255,255,255,0.7);">The BINGO board will appear when the game begins.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Check if game should start
+        if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            st.rerun()
 
 # ===================================================================
 # FOOTER
