@@ -433,6 +433,94 @@ st.markdown("""
         color: #FF9800;
         font-weight: bold;
     }
+    
+    /* Selected card styles - green circle with checkmark */
+    .selected-card-btn {
+        background: rgba(76, 175, 80, 0.25) !important;
+        border: 3px solid #4CAF50 !important;
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 30px rgba(76, 175, 80, 0.25) !important;
+        transform: scale(1.02);
+        padding: 4px 2px !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .selected-card-btn .card-content {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    .selected-card-btn .circle-number {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 50% !important;
+        background: #4CAF50 !important;
+        color: white !important;
+        font-weight: bold !important;
+        font-size: 0.9rem !important;
+        border: 2px solid #2E7D32 !important;
+        flex-shrink: 0 !important;
+    }
+    .selected-card-btn .checkmark {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #4CAF50 !important;
+        font-size: 1.3rem !important;
+        font-weight: bold !important;
+        flex-shrink: 0 !important;
+    }
+    .selected-card-btn:hover {
+        background: rgba(255, 80, 80, 0.25) !important;
+        border: 3px solid #FF4444 !important;
+        box-shadow: 0 0 30px rgba(255, 68, 68, 0.25) !important;
+        transform: scale(1.05);
+    }
+    .selected-card-btn:hover .circle-number {
+        background: #FF4444 !important;
+        border-color: #B71C1C !important;
+    }
+    .selected-card-btn:hover .checkmark {
+        color: #FF4444 !important;
+    }
+    
+    /* Taken card styles */
+    .taken-card-btn {
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+        cursor: not-allowed !important;
+        opacity: 0.4 !important;
+    }
+    .taken-card-btn:hover {
+        transform: none !important;
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        box-shadow: none !important;
+    }
+    
+    /* Available card styles */
+    .available-card-btn {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+    }
+    .available-card-btn:hover {
+        border-color: #FFD700 !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+        transform: scale(1.05);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -560,6 +648,8 @@ def init_session_state():
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
         st.session_state.timer_start_time = time.time()
+    if 'selectbox_key' not in st.session_state:
+        st.session_state.selectbox_key = f"cards_per_row_{int(time.time())}_{random.randint(1000, 9999)}"
 
 init_session_state()
 
@@ -906,7 +996,7 @@ BINGO_CARDS = [
     {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
     {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
     {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
-    # ... (keep all 201 cards - abbreviated for space)
+    # ... (keep all 201 cards)
 ]
 
 def get_card(card_id):
@@ -936,18 +1026,15 @@ def check_winning_pattern(card_data, called_numbers):
             return True
         return int(value) in called_set
     
-    # Check rows
     for row in range(5):
         if all(is_marked(card_data[row][col]) for col in range(5)):
             return {'type': f"Row {row + 1}"}
     
-    # Check columns
     for col in range(5):
         if all(is_marked(card_data[row][col]) for row in range(5)):
             letters = ['B', 'I', 'N', 'G', 'O']
             return {'type': f"Column {letters[col]}"}
     
-    # Check diagonals
     if all(is_marked(card_data[i][i]) for i in range(5)):
         return {'type': "Diagonal Main"}
     if all(is_marked(card_data[i][4 - i]) for i in range(5)):
@@ -1215,7 +1302,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - WITH UNIQUE KEY FOR SELECTBOX
+# CARD SELECTION FUNCTION
 # ===================================================================
 
 def render_card_selection():
@@ -1312,14 +1399,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # FIX: Use a stable unique key based on username
-    selectbox_key = f"cards_per_row_{st.session_state.current_user}"
-    
+    # FIX: Use a stable unique key stored in session state
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        key=selectbox_key,
+        key=st.session_state.selectbox_key,
         help="Select how many cards to display per row"
     )
     
@@ -1346,7 +1431,11 @@ def render_card_selection():
             if is_clicked:
                 # SELECTED CARD - Green circle with checkmark
                 btn_type = "primary"
-                button_html = f"""
+                # Custom label with circle + number + checkmark
+                label = f'<span class="card-content"><span class="circle-number">{i}</span><span class="checkmark">✓</span></span>'
+                
+                # Apply CSS class via markdown
+                st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
                         background: rgba(76, 175, 80, 0.25) !important;
@@ -1406,16 +1495,13 @@ def render_card_selection():
                         color: #FF4444 !important;
                     }}
                 </style>
-                """
-                st.markdown(button_html, unsafe_allow_html=True)
-                # Label with circle + number + checkmark
-                label = f'<span class="card-content"><span class="circle-number">{i}</span><span class="checkmark">✓</span></span>'
+                """, unsafe_allow_html=True)
                 
             elif is_disabled:
                 # DISABLED CARD - Taken by someone else (grayed out)
                 btn_type = "secondary"
                 label = str(i)
-                button_html = f"""
+                st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[kind="secondary"][key="card_{i}"] {{
                         border-color: rgba(255, 0, 0, 0.2) !important;
@@ -1431,13 +1517,12 @@ def render_card_selection():
                         box-shadow: none !important;
                     }}
                 </style>
-                """
-                st.markdown(button_html, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             else:
                 # AVAILABLE CARD - Normal
                 btn_type = "primary"
                 label = str(i)
-                button_html = f"""
+                st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
                         background: rgba(255, 255, 255, 0.08) !important;
@@ -1452,19 +1537,17 @@ def render_card_selection():
                         transform: scale(1.05);
                     }}
                 </style>
-                """
-                st.markdown(button_html, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             # Create the button
-            if is_clicked:
-                # For selected cards, use HTML label with circle and checkmark
-                if st.button(
-                    label,
-                    key=f"card_{i}",
-                    use_container_width=True,
-                    type=btn_type,
-                    disabled=is_disabled
-                ):
+            if st.button(
+                label,
+                key=f"card_{i}",
+                use_container_width=True,
+                type=btn_type,
+                disabled=is_disabled
+            ):
+                if is_clicked:
                     # DESELECT
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
@@ -1475,15 +1558,7 @@ def render_card_selection():
                         st.session_state.selected_card = None
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
-            else:
-                # For non-selected cards, use plain text
-                if st.button(
-                    label,
-                    key=f"card_{i}",
-                    use_container_width=True,
-                    type=btn_type,
-                    disabled=is_disabled
-                ):
+                else:
                     # SELECT
                     if len(st.session_state.clicked_numbers) < 2 and not is_disabled:
                         st.session_state.clicked_numbers.add(i)
