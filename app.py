@@ -606,6 +606,8 @@ def init_session_state():
         st.session_state.celebration_shown = False
     if 'selection_phase_ended' not in st.session_state:
         st.session_state.selection_phase_ended = False
+    if 'timer_running' not in st.session_state:
+        st.session_state.timer_running = False
 
 init_session_state()
 
@@ -685,6 +687,7 @@ def sync_global_winners():
 
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
+CARD_SELECTION_TIME = 60  # 60 seconds global timer
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -1630,14 +1633,29 @@ def render_card_selection():
     
     sync_global_cards()
     
+    # GLOBAL TIMER - Same for all players
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, st.session_state.card_selection_time - elapsed)
+    remaining = max(0, CARD_SELECTION_TIME - elapsed)
     st.session_state.card_selection_time = remaining
     
+    # Show timer to players
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
+    
+    # Check if timer reached 0:01 - Card selection is OVER
+    if remaining <= 1:
+        st.session_state.selection_phase_ended = True
+        st.warning("⏰ CARD SELECTION TIME IS OVER! 🛑")
+        st.info("🔄 The game is starting... BINGO board will appear shortly.")
+        
+        # Automatically start the game if not already started
+        if not st.session_state.game_started:
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            st.rerun()
+        return
     
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
@@ -2125,7 +2143,7 @@ def render_card_selection():
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.rerun()
     
-    progress = 1 - (remaining / 60) if remaining > 0 else 1
+    progress = 1 - (remaining / CARD_SELECTION_TIME) if remaining > 0 else 1
     st.progress(progress)
     
     if enough_cards:
@@ -2246,37 +2264,22 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# TIMER
+# GLOBAL TIMER - CHECK IF SELECTION PHASE SHOULD END
 # ===================================================================
 
-if st.session_state.game_started:
-    pass
-else:
+if not st.session_state.game_started:
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, st.session_state.card_selection_time - elapsed)
+    remaining = max(0, CARD_SELECTION_TIME - elapsed)
     st.session_state.card_selection_time = remaining
     
-    if remaining <= 0 and not st.session_state.game_started:
-        total_selected = len(st.session_state.taken_cards)
-        min_cards_required = 3
-        
-        if total_selected >= min_cards_required:
-            st.session_state.card_selection_time = 0
+    # At 0:01 or less - card selection is OVER
+    if remaining <= 1:
+        st.session_state.selection_phase_ended = True
+        # Start the game automatically
+        if not st.session_state.game_started:
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
-            st.session_state.selection_phase_ended = True
-            
-            if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
-                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-            
-            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 0)
-            st.rerun()
-        else:
-            st.session_state.timer_start_time = time.time()
-            st.session_state.card_selection_time = 30
-            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, 30)
-            st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
             st.rerun()
 
 # ===================================================================
@@ -2374,7 +2377,7 @@ if st.session_state.current_role == "admin":
             st.session_state.game_over = False
             st.session_state.winners_list = []
             st.session_state.prize_distributed = False
-            st.session_state.card_selection_time = 60
+            st.session_state.card_selection_time = CARD_SELECTION_TIME
             st.session_state.timer_start_time = time.time()
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
@@ -2385,7 +2388,7 @@ if st.session_state.current_role == "admin":
             clear_global_winners()
             
             # Save empty state to global file
-            save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
+            save_global_cards([], {}, 4, st.session_state.timer_start_time, CARD_SELECTION_TIME)
             
             st.success("🔄 New game started! Select your cards for the next round.")
             time.sleep(0.5)
@@ -2547,7 +2550,7 @@ if st.session_state.game_started:
             st.session_state.game_over = False
             st.session_state.winners_list = []
             st.session_state.prize_distributed = False
-            st.session_state.card_selection_time = 60
+            st.session_state.card_selection_time = CARD_SELECTION_TIME
             st.session_state.timer_start_time = time.time()
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
@@ -2557,7 +2560,7 @@ if st.session_state.game_started:
             # Clear global winners file
             clear_global_winners()
             
-            save_global_cards([], {}, 4, st.session_state.timer_start_time, 60)
+            save_global_cards([], {}, 4, st.session_state.timer_start_time, CARD_SELECTION_TIME)
             st.success("🔄 New game started! Select your cards for the next round.")
             time.sleep(0.5)
             st.rerun()
@@ -2600,21 +2603,18 @@ if st.session_state.game_started:
 else:
     # GAME NOT STARTED - Show card selection (1-201) ONLY IF SELECTION PHASE NOT ENDED
     if not st.session_state.selection_phase_ended:
-        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
+        # Check if selection time is over (0:01 or less)
+        current_time = time.time()
+        elapsed = current_time - st.session_state.timer_start_time
+        remaining = max(0, CARD_SELECTION_TIME - elapsed)
         
-        # Check if game should start (timer reached 0 and enough cards)
-        if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
+        if remaining <= 1:
+            st.session_state.selection_phase_ended = True
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
-            st.session_state.selection_phase_ended = True
-            
-            if len(st.session_state.clicked_numbers) > 0:
-                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-            else:
-                st.warning("⚠️ You don't have any cards selected! The game has started without you.")
-                st.session_state.selected_card = -1
-            
             st.rerun()
+        
+        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         
         # Show card selection interface (1-201) ONLY IF GAME NOT STARTED
         if not st.session_state.game_started:
@@ -2623,19 +2623,24 @@ else:
             st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
             st.rerun()
     else:
-        # Selection phase ended - show waiting message
-        st.info("⏳ Card selection phase has ended. Waiting for game to start...")
-        st.markdown("""
-        <div style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
-            <h3 style="color:#FFD700;">🔄 Game is starting...</h3>
-            <p style="color:rgba(255,255,255,0.7);">The BINGO board will appear when the game begins.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Check if game should start
-        if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
+        # Selection phase ended - show game starting message
+        if not st.session_state.game_started:
+            st.info("⏳ Card selection phase has ended. The game is starting...")
+            st.markdown("""
+            <div style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
+                <h3 style="color:#FFD700;">🔄 Game is starting...</h3>
+                <p style="color:rgba(255,255,255,0.7);">The BINGO board will appear shortly.</p>
+                <div style="font-size:2rem;margin-top:10px;">🎯</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Start the game
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
             st.rerun()
 
 # ===================================================================
