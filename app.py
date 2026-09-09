@@ -1221,7 +1221,7 @@ def check_for_winners():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using HTML/CSS grid"""
+    """Render card selection grid using st.button grid"""
     load_all_data()
     balance = st.session_state.user_db.get(st.session_state.current_user, {}).get('balance', 0)
     
@@ -1239,7 +1239,7 @@ def render_card_selection():
     
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:8px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
-        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+        <span style="display:inline-block;padding:8px 20px;background:rgba(0,0,0,0.15);border-radius:8px;border:2px solid {color};font-size:1.3rem;font-weight:bold;color:{color};font-family:monospace;">
             ⏱️ {time_str}
         </span>
         <span style="display:inline-block;padding:6px 15px;background:linear-gradient(135deg,#2E7D32,#1B5E20);border-radius:8px;font-size:0.9rem;font-weight:bold;color:#FFD700;">
@@ -1259,71 +1259,127 @@ def render_card_selection():
     elif st.session_state.card_selection_time <= 30:
         st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
     
-    # Build HTML grid with clickable cards
-    html = '<div class="cards-grid-wrapper"><div class="cards-grid">'
-    
-    for i in range(1, 202):
-        is_clicked = i in st.session_state.clicked_numbers
-        is_taken = i in st.session_state.taken_cards
+    # ===================================================================
+    # DISPLAY SELECTED CARDS AT THE TOP (NEW)
+    # ===================================================================
+    if len(st.session_state.clicked_numbers) > 0:
+        st.markdown("### 📋 Your Selected Cards")
         
-        if is_clicked:
-            html += f'<div class="card-btn selected" onclick="handleCardClick({i})" style="cursor:pointer;">✓ {i}</div>'
-        elif is_taken:
-            html += f'<div class="card-btn taken" style="cursor:not-allowed;">{i}</div>'
-        else:
-            html += f'<div class="card-btn" onclick="handleCardClick({i})" style="cursor:pointer;">{i}</div>'
-    
-    html += '</div></div>'
-    
-    # Add JavaScript for card selection
-    html += """
-    <script>
-        function handleCardClick(cardId) {
-            fetch(window.location.pathname + '?toggle=' + cardId, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).then(function(response) {
-                location.reload();
-            }).catch(function() {
-                location.reload();
-            });
-        }
-    </script>
-    """
-    
-    st.markdown(html, unsafe_allow_html=True)
-    
-    # Handle card selection via query params
-    if 'toggle' in st.query_params:
-        card_id = int(st.query_params['toggle'])
+        # Display selected cards in a row
+        selected_cards = list(st.session_state.clicked_numbers)
+        cols = st.columns(min(len(selected_cards), 3))
         
-        if card_id in st.session_state.clicked_numbers:
-            # Deselect
-            st.session_state.clicked_numbers.remove(card_id)
-            if card_id in st.session_state.taken_cards:
-                st.session_state.taken_cards.remove(card_id)
-            if st.session_state.selected_card == card_id:
-                st.session_state.selected_card = None
-        else:
-            # Select
-            if len(st.session_state.clicked_numbers) < 2 and card_id not in st.session_state.taken_cards:
-                st.session_state.clicked_numbers.add(card_id)
-                st.session_state.taken_cards.append(card_id)
+        for idx, card_id in enumerate(selected_cards):
+            with cols[idx % 3]:
+                # Show the card
+                display_selected_card_preview(card_id)
         
-        st.query_params.clear()
-        save_all_data()
-        st.rerun()
+        st.markdown("---")
     
+    # ===================================================================
+    # CARD SELECTION GRID
+    # ===================================================================
+    st.markdown("### 🎯 Available Cards (Click to select)")
+    
+    # Create grid of card buttons
+    cols_per_row = 10
+    
+    # Use a container for scrolling
+    with st.container():
+        # Create a grid using columns
+        for row in range(0, 201, cols_per_row):
+            cols = st.columns(cols_per_row, gap="small")
+            for col_idx in range(cols_per_row):
+                card_num = row + col_idx + 1
+                if card_num > 201:
+                    break
+                
+                is_clicked = card_num in st.session_state.clicked_numbers
+                is_taken = card_num in st.session_state.taken_cards
+                
+                with cols[col_idx]:
+                    if is_clicked:
+                        # Selected card - gold button with checkmark
+                        st.button(
+                            f"✓ {card_num}",
+                            key=f"sel_{card_num}",
+                            use_container_width=True,
+                            type="primary",
+                            help="Click to deselect"
+                        )
+                    elif is_taken:
+                        # Taken card - disabled
+                        st.button(
+                            str(card_num),
+                            key=f"taken_{card_num}",
+                            use_container_width=True,
+                            disabled=True,
+                            help="This card is already taken"
+                        )
+                    else:
+                        # Available card - clickable
+                        if st.button(
+                            str(card_num),
+                            key=f"avail_{card_num}",
+                            use_container_width=True,
+                            help="Click to select this card"
+                        ):
+                            # Select the card
+                            if len(st.session_state.clicked_numbers) < 2:
+                                st.session_state.clicked_numbers.add(card_num)
+                                st.session_state.taken_cards.append(card_num)
+                                save_all_data()
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ You can only select up to 2 cards!")
+    
+    # Progress and status
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for timer...")
     else:
-        st.info("👆 Click a card to select it (max 2 cards)")
+        remaining_slots = 2 - len(st.session_state.clicked_numbers)
+        st.info(f"👆 Click {remaining_slots} more card(s) to select (max 2 cards)")
     
     progress = 1 - (st.session_state.card_selection_time / 60)
     st.progress(progress)
     st.caption(f"⏱️ Auto-join in {int(st.session_state.card_selection_time)}s")
+
+def display_selected_card_preview(card_id):
+    """Display a preview of a selected card (smaller version)"""
+    card = generate_bingo_card(card_id)
+    
+    letters = ['B', 'I', 'N', 'G', 'O']
+    html = f"""
+    <div class="card-container" style="margin:5px 0;border:2px solid #FFD700;box-shadow:0 0 20px rgba(255,215,0,0.2);padding:10px;">
+        <h5 style="text-align:center;color:#FFD700;margin:0 0 5px 0;font-size:0.9rem;">🎯 Card #{card_id}</h5>
+        <table style="width:100%;border-collapse:collapse;text-align:center;font-size:0.8rem;">
+            <tr>
+                <th style="color:#FFD700;padding:2px;font-size:0.7rem;">B</th>
+                <th style="color:#FFD700;padding:2px;font-size:0.7rem;">I</th>
+                <th style="color:#FFD700;padding:2px;font-size:0.7rem;">N</th>
+                <th style="color:#FFD700;padding:2px;font-size:0.7rem;">G</th>
+                <th style="color:#FFD700;padding:2px;font-size:0.7rem;">O</th>
+            </tr>
+    """
+    
+    for row in range(5):
+        html += "<tr>"
+        for letter in letters:
+            value = card[letter][row]
+            if value == 'FREE':
+                display_value = '⭐'
+                bg_color = 'rgba(255,215,0,0.15)'
+                text_color = '#FFD700'
+            else:
+                display_value = str(value)
+                bg_color = 'rgba(255,255,255,0.05)'
+                text_color = '#FFFFFF'
+            
+            html += f'<td style="border:1px solid rgba(255,255,255,0.1);padding:4px 2px;border-radius:3px;background:{bg_color};color:{text_color};font-weight:bold;font-size:0.7rem;">{display_value}</td>'
+        html += "</tr>"
+    
+    html += "</table></div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
 # MAIN APP
