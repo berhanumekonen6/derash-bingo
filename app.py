@@ -1363,7 +1363,7 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
-        st.info(f"📝 Select your cards (max 2). Click 🟢 green card to DESELECT. {int(remaining)} seconds remaining ⏳")
+        st.info(f"📝 Select your cards (max 2). Each card costs 10 ETB. Click 🟢 green card to DESELECT. {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
     # CREATE GRID USING SELECTED NUMBER OF COLUMNS
@@ -1381,7 +1381,9 @@ def render_card_selection():
             # A card is disabled if:
             # 1. It's taken by someone else (not you)
             # 2. You already have 2 cards selected AND this card is not one of yours
-            is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
+            # 3. You don't have enough balance to select a card
+            has_insufficient_balance = balance < 10 and not is_clicked
+            is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or has_insufficient_balance
             
             if is_clicked:
                 # SELECTED CARD - Green highlight, clickable to deselect
@@ -1408,26 +1410,47 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             elif is_disabled:
-                # DISABLED CARD - Taken by someone else or max selected
+                # DISABLED CARD - Taken by someone else, max selected, or insufficient balance
                 btn_type = "secondary"
                 label = str(i)
-                st.markdown(f"""
-                <style>
-                    div[data-testid="stButton"] button[key="card_{i}"] {{
-                        border-color: rgba(255, 0, 0, 0.2) !important;
-                        background: rgba(255, 0, 0, 0.15) !important;
-                        color: rgba(255, 255, 255, 0.3) !important;
-                        cursor: not-allowed !important;
-                        opacity: 0.5 !important;
-                    }}
-                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
-                        transform: none !important;
-                        border-color: rgba(255, 0, 0, 0.2) !important;
-                        background: rgba(255, 0, 0, 0.15) !important;
-                        box-shadow: none !important;
-                    }}
-                </style>
-                """, unsafe_allow_html=True)
+                
+                # Check if disabled due to insufficient balance
+                if has_insufficient_balance:
+                    st.markdown(f"""
+                    <style>
+                        div[data-testid="stButton"] button[key="card_{i}"] {{
+                            border-color: rgba(255, 165, 0, 0.3) !important;
+                            background: rgba(255, 165, 0, 0.15) !important;
+                            color: rgba(255, 255, 255, 0.4) !important;
+                            cursor: not-allowed !important;
+                            opacity: 0.6 !important;
+                        }}
+                        div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                            transform: none !important;
+                            border-color: rgba(255, 165, 0, 0.3) !important;
+                            background: rgba(255, 165, 0, 0.15) !important;
+                            box-shadow: none !important;
+                        }}
+                    </style>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <style>
+                        div[data-testid="stButton"] button[key="card_{i}"] {{
+                            border-color: rgba(255, 0, 0, 0.2) !important;
+                            background: rgba(255, 0, 0, 0.15) !important;
+                            color: rgba(255, 255, 255, 0.3) !important;
+                            cursor: not-allowed !important;
+                            opacity: 0.5 !important;
+                        }}
+                        div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                            transform: none !important;
+                            border-color: rgba(255, 0, 0, 0.2) !important;
+                            background: rgba(255, 0, 0, 0.15) !important;
+                            box-shadow: none !important;
+                        }}
+                    </style>
+                    """, unsafe_allow_html=True)
             else:
                 # AVAILABLE CARD - Normal
                 btn_type = "primary"
@@ -1451,7 +1474,7 @@ def render_card_selection():
                 disabled=is_disabled
             ):
                 if i in st.session_state.clicked_numbers:
-                    # DESELECT - Remove your card from global board
+                    # DESELECT - Remove your card from global board AND REFUND 10 ETB
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1459,25 +1482,45 @@ def render_card_selection():
                         del st.session_state.card_owner[str(i)]
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
+                    
+                    # REFUND 10 ETB to player balance
+                    if st.session_state.current_user in st.session_state.user_db:
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                        save_all_data()
+                    
                     # Save to global file (preserve timer and columns)
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
                 else:
-                    # SELECT - Add your card to global board
+                    # SELECT - Add your card to global board AND DEDUCT 10 ETB
                     if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
-                        st.session_state.clicked_numbers.add(i)
-                        st.session_state.taken_cards.append(i)
-                        st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        # Save to global file (preserve timer and columns)
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                        st.rerun()
+                        # Check if player has enough balance
+                        current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+                        if current_balance >= 10:
+                            # Deduct 10 ETB from player balance
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = current_balance - 10
+                            save_all_data()
+                            
+                            # Add card to player's selection
+                            st.session_state.clicked_numbers.add(i)
+                            st.session_state.taken_cards.append(i)
+                            st.session_state.card_owner[str(i)] = st.session_state.current_user
+                            
+                            # Save to global file (preserve timer and columns)
+                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                            st.rerun()
+                        else:
+                            st.error("❌ Insufficient balance! You need at least 10 ETB to select a card. Please ask admin to add balance.")
     
     if len(st.session_state.clicked_numbers) >= 2:
-        st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it. Waiting for other players... ⏳")
+        st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB). Waiting for other players... ⏳")
     elif len(st.session_state.clicked_numbers) > 0:
-        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 green card to DESELECT it")
+        st.info(f"👆 You have {len(st.session_state.clicked_numbers)} card(s) selected. Click a 🟢 green card to DESELECT it (refund 10 ETB)")
     else:
-        st.info("👆 Click a card to select it (max 2 cards)")
+        if balance < 10:
+            st.warning("⚠️ Insufficient balance! You need at least 10 ETB to select a card. Please ask admin to add balance.")
+        else:
+            st.info("👆 Click a card to select it (max 2 cards). Each card costs 10 ETB.")
     
     # Show selected cards preview with deselect buttons
     if len(st.session_state.clicked_numbers) > 0:
@@ -1492,8 +1535,8 @@ def render_card_selection():
                     🃏 #{card_id}
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("✖ Deselect", key=f"deselect_{card_id}"):
-                    # Deselect this card - timer continues
+                if st.button("✖ Deselect (Refund)", key=f"deselect_{card_id}"):
+                    # Deselect this card and refund 10 ETB
                     if card_id in st.session_state.clicked_numbers:
                         st.session_state.clicked_numbers.remove(card_id)
                         if card_id in st.session_state.taken_cards:
@@ -1502,6 +1545,12 @@ def render_card_selection():
                             del st.session_state.card_owner[str(card_id)]
                         if st.session_state.selected_card == card_id:
                             st.session_state.selected_card = None
+                        
+                        # REFUND 10 ETB
+                        if st.session_state.current_user in st.session_state.user_db:
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                            save_all_data()
+                        
                         # IMPORTANT: Timer continues - NO timer reset!
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.rerun()
