@@ -1243,7 +1243,7 @@ BINGO_CARDS = [
 
 def get_card(card_id):
     for card in BINGO_CARDS:
-        if card["id"] == card_id: 
+        if card["id"] == card_id:
             return card
     return None
 
@@ -2589,6 +2589,7 @@ st.markdown(f"""
 # AUTO-RERUN - INSTANT RESPONSE (ZERO DELAY)
 # ===================================================================
 
+# Check if we need to rerun for game state updates
 if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
     st.rerun()
 elif st.session_state.selected_card is None and not st.session_state.game_started:
