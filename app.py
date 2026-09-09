@@ -442,6 +442,27 @@ st.markdown("""
         background: rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(255, 215, 0, 0.15) !important;
     }
+    
+    /* Fix for mobile card grid - ensure proper column display */
+    .stColumn {
+        padding: 4px !important;
+    }
+    
+    /* Ensure buttons fit well on mobile */
+    @media (max-width: 480px) {
+        .stButton > button {
+            padding: 4px 6px !important;
+            font-size: 0.7rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+        }
+        .card-btn {
+            font-size: 0.7rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 2px 2px !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1669,11 +1690,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
+    # FIX 1: Removed dynamic key with time.time() to stop constant refreshing
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        key=f"cards_per_row_{st.session_state.current_user}_{int(time.time())}",
+        key="cards_per_row_selector",  # Static key - no time.time()
         help="Select how many cards to display per row"
     )
     
