@@ -1793,10 +1793,10 @@ st.markdown(f"""
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
     🎯🍀 <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s ease-in-out infinite;letter-spacing:6px;margin:0;text-shadow:0 0 40px rgba(255,215,0,0.1);">
-        ደራሽ ቢንጎ
+        ደራሽ ቢንጎ -Derash BINGO 
     </h1>
     <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
-        Derash BINGO 
+        
     </p>
 </div>
 """, unsafe_allow_html=True)
