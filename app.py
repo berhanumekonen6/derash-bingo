@@ -1641,23 +1641,11 @@ def admin_panel():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using CSS Grid - responsive on all devices"""
+    """Render card selection as a true grid (rows of N columns)"""
     
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
-        total_selected = len(st.session_state.taken_cards)
-        st.markdown(f"""
-        <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
-            <h4 style="color:#FFD700;text-align:center;">📊 Game Status</h4>
-            <p style="color:rgba(255,255,255,0.8);text-align:center;">
-                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/201</strong>
-            </p>
-            <p style="color:rgba(255,255,255,0.6);text-align:center;font-size:0.9rem;">
-                Waiting for players to select cards...
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
         return
     
     sync_global_cards()
@@ -1675,6 +1663,7 @@ def render_card_selection():
         st.rerun()
         return
     
+    # Timer display
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
@@ -1701,6 +1690,7 @@ def render_card_selection():
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
     
+    # Colour for timer
     if not enough_cards:
         color = "#FF9800"
     elif remaining <= 10:
@@ -1736,8 +1726,9 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # Columns per row selector
+    # Cards per row selector
     col_options = [2, 3, 4, 5, 6, 8, 10]
+    # Default to 4 (changed from 10)
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
     
     selected_cols = st.selectbox(
@@ -1764,248 +1755,80 @@ def render_card_selection():
         st.info(f"📝 Click a number to SELECT (green). Click GREEN number again to DESELECT (refund 10 ETB).")
     
     # ============================================================
-    # RESPONSIVE CSS GRID - SAME LAYOUT ON ALL DEVICES
+    # CREATE A TRUE GRID: rows of N columns, one card per cell
     # ============================================================
-    
-    # Build the cards HTML
-    cards_html = f'<div class="cards-grid cols-{selected_cols}">'
-    
-    for i in range(1, 202):
-        is_clicked = i in st.session_state.clicked_numbers
-        is_taken = i in st.session_state.taken_cards
-        
-        is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
-        has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
-        
-        # Determine button class and label
-        if is_clicked:
-            btn_class = "selected"
-            label = f"🟢 {i}"
-        elif is_taken:
-            btn_class = "taken"
-            label = f"🔒 {i}"
-        elif has_insufficient_balance:
-            btn_class = "insufficient"
-            label = f"⛔ {i}"
-        else:
-            btn_class = ""
-            label = f"⬜ {i}"
-        
-        # Build button HTML with data attributes for Streamlit
-        cards_html += f'''
-        <button class="card-grid-btn {btn_class}" 
-                key="card_{i}_{st.session_state.current_user}"
-                onclick="handleCardClick({i})"
-                data-card-id="{i}"
-                data-clicked="{str(is_clicked).lower()}"
-                data-taken="{str(is_taken).lower()}"
-                data-disabled="{str(is_disabled or has_insufficient_balance).lower()}">
-            {label}
-        </button>
-        '''
-    
-    cards_html += '</div>'
-    
-    # Add JavaScript for card clicks
-    st.markdown(f'''
-    <script>
-    function handleCardClick(cardId) {{
-        // This will be handled by Streamlit's rerun
-        // We'll use hidden inputs to trigger the rerun
-        console.log("Card clicked:", cardId);
-    }}
-    </script>
-    ''', unsafe_allow_html=True)
-    
-    # Display the cards grid
-    st.markdown(cards_html, unsafe_allow_html=True)
-    
-    # ============================================================
-    # HANDLE CARD CLICKS USING STREAMLIT BUTTONS (Fallback)
-    # ============================================================
-    
-    # We need to use Streamlit buttons for actual interaction
-    # Create a grid of buttons using columns for the click handling
-    # But display them with the CSS grid style
     
     cols_per_row = selected_cols
-    cols = st.columns(cols_per_row)
     
-    for i in range(1, 202):
-        col_idx = (i - 1) % cols_per_row
-        with cols[col_idx]:
-            is_clicked = i in st.session_state.clicked_numbers
-            is_taken = i in st.session_state.taken_cards
-            
-            is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
-            has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
-            
-            if is_clicked:
-                btn_type = "secondary"
-                label = f"🟢 {i}"
-                btn_class = "selected"
-            elif is_taken:
-                btn_type = "secondary"
-                label = f"🔒 {i}"
-                btn_class = "taken"
-            elif has_insufficient_balance:
-                btn_type = "secondary"
-                label = f"⛔ {i}"
-                btn_class = "insufficient"
-            else:
-                btn_type = "primary"
-                label = f"⬜ {i}"
-                btn_class = ""
-            
-            # Apply custom class to button
-            st.markdown(f'''
-            <style>
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                    width: 100% !important;
-                    padding: 8px 4px !important;
-                    font-size: 0.75rem !important;
-                    min-height: 38px !important;
-                    height: 38px !important;
-                    line-height: 1.2 !important;
-                    border-radius: 8px !important;
-                    margin: 0 !important;
-                    text-align: center !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    font-weight: bold !important;
-                    border: 2px solid rgba(255, 255, 255, 0.2) !important;
-                    background: rgba(255, 255, 255, 0.1) !important;
-                    color: #FFFFFF !important;
-                    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-                    font-family: Arial, sans-serif !important;
-                    box-sizing: border-box !important;
-                    user-select: none !important;
-                    -webkit-tap-highlight-color: transparent !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover:not(:disabled) {{
-                    transform: scale(1.05);
-                    border-color: #FFD700 !important;
-                    background: rgba(255, 215, 0, 0.2) !important;
-                    box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-                    z-index: 10;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active:not(:disabled) {{
-                    transform: scale(0.92) !important;
-                    transition: transform 0.05s ease !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].selected {{
-                    border-color: #4CAF50 !important;
-                    background: rgba(76, 175, 80, 0.35) !important;
-                    color: #FFFFFF !important;
-                    box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-                    border-width: 3px !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].selected:hover {{
-                    border-color: #FF6B6B !important;
-                    background: rgba(255, 80, 80, 0.3) !important;
-                    box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].taken {{
-                    border-color: rgba(255, 0, 0, 0.2) !important;
-                    background: rgba(255, 0, 0, 0.15) !important;
-                    color: rgba(255, 255, 255, 0.3) !important;
-                    cursor: not-allowed !important;
-                    opacity: 0.5 !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].taken:hover {{
-                    transform: none !important;
-                    border-color: rgba(255, 0, 0, 0.2) !important;
-                    background: rgba(255, 0, 0, 0.15) !important;
-                    box-shadow: none !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].insufficient {{
-                    border-color: rgba(255, 165, 0, 0.3) !important;
-                    background: rgba(255, 165, 0, 0.15) !important;
-                    color: rgba(255, 255, 255, 0.4) !important;
-                    cursor: not-allowed !important;
-                    opacity: 0.6 !important;
-                }}
-                div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"].insufficient:hover {{
-                    transform: none !important;
-                    border-color: rgba(255, 165, 0, 0.3) !important;
-                    background: rgba(255, 165, 0, 0.15) !important;
-                    box-shadow: none !important;
-                }}
-                @media (max-width: 768px) {{
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                        font-size: 0.6rem !important;
-                        min-height: 30px !important;
-                        height: 30px !important;
-                        padding: 4px 2px !important;
-                        border-radius: 6px !important;
-                        border-width: 1.5px !important;
-                    }}
-                }}
-                @media (max-width: 480px) {{
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                        font-size: 0.5rem !important;
-                        min-height: 26px !important;
-                        height: 26px !important;
-                        padding: 2px 1px !important;
-                        border-radius: 4px !important;
-                        border-width: 1px !important;
-                    }}
-                }}
-                @media (max-width: 360px) {{
-                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                        font-size: 0.4rem !important;
-                        min-height: 22px !important;
-                        height: 22px !important;
-                        padding: 1px 1px !important;
-                        border-radius: 3px !important;
-                    }}
-                }}
-            </style>
-            ''', unsafe_allow_html=True)
-            
-            if st.button(
-                label,
-                key=f"card_{i}_{st.session_state.current_user}",
-                use_container_width=True,
-                type=btn_type,
-                disabled=is_disabled or has_insufficient_balance
-            ):
+    # Create rows of cards
+    card_ids = list(range(1, 202))  # 1..201
+    rows = [card_ids[i:i+cols_per_row] for i in range(0, len(card_ids), cols_per_row)]
+    
+    for row_cards in rows:
+        # Create columns for this row
+        cols = st.columns(cols_per_row)
+        for idx, card_id in enumerate(row_cards):
+            with cols[idx]:
+                is_clicked = card_id in st.session_state.clicked_numbers
+                is_taken = card_id in st.session_state.taken_cards
+                
+                is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
+                has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
+                
                 if is_clicked:
-                    # DESELECT
-                    st.session_state.clicked_numbers.remove(i)
-                    if i in st.session_state.taken_cards:
-                        st.session_state.taken_cards.remove(i)
-                    if str(i) in st.session_state.card_owner:
-                        del st.session_state.card_owner[str(i)]
-                    if st.session_state.selected_card == i:
-                        st.session_state.selected_card = None
-                    
-                    if st.session_state.current_user in st.session_state.user_db:
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
-                        save_user_db(st.session_state.user_db)
-                    
-                    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                    save_all_data()
-                    st.rerun()
+                    btn_type = "secondary"
+                    label = f"🟢 {card_id}"
+                elif is_taken:
+                    btn_type = "secondary"
+                    label = f"🔒 {card_id}"
+                elif has_insufficient_balance:
+                    btn_type = "secondary"
+                    label = f"⛔ {card_id}"
                 else:
-                    # SELECT
-                    if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
-                        current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        if current_balance >= 10:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = current_balance - 10
+                    btn_type = "primary"
+                    label = f"⬜ {card_id}"
+                
+                if st.button(
+                    label,
+                    key=f"card_{card_id}_{st.session_state.current_user}",
+                    use_container_width=True,
+                    type=btn_type,
+                    disabled=is_disabled or has_insufficient_balance
+                ):
+                    if is_clicked:
+                        # DESELECT
+                        st.session_state.clicked_numbers.remove(card_id)
+                        if card_id in st.session_state.taken_cards:
+                            st.session_state.taken_cards.remove(card_id)
+                        if str(card_id) in st.session_state.card_owner:
+                            del st.session_state.card_owner[str(card_id)]
+                        if st.session_state.selected_card == card_id:
+                            st.session_state.selected_card = None
+                        
+                        if st.session_state.current_user in st.session_state.user_db:
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
                             save_user_db(st.session_state.user_db)
-                            
-                            st.session_state.clicked_numbers.add(i)
-                            st.session_state.taken_cards.append(i)
-                            st.session_state.card_owner[str(i)] = st.session_state.current_user
-                            
-                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                            save_all_data()
-                            st.rerun()
-                        else:
-                            st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
+                        
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        save_all_data()
+                        st.rerun()
+                    else:
+                        # SELECT
+                        if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
+                            current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+                            if current_balance >= 10:
+                                st.session_state.user_db[st.session_state.current_user]["balance"] = current_balance - 10
+                                save_user_db(st.session_state.user_db)
+                                
+                                st.session_state.clicked_numbers.add(card_id)
+                                st.session_state.taken_cards.append(card_id)
+                                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                                
+                                save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                                save_all_data()
+                                st.rerun()
+                            else:
+                                st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Click a 🟢 GREEN card to DESELECT it (refund 10 ETB).")
@@ -2017,7 +1840,6 @@ def render_card_selection():
         else:
             st.info("👆 Click a number to select it (max 2 cards). Each card costs 10 ETB.")
     
-    # Progress bar
     progress = 1 - (remaining / CARD_SELECTION_TIME) if remaining > 0 else 1
     st.progress(progress)
 
