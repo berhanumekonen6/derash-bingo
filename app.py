@@ -167,12 +167,6 @@ st.markdown("""
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
     }
-    .card-btn .tick-mark {
-        display: none;
-    }
-    .card-btn.selected .tick-mark {
-        display: inline;
-    }
     
     /* Winner Card Celebration */
     .winner-card {
@@ -883,11 +877,11 @@ def admin_panel():
             cols = st.columns(5)
             for i, amount in enumerate(balance_options):
                 with cols[i % 5]:
-                    if st.button(f"{amount}", key=f"bal_{amount}_{selected_user}"):
+                    if st.button(f"+{amount}", key=f"bal_{amount}_{selected_user}"):
                         if selected_user in st.session_state.user_db:
                             st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + amount
                             save_local_users(st.session_state.user_db)
-                            st.success(f"✅ Added {amount} ETB to {selected_user}'s balance!")
+                            st.success(f"✅ Added {amount} ETB to {selected_user}'s balance! New balance: {st.session_state.user_db[selected_user]['balance']:.2f} ETB")
                             st.rerun()
         
         with col2:
@@ -895,7 +889,7 @@ def admin_panel():
                 if selected_user in st.session_state.user_db:
                     st.session_state.user_db[selected_user]["balance"] = st.session_state.user_db[selected_user].get("balance", 0) + custom_amount
                     save_local_users(st.session_state.user_db)
-                    st.success(f"✅ Added {custom_amount} ETB to {selected_user}'s balance!")
+                    st.success(f"✅ Added {custom_amount} ETB to {selected_user}'s balance! New balance: {st.session_state.user_db[selected_user]['balance']:.2f} ETB")
                     st.rerun()
             
             if st.button("💰 Set Balance", type="primary", use_container_width=True):
@@ -904,6 +898,42 @@ def admin_panel():
                     save_local_users(st.session_state.user_db)
                     st.success(f"✅ Set {selected_user}'s balance to {custom_amount} ETB!")
                     st.rerun()
+        
+        st.markdown("---")
+        st.markdown("#### 💸 Deduct Balance")
+        
+        col3, col4 = st.columns([2, 1])
+        
+        with col3:
+            deduct_options = [10, 20, 50, 100, 200, 500, 1000]
+            custom_deduct = st.number_input("Custom Deduct Amount (ETB)", min_value=0, step=10, value=50)
+            
+            st.markdown("**Quick Deduct Amounts:**")
+            deduct_cols = st.columns(5)
+            for i, amount in enumerate(deduct_options):
+                with deduct_cols[i % 5]:
+                    if st.button(f"-{amount}", key=f"deduct_{amount}_{selected_user}"):
+                        if selected_user in st.session_state.user_db:
+                            current_bal = st.session_state.user_db[selected_user].get("balance", 0)
+                            if current_bal >= amount:
+                                st.session_state.user_db[selected_user]["balance"] = current_bal - amount
+                                save_local_users(st.session_state.user_db)
+                                st.success(f"✅ Deducted {amount} ETB from {selected_user}'s balance! New balance: {st.session_state.user_db[selected_user]['balance']:.2f} ETB")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Insufficient balance! {selected_user} only has {current_bal:.2f} ETB.")
+        
+        with col4:
+            if st.button("➖ Deduct Balance", type="primary", use_container_width=True):
+                if selected_user in st.session_state.user_db:
+                    current_bal = st.session_state.user_db[selected_user].get("balance", 0)
+                    if current_bal >= custom_deduct:
+                        st.session_state.user_db[selected_user]["balance"] = current_bal - custom_deduct
+                        save_local_users(st.session_state.user_db)
+                        st.success(f"✅ Deducted {custom_deduct} ETB from {selected_user}'s balance! New balance: {st.session_state.user_db[selected_user]['balance']:.2f} ETB")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Insufficient balance! {selected_user} only has {current_bal:.2f} ETB.")
         
         st.markdown("---")
         st.markdown("#### 📊 All Users")
@@ -930,7 +960,7 @@ def admin_panel():
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
     {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
-    # ... (keep all 201 cards)
+    # ... (keep all 201 cards - abbreviated for space)
 ]
 
 def get_card(card_id):
@@ -1353,7 +1383,7 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... Game starting soon! 🎯")
     else:
-        st.info(f"📝 Select your cards (max 2). Each card costs 10 ETB. Click 🟢 green card to DESELECT. {int(remaining)} seconds remaining ⏳")
+        st.info(f"📝 Click a number to SELECT. Click 🟢 GREEN number to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
     
     cols_per_row = st.session_state.columns_per_row
     cols = st.columns(cols_per_row)
@@ -1364,14 +1394,14 @@ def render_card_selection():
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             
-            # A card is disabled if it's taken by ANYONE (including this player)
-            # This ensures once a card is selected by any player, it cannot be selected again
-            is_disabled = is_taken or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
+            # Card is disabled if taken by someone else OR if player already has 2 cards and this isn't one of theirs
+            is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
             
             # Check balance only for available cards (not already taken)
             has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
             
             if is_clicked:
+                # SELECTED CARD - Green highlight, clickable to deselect
                 btn_type = "secondary"
                 label = f"🟢 {i}"
                 st.markdown(f"""
@@ -1383,6 +1413,7 @@ def render_card_selection():
                         box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
                         border-width: 3px !important;
                         cursor: pointer !important;
+                        transition: all 0.3s ease !important;
                     }}
                     div[data-testid="stButton"] button[key="card_{i}"]:hover {{
                         border-color: #FF6B6B !important;
@@ -1415,9 +1446,30 @@ def render_card_selection():
                     }}
                 </style>
                 """, unsafe_allow_html=True)
-                # Show tooltip with owner name
                 st.caption(f"Taken by: {owner_name}")
+            elif has_insufficient_balance:
+                # Insufficient balance - DISABLED
+                btn_type = "secondary"
+                label = str(i)
+                st.markdown(f"""
+                <style>
+                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                        border-color: rgba(255, 165, 0, 0.3) !important;
+                        background: rgba(255, 165, 0, 0.15) !important;
+                        color: rgba(255, 255, 255, 0.4) !important;
+                        cursor: not-allowed !important;
+                        opacity: 0.6 !important;
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}"]:hover {{
+                        transform: none !important;
+                        border-color: rgba(255, 165, 0, 0.3) !important;
+                        background: rgba(255, 165, 0, 0.15) !important;
+                        box-shadow: none !important;
+                    }}
+                </style>
+                """, unsafe_allow_html=True)
             else:
+                # AVAILABLE CARD
                 btn_type = "primary"
                 label = str(i)
                 st.markdown(f"""
@@ -1438,8 +1490,8 @@ def render_card_selection():
                 type=btn_type,
                 disabled=is_disabled
             ):
-                if i in st.session_state.clicked_numbers:
-                    # DESELECT - Remove your card
+                if is_clicked:
+                    # DESELECT - Remove your card and refund
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1457,7 +1509,7 @@ def render_card_selection():
                     st.rerun()
                 else:
                     # SELECT - Add your card
-                    if len(st.session_state.clicked_numbers) < 2 and not is_taken:
+                    if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         if current_balance >= 10:
                             st.session_state.user_db[st.session_state.current_user]["balance"] = current_balance - 10
@@ -1480,7 +1532,7 @@ def render_card_selection():
         if balance < 10:
             st.warning("⚠️ Insufficient balance! You need at least 10 ETB to select a card.")
         else:
-            st.info("👆 Click a card to select it (max 2 cards). Each card costs 10 ETB.")
+            st.info("👆 Click a number to select it (max 2 cards). Each card costs 10 ETB.")
     
     if len(st.session_state.clicked_numbers) > 0:
         st.markdown("### 📋 Your Selected Cards")
@@ -1809,7 +1861,6 @@ elif st.session_state.game_started or st.session_state.selected_card is not None
             st.markdown("### 🎉🏆 የአሸናፊዎች ካርቶች 🏆🎉")
             
             # Display ALL cards from ALL players with winner highlighting
-            # Get all cards from all players
             all_cards_in_game = st.session_state.taken_cards
             for card_id in all_cards_in_game:
                 is_winner = False
