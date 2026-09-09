@@ -1793,10 +1793,10 @@ st.markdown(f"""
 st.markdown("""
 <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
     🎯🍀 <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s ease-in-out infinite;letter-spacing:6px;margin:0;text-shadow:0 0 40px rgba(255,215,0,0.1);">
-        ደራሽ ቢንጎ- Derash BINGO 
+        ደራሽ ቢንጎ -Derash BINGO 
     </h1>
     <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">
-        @2026
+    @2026 
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -2038,7 +2038,7 @@ if st.session_state.current_role == "admin":
 
 # Check if game has started
 if st.session_state.game_started:
-    # GAME IS RUNNING - HIDE CARD SELECTION (1-201), SHOW BINGO BOARD AND PLAYER CARDS
+    # GAME IS RUNNING - SHOW BINGO BOARD AND PLAYER CARDS
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
@@ -2097,9 +2097,11 @@ if st.session_state.game_started:
                 🎊🎊🎊ፈጥነው ካርቴላ ይምረጡ!!!🎊🎊🎊
             </div>
             <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:3px 0;">
-                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇</span>
-                <span style="font-size:1.2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;color:#FFD700;">የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ</span>
-                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">👇</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">⭐👇</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">🌟የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">✨</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">⭐</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2129,7 +2131,6 @@ if st.session_state.game_started:
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
         
         # NO BINGO BOARD DISPLAYED HERE
-        # NO CARD SELECTION (1-201) DISPLAYED HERE
         
         if st.button("🔄 New Game", use_container_width=True):
             st.session_state.selected_card = None
@@ -2151,7 +2152,6 @@ if st.session_state.game_started:
             st.rerun()
     else:
         # Game is running - show BINGO board and player cards side by side
-        # CARD SELECTION (1-201) IS HIDDEN HERE
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -2186,7 +2186,7 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # GAME NOT STARTED - Show card selection (1-201)
+    # GAME NOT STARTED - Show card selection
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
     # Check if game should start (timer reached 0 and enough cards)
