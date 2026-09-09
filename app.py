@@ -1243,7 +1243,7 @@ BINGO_CARDS = [
 
 def get_card(card_id):
     for card in BINGO_CARDS:
-        if card["id"] == card_id:
+        if card["id"] == card_id: 
             return card
     return None
 
