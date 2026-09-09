@@ -1573,7 +1573,7 @@ def render_card_selection():
         st.info(f"📝 Select your cards (max 2). Click ✅ CHECKED card to DESELECT. {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
-    # CARDS PER ROW DROPDOWN
+    # CARDS PER ROW DROPDOWN - WITH UNIQUE KEY
     # ================================================================
     
     col_options = [2, 3, 4, 5, 6, 8, 10]
@@ -1594,10 +1594,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
+    # FIX: Added unique key to selectbox
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
+        key="cards_per_row_selector",  # UNIQUE KEY FIX
         help="Select how many cards to display per row"
     )
     
@@ -1728,15 +1730,16 @@ def render_card_selection():
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
             
-            # Create the button
-            if st.button(
-                label,
-                key=f"card_{i}",
-                use_container_width=True,
-                type=btn_type,
-                disabled=is_disabled
-            ):
-                if is_clicked:
+            # Create the button - using HTML label for selected cards
+            if is_clicked:
+                # For selected cards, use HTML label with circle and checkmark
+                if st.button(
+                    label,
+                    key=f"card_{i}",
+                    use_container_width=True,
+                    type=btn_type,
+                    disabled=is_disabled
+                ):
                     # DESELECT - Remove YOUR card from global board
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
@@ -1748,7 +1751,15 @@ def render_card_selection():
                     # Save - timer continues running
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
-                else:
+            else:
+                # For non-selected cards, use plain text
+                if st.button(
+                    label,
+                    key=f"card_{i}",
+                    use_container_width=True,
+                    type=btn_type,
+                    disabled=is_disabled
+                ):
                     # SELECT - Add YOUR card to global board
                     if len(st.session_state.clicked_numbers) < 2 and not is_disabled:
                         st.session_state.clicked_numbers.add(i)
@@ -1803,6 +1814,7 @@ def render_card_selection():
         st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
         st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... {total_selected} selected 🃏")
+        
 
 # ===================================================================
 # MAIN APP
