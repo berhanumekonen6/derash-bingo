@@ -2,7 +2,6 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 from datetime import datetime
-import asyncio
 
 # Enable logging
 logging.basicConfig(
@@ -21,10 +20,6 @@ BOT_USERNAME = "@DerashBingoPlayBot"
 # === CONVERSATION STATES ===
 WITHDRAW_AMOUNT, WITHDRAW_USERNAME, WITHDRAW_PHONE = range(3)
 
-# === GAME TIMER SETTINGS ===
-GAME_DURATION_SECONDS = 120  # 2 minutes countdown
-COUNTDOWN_CHAT_ID = None  # Will be set when timer starts
-
 # === MAIN MENU ===
 def get_main_menu():
     keyboard = [
@@ -34,26 +29,8 @@ def get_main_menu():
         [InlineKeyboardButton("🎯 Play Game", url=GAME_LINK)],
         [InlineKeyboardButton("❓ How to Play", callback_data="howto")],
         [InlineKeyboardButton("🆘 Support / መረጃ", callback_data="support")],
-        [InlineKeyboardButton("⏱️ Game Timer", callback_data="timer_status")],
     ]
     return InlineKeyboardMarkup(keyboard)
-
-# === TIMER MENU ===
-def get_timer_menu(seconds_remaining=None):
-    if seconds_remaining is None:
-        status_text = "⏱️ Timer is not running"
-    else:
-        minutes = seconds_remaining // 60
-        seconds = seconds_remaining % 60
-        status_text = f"⏱️ Time Remaining: {minutes:02d}:{seconds:02d}"
-    
-    keyboard = [
-        [InlineKeyboardButton("▶️ Start Game Timer", callback_data="timer_start")],
-        [InlineKeyboardButton("⏹️ Stop Timer", callback_data="timer_stop")],
-        [InlineKeyboardButton("🔄 Reset Timer", callback_data="timer_reset")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
-    ]
-    return InlineKeyboardMarkup(keyboard), status_text
 
 # === WITHDRAW MENU ===
 def get_withdraw_menu():
@@ -105,13 +82,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🎯 How to play?
    → Click "🎯 Play Game" button
-   → Wait for timer to reach 0:00 to join game
-   → Card selection stops at 0:00
-
-⏱️ Game Timer?
-   → Click "⏱️ Game Timer" to see time remaining
-   → Timer counts down every second
-   → At 0:00, game starts automatically
 
 🆘 Need more help?
    → Click "Support / መረጃ" or contact {ADMIN_USERNAME}
@@ -147,9 +117,7 @@ async def how_to_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🎯 STEP 4: PLAY
    → Click "🎯 Play Game" to start playing!
    → Login with your username and password
-   → ⏱️ Watch the game timer count down
-   → Select 1-2 cards (10 ETB each) before timer hits 0:00
-   → At 0:00, card selection stops and game starts
+   → Select 1-2 cards (10 ETB each)
    → Wait for numbers to be called
    → Get BINGO and WIN! 🎉
 
@@ -160,7 +128,6 @@ async def how_to_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✅ Prize: 8 ETB per card
 ✅ 201 cards available
 ✅ Auto-call every 2 seconds
-✅ Card selection stops at 0:00
 
 🔗 PLAY NOW: {GAME_LINK}
 """
@@ -179,7 +146,6 @@ Click "📝 Register" to create your account.
 1️⃣ Click "💰 Deposit / Pay" to add balance
 2️⃣ Click "💸 Withdraw (ወጪ)" to withdraw funds
 3️⃣ Click "🎯 Play Game" to start playing!
-4️⃣ ⏱️ Watch timer - game starts at 0:00!
 
 🔗 GAME LINK: {GAME_LINK}
 📞 Telebirr: {TELEBIRR_NUMBER}
@@ -467,8 +433,7 @@ async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🎯 ለመጫወት:
    → "🎯 Play Game" ይጫኑ
    → በስምዎ እና ይለፍቃድዎ ይግቡ
-   → ⏱️ ጨዋታው ከመጀመሩ በፊት ካርድ ይምረጡ
-   → በ0:00 ላይ ካርድ መምረጥ ይቆማል
+   → ካርድ ይምረጡ (እስከ 2)
    → ቁጥሮች ሲጠሩ ይጠብቁ
    → ቢንጎ ሲሆን ያሸንፉ! 🎉
 
@@ -479,7 +444,6 @@ async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✅ ሽልማት: 8 ETB በአንድ ካርድ
 ✅ 201 ካርዶች ይገኛሉ
 ✅ በየ2 ሰከንድ አውቶማቲክ ቁጥር ይጠራል
-✅ ካርድ መምረጥ የሚቻለው ከጨዋታ መጀመሩ በፊት ብቻ ነው
 
 ━━━━━━━━━━━━━━━━━━━
 📞 ቴሌብር: {TELEBIRR_NUMBER}
@@ -532,7 +496,6 @@ async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 1️⃣ Click "💰 Deposit / Pay" to add balance
 2️⃣ Click "💸 Withdraw (ወጪ)" to withdraw funds
 3️⃣ Click "🎯 Play Game" to start playing!
-4️⃣ ⏱️ Watch timer - game starts at 0:00!
 
 🔗 GAME LINK: {GAME_LINK}
 💰 Telebirr: {TELEBIRR_NUMBER}
@@ -542,286 +505,6 @@ async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📌 ለመረጃ: {BOT_USERNAME}
 """,
         reply_markup=get_main_menu()
-    )
-
-# === GAME TIMER FUNCTIONS ===
-
-async def update_timer_message(context: ContextTypes.DEFAULT_TYPE):
-    """Background task that updates timer every second"""
-    job_data = context.job.data
-    seconds_remaining = job_data.get('seconds', GAME_DURATION_SECONDS)
-    
-    if seconds_remaining <= 0:
-        # Timer hit 0:00 - Game starts!
-        chat_id = job_data.get('chat_id')
-        if chat_id:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=f"""
-🎯 GAME STARTED! 🎯
-
-━━━━━━━━━━━━━━━━━━━
-⏱️ COUNTDOWN REACHED 0:00!
-
-❌ CARD SELECTION IS NOW CLOSED!
-✅ GAME HAS BEGUN!
-
-🎯 Login now and join the game!
-🔗 {GAME_LINK}
-
-📌 መረጃ ለማግኘት: {BOT_USERNAME}
-"""
-            )
-        
-        # Stop the timer job
-        context.job.schedule_removal()
-        
-        # Reset timer in user_data
-        context.user_data['timer_seconds'] = 0
-        context.user_data['timer_running'] = False
-        
-        return
-    
-    # Update seconds remaining
-    seconds_remaining -= 1
-    job_data['seconds'] = seconds_remaining
-    context.user_data['timer_seconds'] = seconds_remaining
-    
-    # Send update every 10 seconds to avoid spam, or every second for last 10 seconds
-    should_update = (
-        seconds_remaining <= 10 or 
-        seconds_remaining % 10 == 0 or
-        seconds_remaining == 30 or
-        seconds_remaining == 60
-    )
-    
-    if should_update and job_data.get('chat_id'):
-        minutes = seconds_remaining // 60
-        seconds = seconds_remaining % 60
-        timer_text = f"""
-⏱️ GAME COUNTDOWN
-
-━━━━━━━━━━━━━━━━━━━
-⏰ Time Remaining: {minutes:02d}:{seconds:02d}
-
-━━━━━━━━━━━━━━━━━━━
-📝 Actions:
-• Select your cards before 0:00
-• At 0:00, game starts automatically
-• Card selection stops at 0:00
-
-━━━━━━━━━━━━━━━━━━━
-💰 Each card: 10 ETB
-🎯 Prize: 8 ETB per card
-✅ Max 2 cards per player
-
-🔗 PLAY NOW: {GAME_LINK}
-"""
-        
-        try:
-            await context.bot.send_message(
-                chat_id=job_data['chat_id'],
-                text=timer_text
-            )
-        except Exception as e:
-            logger.error(f"Failed to send timer update: {e}")
-
-async def timer_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show timer status"""
-    await update.callback_query.answer()
-    
-    seconds = context.user_data.get('timer_seconds', 0)
-    is_running = context.user_data.get('timer_running', False)
-    
-    if is_running and seconds > 0:
-        minutes = seconds // 60
-        secs = seconds % 60
-        status_text = f"⏱️ Timer Running: {minutes:02d}:{secs:02d}"
-    elif not is_running and seconds > 0:
-        minutes = seconds // 60
-        secs = seconds % 60
-        status_text = f"⏱️ Timer Paused: {minutes:02d}:{secs:02d}"
-    elif seconds == 0:
-        status_text = "⏱️ Timer at 0:00 - Game is active!"
-    else:
-        status_text = "⏱️ Timer not started"
-    
-    text = f"""
-⏱️ GAME TIMER STATUS
-
-━━━━━━━━━━━━━━━━━━━
-📊 {status_text}
-
-━━━━━━━━━━━━━━━━━━━
-📌 Controls:
-▶️ Start - Begin countdown
-⏹️ Stop - Pause countdown
-🔄 Reset - Reset to {GAME_DURATION_SECONDS//60} minutes
-
-━━━━━━━━━━━━━━━━━━━
-💡 When timer reaches 0:00:
-• Card selection stops
-• Game automatically starts
-• Players must join the game
-
-━━━━━━━━━━━━━━━━━━━
-📞 Admin: {ADMIN_USERNAME}
-"""
-    
-    timer_menu, _ = get_timer_menu(seconds if is_running else None)
-    await update.callback_query.edit_message_text(text, reply_markup=timer_menu)
-
-async def timer_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start the game timer"""
-    await update.callback_query.answer()
-    
-    chat_id = update.effective_chat.id
-    
-    # Check if timer is already running
-    if context.user_data.get('timer_running', False):
-        await update.callback_query.edit_message_text(
-            "⏱️ Timer is already running!\n\n"
-            "📌 Use '⏹️ Stop Timer' to pause or '🔄 Reset Timer' to restart.",
-            reply_markup=get_timer_menu()[0]
-        )
-        return
-    
-    # Get current seconds or reset to default
-    seconds = context.user_data.get('timer_seconds', GAME_DURATION_SECONDS)
-    if seconds <= 0:
-        seconds = GAME_DURATION_SECONDS
-    
-    context.user_data['timer_running'] = True
-    context.user_data['timer_seconds'] = seconds
-    
-    # Schedule the timer job
-    job_data = {
-        'seconds': seconds,
-        'chat_id': chat_id
-    }
-    
-    # Remove existing job if any
-    if context.job_queue:
-        current_jobs = context.job_queue.jobs()
-        for job in current_jobs:
-            if job.name == f"timer_{chat_id}":
-                job.schedule_removal()
-    
-    # Create new job that runs every second
-    context.job_queue.run_repeating(
-        update_timer_message,
-        interval=1,
-        first=1,
-        data=job_data,
-        name=f"timer_{chat_id}"
-    )
-    
-    minutes = seconds // 60
-    secs = seconds % 60
-    
-    await update.callback_query.edit_message_text(
-        f"""
-▶️ TIMER STARTED! ⏱️
-
-━━━━━━━━━━━━━━━━━━━
-⏰ Time: {minutes:02d}:{secs:02d}
-
-━━━━━━━━━━━━━━━━━━━
-📌 Timer will count down every second.
-⏰ Updates sent every 10 seconds.
-🔔 Final 10 seconds update every second.
-
-━━━━━━━━━━━━━━━━━━━
-📝 Remember:
-• Select cards before 0:00
-• At 0:00, game starts!
-• Card selection stops at 0:00
-
-🎯 Good luck! 🍀
-""",
-        reply_markup=get_timer_menu()[0]
-    )
-
-async def timer_stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Stop the game timer"""
-    await update.callback_query.answer()
-    
-    chat_id = update.effective_chat.id
-    
-    if not context.user_data.get('timer_running', False):
-        await update.callback_query.edit_message_text(
-            "⏱️ Timer is not currently running!\n\n"
-            "📌 Use '▶️ Start Game Timer' to begin.",
-            reply_markup=get_timer_menu()[0]
-        )
-        return
-    
-    # Remove the timer job
-    if context.job_queue:
-        current_jobs = context.job_queue.jobs()
-        for job in current_jobs:
-            if job.name == f"timer_{chat_id}":
-                job.schedule_removal()
-    
-    context.user_data['timer_running'] = False
-    
-    seconds = context.user_data.get('timer_seconds', 0)
-    minutes = seconds // 60
-    secs = seconds % 60
-    
-    await update.callback_query.edit_message_text(
-        f"""
-⏹️ TIMER STOPPED! ⏱️
-
-━━━━━━━━━━━━━━━━━━━
-⏰ Time Remaining: {minutes:02d}:{secs:02d}
-
-━━━━━━━━━━━━━━━━━━━
-📌 Use '▶️ Start Game Timer' to continue.
-🔄 Use '🔄 Reset Timer' to start over.
-
-━━━━━━━━━━━━━━━━━━━
-💡 Card selection is still open until 0:00!
-""",
-        reply_markup=get_timer_menu()[0]
-    )
-
-async def timer_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reset the game timer"""
-    await update.callback_query.answer()
-    
-    chat_id = update.effective_chat.id
-    
-    # Remove existing timer job
-    if context.job_queue:
-        current_jobs = context.job_queue.jobs()
-        for job in current_jobs:
-            if job.name == f"timer_{chat_id}":
-                job.schedule_removal()
-    
-    context.user_data['timer_running'] = False
-    context.user_data['timer_seconds'] = GAME_DURATION_SECONDS
-    
-    minutes = GAME_DURATION_SECONDS // 60
-    
-    await update.callback_query.edit_message_text(
-        f"""
-🔄 TIMER RESET! ⏱️
-
-━━━━━━━━━━━━━━━━━━━
-⏰ Reset to: {minutes:02d}:00
-
-━━━━━━━━━━━━━━━━━━━
-📌 Use '▶️ Start Game Timer' to begin countdown.
-⏰ Timer will count down every second.
-
-━━━━━━━━━━━━━━━━━━━
-📝 Remember:
-• Select cards before 0:00
-• At 0:00, game starts!
-• Card selection stops at 0:00
-""",
-        reply_markup=get_timer_menu()[0]
     )
 
 # === BUTTON HANDLER ===
@@ -843,14 +526,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await support_button(update, context)
     elif query.data == "back_to_menu":
         await back_to_menu(update, context)
-    elif query.data == "timer_status":
-        await timer_status(update, context)
-    elif query.data == "timer_start":
-        await timer_start(update, context)
-    elif query.data == "timer_stop":
-        await timer_stop(update, context)
-    elif query.data == "timer_reset":
-        await timer_reset(update, context)
 
 # === MAIN FUNCTION ===
 def main():
@@ -884,7 +559,6 @@ def main():
     print(f"🎯 Game: {GAME_LINK}")
     print(f"📞 Telebirr: {TELEBIRR_NUMBER}")
     print(f"💸 Withdraw: Conversation flow (amount, username, phone)")
-    print(f"⏱️ Timer: {GAME_DURATION_SECONDS//60} minutes countdown")
     print("=" * 50)
     print("Send /start on Telegram to test!")
     print("Press Ctrl+C to stop the bot.")
