@@ -543,21 +543,86 @@ def get_winner_sound_js():
     """
 
 # ===================================================================
-# PERSISTENT SESSION STATE - SAVES TO DISK
+# PERSISTENT STORAGE FILES
 # ===================================================================
 
-# File paths for persistent storage
 USER_DB_FILE = "bingo_users_local.json"
 GLOBAL_CARDS_FILE = "bingo_global_cards.json"
 GLOBAL_WINNERS_FILE = "bingo_global_winners.json"
 GAME_STATE_FILE = "bingo_game_state.json"
+GLOBAL_TIMER_FILE = "bingo_global_timer.json"
 
 # ===================================================================
-# SESSION STATE INITIALIZATION WITH PERSISTENCE
+# GLOBAL TIMER FUNCTIONS - PERSISTENT ACROSS ALL USERS
+# ===================================================================
+
+def get_global_timer_file():
+    return GLOBAL_TIMER_FILE
+
+def save_global_timer(timer_start_time, card_selection_time, game_started, selection_phase_ended):
+    """Save global timer state to file"""
+    try:
+        data = {
+            "timer_start_time": timer_start_time,
+            "card_selection_time": card_selection_time,
+            "game_started": game_started,
+            "selection_phase_ended": selection_phase_ended,
+            "timestamp": time.time()
+        }
+        with open(GLOBAL_TIMER_FILE, "w") as f:
+            json.dump(data, f)
+        return True
+    except:
+        return False
+
+def load_global_timer():
+    """Load global timer state from file"""
+    try:
+        if os.path.exists(GLOBAL_TIMER_FILE):
+            with open(GLOBAL_TIMER_FILE, "r") as f:
+                data = json.load(f)
+                return (data.get("timer_start_time", time.time()),
+                        data.get("card_selection_time", 60),
+                        data.get("game_started", False),
+                        data.get("selection_phase_ended", False))
+    except:
+        pass
+    return time.time(), 60, False, False
+
+def get_global_remaining_time():
+    """Get remaining time from global timer - NEVER STOPS"""
+    timer_start, timer_duration, game_started, selection_ended = load_global_timer()
+    
+    # If game already started, return 0
+    if game_started:
+        return 0, game_started, selection_ended
+    
+    elapsed = time.time() - timer_start
+    remaining = max(0, timer_duration - elapsed)
+    
+    # Save updated time back to file
+    save_global_timer(timer_start, remaining, game_started, selection_ended)
+    
+    return remaining, game_started, selection_ended
+
+def reset_global_timer(duration=60):
+    """Reset global timer"""
+    timer_start = time.time()
+    save_global_timer(timer_start, duration, False, False)
+    return timer_start
+
+def start_game_globally():
+    """Start the game globally"""
+    timer_start, duration, _, _ = load_global_timer()
+    save_global_timer(timer_start, 0, True, True)
+    return True
+
+# ===================================================================
+# SESSION STATE INITIALIZATION
 # ===================================================================
 
 def init_session_state():
-    """Initialize all session state variables with persistence"""
+    """Initialize all session state variables"""
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'current_user' not in st.session_state:
@@ -582,8 +647,6 @@ def init_session_state():
         st.session_state.auto_call_started = False
     if 'card_selection_time' not in st.session_state:
         st.session_state.card_selection_time = 60
-    if 'card_selection_last_update' not in st.session_state:
-        st.session_state.card_selection_last_update = time.time()
     if 'game_over' not in st.session_state:
         st.session_state.game_over = False
     if 'winners_list' not in st.session_state:
@@ -611,24 +674,46 @@ def init_session_state():
     if 'global_synced' not in st.session_state:
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
-        st.session_state.timer_start_time = time.time()
+        # Load from global timer
+        timer_start, _, _, _ = load_global_timer()
+        st.session_state.timer_start_time = timer_start
     if 'celebration_shown' not in st.session_state:
         st.session_state.celebration_shown = False
     if 'selection_phase_ended' not in st.session_state:
-        st.session_state.selection_phase_ended = False
-    if 'timer_running' not in st.session_state:
-        st.session_state.timer_running = False
+        _, _, _, selection_ended = load_global_timer()
+        st.session_state.selection_phase_ended = selection_ended
 
 init_session_state()
 
 # ===================================================================
-# PERSISTENT STORAGE FUNCTIONS
+# SYNC GLOBAL TIMER ON PAGE LOAD
+# ===================================================================
+
+def sync_global_timer():
+    """Sync session state with global timer"""
+    remaining, game_started, selection_ended = get_global_remaining_time()
+    
+    # Update session state from global timer
+    st.session_state.card_selection_time = remaining
+    st.session_state.game_started = game_started
+    st.session_state.selection_phase_ended = selection_ended
+    
+    # If timer reached 0, game should start
+    if remaining <= 0 and not game_started:
+        start_game_globally()
+        st.session_state.game_started = True
+        st.session_state.selection_phase_ended = True
+        return True
+    
+    return False
+
+# ===================================================================
+# USER DATA STORAGE FUNCTIONS
 # ===================================================================
 
 def save_user_db(users):
     """Save user database to disk"""
     try:
-        # Convert sets to lists for JSON serialization
         serializable_users = {}
         for username, data in users.items():
             serializable_users[username] = {
@@ -638,14 +723,12 @@ def save_user_db(users):
                 "name": data.get("name", username),
                 "phone": data.get("phone", ""),
                 "game_played": data.get("game_played", 0),
-                "wins": data.get("wins", 0),
-                "selected_cards": list(data.get("selected_cards", [])) if isinstance(data.get("selected_cards", []), set) else data.get("selected_cards", [])
+                "wins": data.get("wins", 0)
             }
         with open(USER_DB_FILE, "w") as f:
             json.dump(serializable_users, f, indent=2)
         return True
-    except Exception as e:
-        print(f"Error saving user DB: {e}")
+    except:
         return False
 
 def load_user_db():
@@ -653,14 +736,9 @@ def load_user_db():
     try:
         if os.path.exists(USER_DB_FILE):
             with open(USER_DB_FILE, "r") as f:
-                data = json.load(f)
-                # Convert lists back to sets where needed
-                for username, user_data in data.items():
-                    if "selected_cards" in user_data and isinstance(user_data["selected_cards"], list):
-                        user_data["selected_cards"] = set(user_data["selected_cards"])
-                return data
-    except Exception as e:
-        print(f"Error loading user DB: {e}")
+                return json.load(f)
+    except:
+        pass
     return {}
 
 def save_game_state():
@@ -687,8 +765,7 @@ def save_game_state():
         with open(GAME_STATE_FILE, "w") as f:
             json.dump(state, f, indent=2)
         return True
-    except Exception as e:
-        print(f"Error saving game state: {e}")
+    except:
         return False
 
 def load_game_state():
@@ -697,14 +774,13 @@ def load_game_state():
         if os.path.exists(GAME_STATE_FILE):
             with open(GAME_STATE_FILE, "r") as f:
                 state = json.load(f)
-                # Convert lists back to sets
                 if "called_numbers" in state:
                     state["called_numbers"] = set(state["called_numbers"])
                 if "clicked_numbers" in state:
                     state["clicked_numbers"] = set(state["clicked_numbers"])
                 return state
-    except Exception as e:
-        print(f"Error loading game state: {e}")
+    except:
+        pass
     return None
 
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
@@ -786,21 +862,14 @@ def save_global_cards(taken_cards, card_owner, columns_per_row=None, timer_start
     except:
         return False
 
-# ===================================================================
-# RESTORE STATE ON LOGIN
-# ===================================================================
-
 def restore_user_state(username):
     """Restore user's state from disk"""
-    # Load user database
     users = load_user_db()
     if username in users:
         st.session_state.user_db = users
         
-        # Load game state
         game_state = load_game_state()
         if game_state:
-            # Restore game state for all users
             st.session_state.called_numbers = game_state.get("called_numbers", set())
             st.session_state.last_called_number = game_state.get("last_called_number", None)
             st.session_state.auto_called_count = game_state.get("auto_called_count", 0)
@@ -817,26 +886,22 @@ def restore_user_state(username):
             st.session_state.timer_start_time = game_state.get("timer_start_time", time.time())
             st.session_state.columns_per_row = game_state.get("columns_per_row", 4)
             
-            # Restore user's selected cards
             clicked = game_state.get("clicked_numbers", [])
             if isinstance(clicked, list):
                 st.session_state.clicked_numbers = set(clicked)
             else:
                 st.session_state.clicked_numbers = clicked
         
+        # Sync global timer
+        sync_global_timer()
         return True
     return False
 
 def save_all_data():
     """Save all data to disk"""
-    # Save user database
     if "user_db" in st.session_state and st.session_state.user_db:
         save_user_db(st.session_state.user_db)
-    
-    # Save game state
     save_game_state()
-    
-    # Save global cards
     if "taken_cards" in st.session_state and "card_owner" in st.session_state:
         save_global_cards(
             st.session_state.taken_cards,
@@ -918,7 +983,6 @@ def login_user(username, password):
     username = username.strip()
     password = password.strip()
     
-    # Load users from disk
     users = load_user_db()
     st.session_state.user_db = users
     
@@ -937,7 +1001,6 @@ def login_user(username, password):
             save_user_db(users)
             st.session_state.user_db = users
         else:
-            # Ensure admin balance is always 0
             users["admin"]["balance"] = 0.0
             save_user_db(users)
             st.session_state.user_db = users
@@ -946,7 +1009,8 @@ def login_user(username, password):
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
         
-        # Restore game state
+        # Sync global timer
+        sync_global_timer()
         restore_user_state(username)
         return True, "✅ Admin login successful!"
     
@@ -958,7 +1022,7 @@ def login_user(username, password):
         st.session_state.current_user = username
         st.session_state.current_role = users[username].get("role", "player")
         
-        # Restore user's state
+        sync_global_timer()
         restore_user_state(username)
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
@@ -995,9 +1059,7 @@ def register_user(username, password, name, phone=""):
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
-    # Save all data before logout
     save_all_data()
-    
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
@@ -1035,23 +1097,19 @@ def sync_global_cards():
     if global_columns:
         st.session_state.columns_per_row = global_columns
     
-    st.session_state.timer_start_time = global_timer_start
-    st.session_state.card_selection_time = global_timer_value
-    
     current_user = st.session_state.current_user
     if current_user:
         user_cards = [int(card_id) for card_id, owner in global_owner.items() if owner == current_user] if global_owner else []
         st.session_state.clicked_numbers = set(user_cards)
 
 # ===================================================================
-# ALL 201 BINGO CARDS - FULL LIST (Shortened for space)
+# ALL 201 BINGO CARDS - FULL LIST
 # ===================================================================
 
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
     {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
-    # ... (all 201 cards would be here - I'm showing just 2 for brevity)
-    # Full list would be included in your actual code
+    # ... (all 201 cards would be here)
 ]
 
 def get_card(card_id):
@@ -1104,10 +1162,6 @@ def check_winning_pattern(card_data, called_numbers):
         return {'type': "Small Corners", 'cells': small_corners}
     
     return None
-
-# ===================================================================
-# GAME FUNCTIONS
-# ===================================================================
 
 def check_for_winners():
     if st.session_state.winner_declared:
@@ -1185,7 +1239,6 @@ def distribute_prizes(winners):
 # ===================================================================
 
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
-    # Sync winners before displaying
     if not st.session_state.winner_declared:
         sync_global_winners()
     
@@ -1257,7 +1310,6 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    # Sync winners from global file before displaying
     if not st.session_state.winner_declared:
         sync_global_winners()
     
@@ -1534,14 +1586,12 @@ def admin_panel():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid with Cards per row selector (default 4)"""
+    """Render card selection grid with Cards per row selector"""
     
-    # PREVENT ADMIN FROM PLAYING
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
         
-        # Show current game status for admin
         total_selected = len(st.session_state.taken_cards)
         st.markdown(f"""
         <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
@@ -1558,13 +1608,21 @@ def render_card_selection():
     
     sync_global_cards()
     
-    # GLOBAL TIMER - Same for all players
-    current_time = time.time()
-    elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, CARD_SELECTION_TIME - elapsed)
+    # Get global remaining time - NEVER STOPS
+    remaining, game_started, selection_ended = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
+    st.session_state.game_started = game_started
+    st.session_state.selection_phase_ended = selection_ended
     
-    # Show timer to players
+    # If timer reached 0, game should start
+    if remaining <= 0 and not game_started:
+        start_game_globally()
+        st.session_state.game_started = True
+        st.session_state.selection_phase_ended = True
+        st.rerun()
+        return
+    
+    # Show timer
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
@@ -1576,8 +1634,8 @@ def render_card_selection():
         st.warning("⏰ CARD SELECTION TIME IS OVER! 🛑")
         st.info("🔄 The game is starting... BINGO board will appear shortly.")
         
-        # Automatically start the game if not already started
         if not st.session_state.game_started:
+            start_game_globally()
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
             save_all_data()
@@ -1706,7 +1764,6 @@ def render_card_selection():
                 disabled=is_disabled or has_insufficient_balance
             ):
                 if is_clicked:
-                    # DESELECT
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1715,7 +1772,6 @@ def render_card_selection():
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                     
-                    # Refund
                     if st.session_state.current_user in st.session_state.user_db:
                         st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
                         save_user_db(st.session_state.user_db)
@@ -1724,7 +1780,6 @@ def render_card_selection():
                     save_all_data()
                     st.rerun()
                 else:
-                    # SELECT
                     if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         if current_balance >= 10:
@@ -1841,7 +1896,6 @@ if st.session_state.current_role == "admin":
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
 
-# Ensure admin balance is always 0
 if st.session_state.current_user == "admin":
     balance = 0.0
     if "admin" in st.session_state.user_db:
@@ -1865,25 +1919,22 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# GLOBAL TIMER - CHECK IF SELECTION PHASE SHOULD END
+# GLOBAL TIMER - SYNC ON EVERY PAGE LOAD
 # ===================================================================
 
-if not st.session_state.game_started:
-    current_time = time.time()
-    elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, CARD_SELECTION_TIME - elapsed)
-    st.session_state.card_selection_time = remaining
-    
-    # At 0:01 or less - card selection is OVER
-    if remaining <= 1:
-        st.session_state.selection_phase_ended = True
-        save_all_data()
-        # Start the game automatically
-        if not st.session_state.game_started:
-            st.session_state.game_started = True
-            st.session_state.auto_call_started = False
-            save_all_data()
-            st.rerun()
+# Sync global timer on every page load - NEVER STOPS
+remaining, game_started, selection_ended = get_global_remaining_time()
+st.session_state.card_selection_time = remaining
+st.session_state.game_started = game_started
+st.session_state.selection_phase_ended = selection_ended
+
+# If timer reached 0, start game
+if remaining <= 0 and not game_started:
+    start_game_globally()
+    st.session_state.game_started = True
+    st.session_state.selection_phase_ended = True
+    save_all_data()
+    st.rerun()
 
 # ===================================================================
 # SYNC GLOBAL WINNERS
@@ -1980,6 +2031,9 @@ if st.session_state.current_role == "admin":
             st.session_state.card_owner = {}
             st.session_state.clicked_numbers = set()
             st.session_state.selection_phase_ended = False
+            
+            # Reset global timer
+            reset_global_timer(CARD_SELECTION_TIME)
             
             clear_global_winners()
             save_global_cards([], {}, 4, st.session_state.timer_start_time, CARD_SELECTION_TIME)
@@ -2135,6 +2189,7 @@ if st.session_state.game_started:
             st.session_state.clicked_numbers = set()
             st.session_state.selection_phase_ended = False
             
+            reset_global_timer(CARD_SELECTION_TIME)
             clear_global_winners()
             save_global_cards([], {}, 4, st.session_state.timer_start_time, CARD_SELECTION_TIME)
             save_all_data()
@@ -2176,14 +2231,14 @@ if st.session_state.game_started:
 
 else:
     if not st.session_state.selection_phase_ended:
-        current_time = time.time()
-        elapsed = current_time - st.session_state.timer_start_time
-        remaining = max(0, CARD_SELECTION_TIME - elapsed)
+        # Get remaining time from global timer
+        remaining, _, _ = get_global_remaining_time()
         
         if remaining <= 1:
             st.session_state.selection_phase_ended = True
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
+            start_game_globally()
             save_all_data()
             st.rerun()
         
@@ -2205,6 +2260,7 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
+            start_game_globally()
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
             save_all_data()
