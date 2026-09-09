@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 # ===================================================================
 # CODE VERSION - CHANGE THIS WHEN YOU UPDATE THE CODE
 # ===================================================================
-CODE_VERSION = "2.1"
+CODE_VERSION = "2.2"
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ🍀",
@@ -105,103 +105,85 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* CSS Grid - DYNAMIC columns - will be set by inline style */
-    .cards-grid {
-        display: grid !important;
+    /* Force Streamlit columns to respect the number of columns */
+    .row-widget.stColumns {
+        display: flex !important;
+        flex-wrap: nowrap !important;
         gap: 5px !important;
+    }
+    .row-widget.stColumns > div {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
         max-width: 100% !important;
-        margin: 0 auto !important;
-        width: 100% !important;
     }
     
-    /* Card grid item - ensures buttons fit properly */
-    .card-grid-item {
+    /* Card buttons */
+    .card-btn {
         width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-    }
-    .card-grid-item .stButton {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-    }
-    .card-grid-item .stButton > button {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        padding: 4px 2px !important;
-        font-size: 0.8rem !important;
-        min-height: 36px !important;
-        height: 36px !important;
-        border-radius: 6px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        padding: 6px 4px !important;
+        font-size: 0.9rem !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 1.2 !important;
+        border-radius: 8px !important;
         margin: 0 !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: bold !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
         border: 2px solid rgba(255, 255, 255, 0.2) !important;
         background: rgba(255, 255, 255, 0.1) !important;
         color: #FFFFFF !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        position: relative !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
         text-shadow: 0 1px 3px rgba(0,0,0,0.4);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        font-weight: bold !important;
+        font-family: Arial, sans-serif !important;
+        box-sizing: border-box !important;
     }
-    .card-grid-item .stButton > button:hover:not(:disabled) {
+    .card-btn:hover:not(.taken) {
         transform: scale(1.05);
         border-color: #FFD700 !important;
         background: rgba(255, 215, 0, 0.2) !important;
         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
         z-index: 10;
     }
-    .card-grid-item .stButton > button:disabled {
-        opacity: 0.5 !important;
-        cursor: not-allowed !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        color: rgba(255, 255, 255, 0.3) !important;
+    .card-btn:active {
+        transform: scale(0.95);
     }
-    .card-grid-item .stButton > button:disabled:hover {
+    .card-btn.selected {
+        border-color: #4CAF50 !important;
+        background: rgba(76, 175, 80, 0.35) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+        border-width: 3px !important;
+    }
+    .card-btn.taken {
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+        cursor: not-allowed !important;
+        opacity: 0.5 !important;
+    }
+    .card-btn.taken:hover {
         transform: none !important;
         border-color: rgba(255, 0, 0, 0.2) !important;
         background: rgba(255, 0, 0, 0.15) !important;
         box-shadow: none !important;
     }
-    
-    /* Mobile - ONLY font size, NOT columns */
-    @media (max-width: 768px) {
-        .cards-grid-wrapper {
-            max-height: 500px !important;
-        }
-        .card-grid-item .stButton > button {
-            font-size: 0.7rem !important;
-            min-height: 30px !important;
-            height: 30px !important;
-            padding: 2px 1px !important;
-        }
+    .card-btn .tick-mark {
+        display: none;
     }
-    
-    @media (max-width: 480px) {
-        .cards-grid-wrapper {
-            max-height: 450px !important;
-        }
-        .card-grid-item .stButton > button {
-            font-size: 0.6rem !important;
-            min-height: 26px !important;
-            height: 26px !important;
-            padding: 2px 1px !important;
-            border-radius: 4px !important;
-        }
-    }
-    
-    @media (max-width: 360px) {
-        .cards-grid-wrapper {
-            max-height: 400px !important;
-        }
-        .card-grid-item .stButton > button {
-            font-size: 0.5rem !important;
-            min-height: 22px !important;
-            height: 22px !important;
-            padding: 1px 1px !important;
-        }
+    .card-btn.selected .tick-mark {
+        display: inline;
     }
     
     /* Winner Card Celebration */
@@ -1524,11 +1506,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - FIXED: Uses CSS Grid with dynamic columns
+# CARD SELECTION FUNCTION - FIXED: Uses Streamlit columns with CSS fix
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using CSS Grid - FORCES the selected number of columns"""
+    """Render card selection grid using Streamlit columns - ONE GLOBAL BOARD"""
     
     # Sync with global data first - ALWAYS sync to get latest updates
     sync_global_cards()
@@ -1643,68 +1625,57 @@ def render_card_selection():
         st.info(f"📝 Select your cards (max 2). {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
-    # CREATE CSS GRID WITH DYNAMIC COLUMNS
+    # CREATE GRID USING STREAMLIT COLUMNS - FORCED by CSS
     # ================================================================
     
     cols_per_row = st.session_state.columns_per_row
     
-    # Create the grid container with dynamic columns using inline style
-    st.markdown(f"""
-    <div class="cards-grid-wrapper">
-        <div class="cards-grid" style="grid-template-columns: repeat({cols_per_row}, 1fr) !important;">
-    """, unsafe_allow_html=True)
+    # Create columns
+    cols = st.columns(cols_per_row)
     
-    # Generate each card as a button in the grid
     for i in range(1, 202):
-        is_clicked = i in st.session_state.clicked_numbers
-        is_taken = i in st.session_state.taken_cards
-        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
-        
-        # Determine button label and style
-        if is_clicked:
-            btn_type = "secondary"
-            label = f"🟢 {i}"
-        elif is_taken:
-            btn_type = "secondary"
-            label = str(i)
-        else:
-            btn_type = "primary"
-            label = str(i)
-        
-        # Each card in its own grid cell with wrapper
-        st.markdown(f'<div class="card-grid-item">', unsafe_allow_html=True)
-        if st.button(
-            label,
-            key=f"card_{i}",
-            use_container_width=True,
-            type=btn_type,
-            disabled=is_taken
-        ):
-            if i in st.session_state.clicked_numbers:
-                # DESELECT - Remove your card from global board
-                st.session_state.clicked_numbers.remove(i)
-                if i in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(i)
-                if str(i) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(i)]
-                if st.session_state.selected_card == i:
-                    st.session_state.selected_card = None
-                save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                st.rerun()
+        col_idx = (i - 1) % cols_per_row
+        with cols[col_idx]:
+            is_clicked = i in st.session_state.clicked_numbers
+            is_taken = i in st.session_state.taken_cards
+            is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
+            
+            if is_clicked:
+                btn_type = "secondary"
+                label = f"🟢 {i}"
+            elif is_disabled:
+                btn_type = "secondary"
+                label = str(i)
             else:
-                # SELECT - Add your card to global board
-                if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
-                    st.session_state.clicked_numbers.add(i)
-                    st.session_state.taken_cards.append(i)
-                    st.session_state.card_owner[str(i)] = st.session_state.current_user
+                btn_type = "primary"
+                label = str(i)
+            
+            if st.button(
+                label,
+                key=f"card_{i}",
+                use_container_width=True,
+                type=btn_type,
+                disabled=is_taken
+            ):
+                if i in st.session_state.clicked_numbers:
+                    # DESELECT - Remove your card from global board
+                    st.session_state.clicked_numbers.remove(i)
+                    if i in st.session_state.taken_cards:
+                        st.session_state.taken_cards.remove(i)
+                    if str(i) in st.session_state.card_owner:
+                        del st.session_state.card_owner[str(i)]
+                    if st.session_state.selected_card == i:
+                        st.session_state.selected_card = None
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
                     st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+                else:
+                    # SELECT - Add your card to global board
+                    if len(st.session_state.clicked_numbers) < 2 and i not in st.session_state.taken_cards:
+                        st.session_state.clicked_numbers.add(i)
+                        st.session_state.taken_cards.append(i)
+                        st.session_state.card_owner[str(i)] = st.session_state.current_user
+                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Waiting for other players... ⏳")
