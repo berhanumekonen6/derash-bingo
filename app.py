@@ -1713,121 +1713,74 @@ def render_card_selection():
     else:
         st.info(f"📝 Click a number to SELECT. Click 🟢 GREEN number to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
     
-    # FORCE EXACT COLUMNS ON ALL DEVICES - NO MEDIA QUERY OVERRIDES
     cols_per_row = st.session_state.columns_per_row
     
-    # Use CSS Grid with !important to force exact columns on ALL devices
-    st.markdown(f"""
+    # Add CSS for HIGHLY ACTIVE touch-responsive buttons
+    st.markdown("""
     <style>
-        /* FORCE EXACT COLUMNS ON ALL DEVICES - NO EXCEPTIONS */
-        .card-grid-container {{
-            display: grid !important;
-            grid-template-columns: repeat({cols_per_row}, 1fr) !important;
-            gap: 4px !important;
-            padding: 4px 0 !important;
-            width: 100% !important;
-        }}
-        .card-grid-container .card-item {{
-            width: 100% !important;
-            min-width: 0 !important;
-        }}
-        .card-grid-container .card-item button {{
-            width: 100% !important;
-            padding: 4px 2px !important;
-            font-size: 0.65rem !important;
-            min-height: 28px !important;
-            height: 28px !important;
-            border-radius: 6px !important;
-            margin: 0 !important;
-            text-align: center !important;
-            font-weight: bold !important;
-            transition: all 0.2s ease !important;
+        /* MAKE BUTTONS EXTREMELY RESPONSIVE AND ACTIVE */
+        .stButton > button {
+            transition: all 0.1s ease !important;
+            -webkit-tap-highlight-color: transparent !important;
+            touch-action: manipulation !important;
             cursor: pointer !important;
-            border: 2px solid rgba(255, 255, 255, 0.2) !important;
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: #FFFFFF !important;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-            font-family: Arial, sans-serif !important;
-            box-sizing: border-box !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            line-height: 1 !important;
-        }}
-        .card-grid-container .card-item button:hover:not(:disabled) {{
-            border-color: #FFD700 !important;
-            background: rgba(255, 215, 0, 0.2) !important;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-            transform: scale(1.05) !important;
-            z-index: 10 !important;
-        }}
-        .card-grid-container .card-item button:active {{
-            transform: scale(0.95) !important;
-        }}
-        .card-grid-container .card-item .selected-btn {{
-            border-color: #4CAF50 !important;
-            background: rgba(76, 175, 80, 0.35) !important;
-            color: #FFFFFF !important;
-            box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-            border-width: 3px !important;
-        }}
-        .card-grid-container .card-item .selected-btn:hover {{
-            border-color: #FF6B6B !important;
-            background: rgba(255, 80, 80, 0.3) !important;
-            box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
-        }}
-        .card-grid-container .card-item .taken-btn {{
-            border-color: rgba(255, 0, 0, 0.2) !important;
-            background: rgba(255, 0, 0, 0.15) !important;
-            color: rgba(255, 255, 255, 0.3) !important;
-            cursor: not-allowed !important;
-            opacity: 0.5 !important;
-        }}
-        .card-grid-container .card-item .taken-btn:hover {{
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        .stButton > button:active {
+            transform: scale(0.92) !important;
+            transition: all 0.05s ease !important;
+            box-shadow: 0 0 30px rgba(255,215,0,0.4) !important;
+        }
+        .stButton > button:focus {
+            outline: none !important;
+        }
+        /* Disabled buttons should not scale */
+        .stButton > button:disabled:active {
             transform: none !important;
-            border-color: rgba(255, 0, 0, 0.2) !important;
-            background: rgba(255, 0, 0, 0.15) !important;
-            box-shadow: none !important;
-        }}
-        .card-grid-container .card-item .insufficient-btn {{
-            border-color: rgba(255, 165, 0, 0.3) !important;
-            background: rgba(255, 165, 0, 0.15) !important;
-            color: rgba(255, 255, 255, 0.4) !important;
-            cursor: not-allowed !important;
-            opacity: 0.6 !important;
-        }}
-        .card-grid-container .card-item .insufficient-btn:hover {{
-            transform: none !important;
-            border-color: rgba(255, 165, 0, 0.3) !important;
-            background: rgba(255, 165, 0, 0.15) !important;
-            box-shadow: none !important;
-        }}
-        .card-grid-container .card-item .available-btn:hover {{
-            border-color: #FFD700 !important;
-            background: rgba(255, 215, 0, 0.2) !important;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-            transform: scale(1.05) !important;
-        }}
-        /* OVERRIDE ANY MOBILE MEDIA QUERIES - FORCE EXACT COLUMNS */
-        @media (max-width: 768px), (max-width: 480px), (max-width: 360px) {{
-            .card-grid-container {{
-                grid-template-columns: repeat({cols_per_row}, 1fr) !important;
-                gap: 3px !important;
-            }}
-            .card-grid-container .card-item button {{
-                font-size: 0.5rem !important;
-                min-height: 22px !important;
-                height: 22px !important;
-                padding: 1px 1px !important;
-                border-width: 1.5px !important;
-            }}
-        }}
+        }
+        /* Specific styles for selected cards - more active feedback */
+        div[data-testid="stButton"] button:active {
+            transform: scale(0.90) !important;
+            transition: all 0.05s ease !important;
+        }
+        /* Ensure touch targets are large enough */
+        @media (max-width: 480px) {
+            .stButton > button {
+                min-height: 30px !important;
+                height: 30px !important;
+                padding: 4px 2px !important;
+                font-size: 0.55rem !important;
+                border-radius: 6px !important;
+            }
+            .stButton > button:active {
+                transform: scale(0.88) !important;
+            }
+        }
+        @media (max-width: 360px) {
+            .stButton > button {
+                min-height: 26px !important;
+                height: 26px !important;
+                padding: 2px 1px !important;
+                font-size: 0.45rem !important;
+            }
+        }
+        /* Make card buttons more touch-friendly */
+        .stButton {
+            width: 100% !important;
+        }
+        /* Flash effect on click */
+        .stButton > button:active {
+            animation: buttonFlash 0.2s ease !important;
+        }
+        @keyframes buttonFlash {
+            0% { box-shadow: 0 0 0px rgba(255,215,0,0); }
+            50% { box-shadow: 0 0 40px rgba(255,215,0,0.8); }
+            100% { box-shadow: 0 0 0px rgba(255,215,0,0); }
+        }
     </style>
     """, unsafe_allow_html=True)
     
-    # Build the grid with actual Streamlit buttons using columns
-    # We need to use st.columns with the exact number
     cols = st.columns(cols_per_row)
     
     for i in range(1, 202):
@@ -1842,7 +1795,6 @@ def render_card_selection():
             if is_clicked:
                 btn_type = "secondary"
                 label = f"🟢{i}"
-                # Use custom styling to make it green
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
@@ -1852,11 +1804,11 @@ def render_card_selection():
                         box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
                         border-width: 3px !important;
                         cursor: pointer !important;
-                        transition: all 0.3s ease !important;
-                        font-size: 0.5rem !important;
+                        transition: all 0.1s ease !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
-                        min-height: 22px !important;
-                        height: 22px !important;
+                        min-height: 24px !important;
+                        height: 24px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
@@ -1868,6 +1820,12 @@ def render_card_selection():
                         box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
                         transform: scale(1.05);
                         color: #FFFFFF !important;
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
+                        transform: scale(0.90) !important;
+                        transition: all 0.05s ease !important;
+                        box-shadow: 0 0 50px rgba(76, 175, 80, 0.6) !important;
+                        border-color: #FFD700 !important;
                     }}
                 </style>
                 """, unsafe_allow_html=True)
@@ -1882,10 +1840,10 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.3) !important;
                         cursor: not-allowed !important;
                         opacity: 0.5 !important;
-                        font-size: 0.45rem !important;
+                        font-size: 0.5rem !important;
                         padding: 2px 1px !important;
-                        min-height: 20px !important;
-                        height: 20px !important;
+                        min-height: 22px !important;
+                        height: 22px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
@@ -1896,6 +1854,9 @@ def render_card_selection():
                         border-color: rgba(255, 0, 0, 0.2) !important;
                         background: rgba(255, 0, 0, 0.15) !important;
                         box-shadow: none !important;
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
+                        transform: none !important;
                     }}
                 </style>
                 """, unsafe_allow_html=True)
@@ -1910,10 +1871,10 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.4) !important;
                         cursor: not-allowed !important;
                         opacity: 0.6 !important;
-                        font-size: 0.5rem !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
-                        min-height: 22px !important;
-                        height: 22px !important;
+                        min-height: 24px !important;
+                        height: 24px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
@@ -1925,6 +1886,9 @@ def render_card_selection():
                         background: rgba(255, 165, 0, 0.15) !important;
                         box-shadow: none !important;
                     }}
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
+                        transform: none !important;
+                    }}
                 </style>
                 """, unsafe_allow_html=True)
             else:
@@ -1933,20 +1897,27 @@ def render_card_selection():
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"] {{
-                        font-size: 0.5rem !important;
+                        font-size: 0.55rem !important;
                         padding: 2px 1px !important;
-                        min-height: 22px !important;
-                        height: 22px !important;
+                        min-height: 24px !important;
+                        height: 24px !important;
                         white-space: nowrap !important;
                         overflow: hidden !important;
                         text-overflow: ellipsis !important;
                         line-height: 1 !important;
+                        transition: all 0.1s ease !important;
                     }}
                     div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:hover {{
                         border-color: #FFD700 !important;
                         background: rgba(255, 215, 0, 0.2) !important;
                         box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
                         transform: scale(1.05);
+                    }}
+                    div[data-testid="stButton"] button[key="card_{i}_{st.session_state.current_user}"]:active {{
+                        transform: scale(0.90) !important;
+                        transition: all 0.05s ease !important;
+                        box-shadow: 0 0 40px rgba(255, 215, 0, 0.5) !important;
+                        border-color: #FFD700 !important;
                     }}
                 </style>
                 """, unsafe_allow_html=True)
