@@ -1879,10 +1879,10 @@ if st.session_state.game_started:
                 🎉🎊🏆👑🎊🎉
             </div>
             <div style="font-size:3rem;color:#FFD700;margin:10px 0;text-shadow:0 0 40px rgba(255,215,0,0.5);">
-                🎉 ቢንጎ!!! አሸናፊ ታወቀ!!! 🎉
+                🎉 ቢንጎ!!! አሸናፊዉ ታዉቋል!!! 🎉
             </div>
             <div style="font-size:2rem;color:#FFD700;margin:10px 0;text-shadow:0 0 30px rgba(255,215,0,0.3);">
-                🎊🍀🥳 እንኳን ደስ አለዎት!!! 🥳🍀🎊
+                🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊
             </div>
             <div style="font-size:1.5rem;color:#FFFFFF;margin:10px 0;">
                 🏆 <span style="color:#FFD700;">{winner_names_str}</span> 🏆
@@ -1908,7 +1908,7 @@ if st.session_state.game_started:
                 🏅 {winning_pattern}
             </div>
             <div style="font-size:1.3rem;color:#FFD700;margin-top:15px;">
-                🎊🎊🎊 ፈጥነው ካርቶቻችሁን ይምረጡ ለቀጣይ ጨዋታ!!! 🎊🎊🎊
+                🎊🎊🎊ፈጥነው ካርቴላ ይምረጡ!!!🎊🎊🎊
             </div>
             <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:10px;">
                 <span class="emoji-rain">⭐</span>
@@ -1923,7 +1923,7 @@ if st.session_state.game_started:
         st.balloons()
         st.snow()
         
-        st.markdown("### 🎉🏆 የአሸናፊዎች ካርቶች 🏆🎉")
+        st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
         
         # Display ALL cards from ALL players with winner highlighting
         all_cards_in_game = st.session_state.taken_cards
