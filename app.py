@@ -2164,7 +2164,7 @@ if st.session_state.current_role == "admin":
 
 # Check if game has started
 if st.session_state.game_started:
-    # GAME IS RUNNING - SHOW BINGO BOARD AND PLAYER CARDS
+    # GAME IS RUNNING - HIDE CARD SELECTION (1-201), SHOW BINGO BOARD AND PLAYER CARDS
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
@@ -2176,7 +2176,7 @@ if st.session_state.game_started:
         
         winning_patterns = []
         winner_names = []
-        all_winner_cards = []  # Collect all winner cards
+        all_winner_cards = []
         
         for winner in st.session_state.winners_list:
             winning_patterns.extend(winner.get("patterns", []))
@@ -2275,6 +2275,7 @@ if st.session_state.game_started:
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
         
         # NO BINGO BOARD DISPLAYED HERE
+        # NO CARD SELECTION (1-201) DISPLAYED HERE
         
         if st.button("🔄 New Game", use_container_width=True):
             # COMPLETE RESET FOR NEW GAME
@@ -2304,6 +2305,7 @@ if st.session_state.game_started:
             st.rerun()
     else:
         # Game is running - show BINGO board and player cards side by side
+        # CARD SELECTION (1-201) IS HIDDEN HERE - ONLY BINGO BOARD AND PLAYER CARDS SHOWN
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -2338,7 +2340,7 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # GAME NOT STARTED - Show card selection
+    # GAME NOT STARTED - Show card selection (1-201)
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     
     # Check if game should start (timer reached 0 and enough cards)
@@ -2354,7 +2356,7 @@ else:
         
         st.rerun()
     
-    # Show card selection interface
+    # Show card selection interface (1-201)
     if not st.session_state.game_started:
         render_card_selection()
     else:
