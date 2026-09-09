@@ -180,32 +180,17 @@ st.markdown("""
         100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255, 215, 0, 0.7); }
     }
     
-    /* Big Winner Celebration */
-    .winner-celebration {
-        animation: celebrationPulse 0.8s ease-in-out infinite alternate;
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.1)) !important;
-        border: 4px solid #FFD700 !important;
-        border-radius: 20px !important;
-        padding: 30px !important;
-        margin: 20px 0 !important;
-        text-align: center !important;
-        box-shadow: 0 0 80px rgba(255, 215, 0, 0.4) !important;
-    }
-    @keyframes celebrationPulse {
-        0% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 215, 0, 0.3); }
-        100% { transform: scale(1.02); box-shadow: 0 0 80px rgba(255, 215, 0, 0.6); }
-    }
-    
     /* Winner Emojis Animation */
-    .emoji-rain {
-        font-size: 3rem;
-        animation: emojiFloat 2s ease-in-out infinite;
-        display: inline-block;
-    }
     @keyframes emojiFloat {
         0% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(10deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
         100% { transform: translateY(0) rotate(0deg); }
+    }
+    
+    /* Celebration Pulse Animation */
+    @keyframes celebrationPulse {
+        0% { transform: scale(1); box-shadow: 0 0 30px rgba(255,215,0,0.2); }
+        100% { transform: scale(1.01); box-shadow: 0 0 60px rgba(255,215,0,0.4); }
     }
     
     /* Scrollbar */
@@ -2070,50 +2055,53 @@ if st.session_state.game_started:
         
         st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
         
-        # Winner Celebration with Emojis for ALL players to see - NO BINGO BOARD
+        # Winner Celebration with Emojis - MINIMIZED SPACE
         st.markdown(f"""
-        <div class="winner-celebration">
-            <div style="font-size:4rem;color:#FFD700;">
+        <div style="background:linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+                    border:3px solid #FFD700;
+                    border-radius:15px;
+                    padding:15px 10px;
+                    margin:10px 0;
+                    text-align:center;
+                    box-shadow: 0 0 40px rgba(255,215,0,0.2);
+                    animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
+            <div style="font-size:2.5rem;color:#FFD700;letter-spacing:5px;">
                 🎉🎊🏆👑🎊🎉
             </div>
-            <div style="font-size:3rem;color:#FFD700;margin:10px 0;text-shadow:0 0 40px rgba(255,215,0,0.5);">
+            <div style="font-size:1.8rem;color:#FFD700;margin:3px 0;text-shadow:0 0 30px rgba(255,215,0,0.3);">
                 🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉
             </div>
-            <div style="font-size:2rem;color:#FFD700;margin:10px 0;text-shadow:0 0 30px rgba(255,215,0,0.3);">
+            <div style="font-size:1.2rem;color:#FFD700;margin:2px 0;text-shadow:0 0 20px rgba(255,215,0,0.2);">
                 🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊
             </div>
-            <div style="font-size:1.5rem;color:#FFFFFF;margin:10px 0;">
-                🏆 <span style="color:#FFD700;">{winner_names_str}</span> 🏆
+            <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:5px 0;">
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">🏆</span>
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">👑</span>
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">🥳</span>
+                <span style="font-size:1.8rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 1s;">🎉</span>
             </div>
-            <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:15px 0;">
-                <span class="emoji-rain">🎉</span>
-                <span class="emoji-rain" style="animation-delay:0.2s;">🎊</span>
-                <span class="emoji-rain" style="animation-delay:0.4s;">🏆</span>
-                <span class="emoji-rain" style="animation-delay:0.6s;">👑</span>
-                <span class="emoji-rain" style="animation-delay:0.8s;">🥳</span>
-                <span class="emoji-rain" style="animation-delay:1s;">🎉</span>
-            </div>
-            <div style="font-size:1.3rem;color:#FFFFFF;">
+            <div style="font-size:1.2rem;color:#FFFFFF;margin:3px 0;">
+                🏆 <span style="color:#FFD700;">{winner_names_str}</span> 🏆 
+                <span style="color:rgba(255,255,255,0.5);margin:0 5px;">|</span> 
                 🏆 {len(st.session_state.winners_list)} Winner(s)! 🏆
             </div>
-            <div style="font-size:1.2rem;color:#4CAF50;">
+            <div style="font-size:1.1rem;color:#4CAF50;margin:2px 0;">
                 💰 Prize per winner: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
             </div>
-            <div style="font-size:1rem;color:rgba(255,255,255,0.6);">
-                Total Cards: <strong style="color:#FFD700;">{len(st.session_state.taken_cards)}</strong> × {PRIZE_PER_CARD} ETB = <strong style="color:#FFD700;">{total_prize} ETB</strong>
-            </div>
-            <div style="font-size:1.2rem;color:#FFD700;margin-top:10px;text-shadow:0 0 20px rgba(255,215,0,0.3);">
+            <div style="font-size:1rem;color:#FFD700;margin:3px 0;text-shadow:0 0 15px rgba(255,215,0,0.2);">
                 🏅 {winning_pattern}
             </div>
-            <div style="font-size:1.3rem;color:#FFD700;margin-top:15px;">
+            <div style="font-size:1.1rem;color:#FFD700;margin:5px 0;">
                 🎊🎊🎊ፈጥነው ካርቴላ ይምረጡ!!!🎊🎊🎊
             </div>
-            <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:10px;">
-                <span class="emoji-rain">⭐</span>
-                <span class="emoji-rain" style="animation-delay:0.3s;">🌟</span>
-                <span class="emoji-rain" style="animation-delay:0.5s;">✨</span>
-                <span class="emoji-rain" style="animation-delay:0.7s;">⭐</span>
-                <span class="emoji-rain" style="animation-delay:0.9s;">🌟</span>
+            <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:3px 0;">
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">⭐</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">🌟</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">✨</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">⭐</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
