@@ -1690,12 +1690,11 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # FIX 1: Removed dynamic key with time.time() to stop constant refreshing
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        key="cards_per_row_selector",  # Static key - no time.time()
+        key="cards_per_row_selector",
         help="Select how many cards to display per row"
     )
     
@@ -1714,8 +1713,12 @@ def render_card_selection():
     else:
         st.info(f"📝 Click a number to SELECT. Click 🟢 GREEN number to DESELECT (refund 10 ETB). {int(remaining)} seconds remaining ⏳")
     
+    # Use a container with higher rerun threshold - only rerun when user interacts
     cols_per_row = st.session_state.columns_per_row
     cols = st.columns(cols_per_row)
+    
+    # Track if any action was taken
+    action_taken = False
     
     for i in range(1, 202):
         col_idx = (i - 1) % cols_per_row
@@ -1723,14 +1726,10 @@ def render_card_selection():
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             
-            # Card is disabled if taken by someone else OR if player already has 2 cards and this isn't one of theirs
             is_disabled = (is_taken and not is_clicked) or (len(st.session_state.clicked_numbers) >= 2 and not is_clicked)
-            
-            # Check balance only for available cards (not already taken)
             has_insufficient_balance = balance < 10 and not is_clicked and not is_taken
             
             if is_clicked:
-                # SELECTED CARD - Green highlight, clickable to deselect
                 btn_type = "secondary"
                 label = f"🟢 {i}"
                 st.markdown(f"""
@@ -1743,6 +1742,13 @@ def render_card_selection():
                         border-width: 3px !important;
                         cursor: pointer !important;
                         transition: all 0.3s ease !important;
+                        font-size: 0.7rem !important;
+                        padding: 2px 2px !important;
+                        min-height: 30px !important;
+                        height: 30px !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
                     }}
                     div[data-testid="stButton"] button[key="card_{i}"]:hover {{
                         border-color: #FF6B6B !important;
@@ -1754,10 +1760,8 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             elif is_taken:
-                # Card is taken by someone else - DISABLED
                 btn_type = "secondary"
                 label = str(i)
-                owner_name = st.session_state.card_owner.get(str(i), "Unknown")
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[key="card_{i}"] {{
@@ -1766,6 +1770,13 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.3) !important;
                         cursor: not-allowed !important;
                         opacity: 0.5 !important;
+                        font-size: 0.6rem !important;
+                        padding: 2px 2px !important;
+                        min-height: 24px !important;
+                        height: 24px !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
                     }}
                     div[data-testid="stButton"] button[key="card_{i}"]:hover {{
                         transform: none !important;
@@ -1775,9 +1786,7 @@ def render_card_selection():
                     }}
                 </style>
                 """, unsafe_allow_html=True)
-                st.caption(f"Taken by: {owner_name}")
             elif has_insufficient_balance:
-                # Insufficient balance - DISABLED
                 btn_type = "secondary"
                 label = str(i)
                 st.markdown(f"""
@@ -1788,6 +1797,13 @@ def render_card_selection():
                         color: rgba(255, 255, 255, 0.4) !important;
                         cursor: not-allowed !important;
                         opacity: 0.6 !important;
+                        font-size: 0.7rem !important;
+                        padding: 2px 2px !important;
+                        min-height: 30px !important;
+                        height: 30px !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
                     }}
                     div[data-testid="stButton"] button[key="card_{i}"]:hover {{
                         transform: none !important;
@@ -1798,11 +1814,19 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             else:
-                # AVAILABLE CARD
                 btn_type = "primary"
                 label = str(i)
                 st.markdown(f"""
                 <style>
+                    div[data-testid="stButton"] button[key="card_{i}"] {{
+                        font-size: 0.7rem !important;
+                        padding: 2px 2px !important;
+                        min-height: 30px !important;
+                        height: 30px !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
+                    }}
                     div[data-testid="stButton"] button[key="card_{i}"]:hover {{
                         border-color: #FFD700 !important;
                         background: rgba(255, 215, 0, 0.2) !important;
@@ -1812,15 +1836,16 @@ def render_card_selection():
                 </style>
                 """, unsafe_allow_html=True)
             
+            # Use a unique key that doesn't change with time
             if st.button(
                 label,
-                key=f"card_{i}",
+                key=f"card_{i}_{st.session_state.current_user}",
                 use_container_width=True,
                 type=btn_type,
-                disabled=is_disabled
+                disabled=is_disabled or has_insufficient_balance or is_taken
             ):
                 if is_clicked:
-                    # DESELECT - Remove your card and refund
+                    # DESELECT
                     st.session_state.clicked_numbers.remove(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1829,15 +1854,13 @@ def render_card_selection():
                     if st.session_state.selected_card == i:
                         st.session_state.selected_card = None
                     
-                    # Refund 10 ETB
                     if st.session_state.current_user in st.session_state.user_db:
                         st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
                         save_all_data()
                     
                     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                    st.rerun()
+                    action_taken = True
                 else:
-                    # SELECT - Add your card
                     if len(st.session_state.clicked_numbers) < 2 and not is_taken and not has_insufficient_balance:
                         current_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         if current_balance >= 10:
@@ -1849,9 +1872,13 @@ def render_card_selection():
                             st.session_state.card_owner[str(i)] = st.session_state.current_user
                             
                             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner, st.session_state.columns_per_row, st.session_state.timer_start_time, st.session_state.card_selection_time)
-                            st.rerun()
+                            action_taken = True
                         else:
                             st.error("❌ Insufficient balance! You need at least 10 ETB to select a card.")
+    
+    # Only rerun if action was taken, otherwise just update display without rerun
+    if action_taken:
+        st.rerun()
     
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB).")
@@ -1871,11 +1898,11 @@ def render_card_selection():
             col_idx = idx % 4
             with selected_cols[col_idx]:
                 st.markdown(f"""
-                <div style="background:rgba(76,175,80,0.15);border:2px solid #4CAF50;border-radius:8px;padding:8px 12px;text-align:center;color:#4CAF50;font-weight:bold;margin-bottom:5px;">
+                <div style="background:rgba(76,175,80,0.15);border:2px solid #4CAF50;border-radius:8px;padding:8px 12px;text-align:center;color:#4CAF50;font-weight:bold;margin-bottom:5px;font-size:0.8rem;">
                     🃏 #{card_id}
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("✖ Deselect (Refund)", key=f"deselect_{card_id}"):
+                if st.button("✖ Deselect (Refund)", key=f"deselect_{card_id}_{st.session_state.current_user}"):
                     if card_id in st.session_state.clicked_numbers:
                         st.session_state.clicked_numbers.remove(card_id)
                         if card_id in st.session_state.taken_cards:
