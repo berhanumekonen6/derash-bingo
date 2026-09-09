@@ -2577,7 +2577,7 @@ else:
         st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
         st.rerun()
 
-# ===================================================================
+# =================================================================== 
 # FOOTER
 # ===================================================================
 
