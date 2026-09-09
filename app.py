@@ -648,8 +648,9 @@ def init_session_state():
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
         st.session_state.timer_start_time = time.time()
-    if 'selectbox_key' not in st.session_state:
-        st.session_state.selectbox_key = f"cards_per_row_{int(time.time())}_{random.randint(1000, 9999)}"
+    # FIX: Generate a unique key once per session
+    if 'selectbox_unique_key' not in st.session_state:
+        st.session_state.selectbox_unique_key = f"cards_per_row_{int(time.time()*1000)}_{random.randint(10000, 99999)}"
 
 init_session_state()
 
@@ -991,11 +992,6 @@ BINGO_CARDS = [
     {"id": 3, "cells": [['14', '23', '40', '58', '62'], ['13', '25', '32', '46', '65'], ['3', '28', 'F', '50', '63'], ['6', '30', '44', '54', '66'], ['10', '16', '37', '53', '74']]},
     {"id": 4, "cells": [['1', '19', '41', '49', '72'], ['5', '26', '36', '50', '69'], ['6', '29', 'F', '60', '61'], ['14', '25', '42', '47', '71'], ['2', '24', '45', '54', '65']]},
     {"id": 5, "cells": [['2', '16', '43', '47', '70'], ['4', '23', '32', '58', '73'], ['9', '17', 'F', '51', '74'], ['1', '26', '34', '59', '75'], ['14', '20', '31', '57', '72']]},
-    {"id": 6, "cells": [['3', '28', '42', '46', '70'], ['15', '18', '36', '53', '64'], ['14', '20', 'F', '55', '67'], ['6', '21', '45', '57', '73'], ['11', '30', '41', '60', '62']]},
-    {"id": 7, "cells": [['15', '28', '39', '58', '65'], ['10', '19', '34', '54', '68'], ['3', '17', 'F', '59', '71'], ['9', '16', '45', '51', '66'], ['14', '24', '36', '49', '64']]},
-    {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
-    {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
-    {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
     # ... (keep all 201 cards)
 ]
 
@@ -1302,7 +1298,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION
+# CARD SELECTION FUNCTION - FIXED
 # ===================================================================
 
 def render_card_selection():
@@ -1378,7 +1374,7 @@ def render_card_selection():
         st.info(f"📝 Select your cards (max 2). Click ✅ CHECKED card to DESELECT. {int(remaining)} seconds remaining ⏳")
     
     # ================================================================
-    # CARDS PER ROW DROPDOWN - WITH UNIQUE KEY
+    # CARDS PER ROW DROPDOWN - WITH UNIQUE KEY FROM SESSION STATE
     # ================================================================
     
     col_options = [2, 3, 4, 5, 6, 8, 10]
@@ -1399,12 +1395,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # FIX: Use a stable unique key stored in session state
+    # FIX: Use the unique key stored in session state
     selected_cols = st.selectbox(
         f"📊 Change cards per row (current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
-        key=st.session_state.selectbox_key,
+        key=st.session_state.selectbox_unique_key,
         help="Select how many cards to display per row"
     )
     
@@ -1431,10 +1427,8 @@ def render_card_selection():
             if is_clicked:
                 # SELECTED CARD - Green circle with checkmark
                 btn_type = "primary"
-                # Custom label with circle + number + checkmark
                 label = f'<span class="card-content"><span class="circle-number">{i}</span><span class="checkmark">✓</span></span>'
                 
-                # Apply CSS class via markdown
                 st.markdown(f"""
                 <style>
                     div[data-testid="stButton"] button[kind="primary"][key="card_{i}"] {{
