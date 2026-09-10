@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import time
 import hashlib
@@ -269,9 +270,6 @@ st.markdown("""
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
     .selected-cards-preview { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
 
-    /* ============================================================ */
-    /* MOBILE-FRIENDLY CARD GRID - keeps columns side-by-side       */
-    /* ============================================================ */
     @media (max-width: 768px) {
         .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
         .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
@@ -281,96 +279,12 @@ st.markdown("""
         .motivation-box { padding: 8px 12px !important; }
         .motivation-box .quote { font-size: 0.85rem !important; }
         h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
-        [data-testid="stHorizontalBlock"] {
-            flex-wrap: nowrap !important;
-            gap: 4px !important;
-        }
-        [data-testid="column"] {
-            min-width: 0 !important;
-            flex: 1 1 0 !important;
-        }
-        [data-testid="stButton"] button {
-            min-height: 42px !important;
-            height: 42px !important;
-            padding: 2px 1px !important;
-            font-size: 0.72rem !important;
-            border-radius: 6px !important;
-            white-space: nowrap !important;
-        }
-        .cards-grid-wrapper { padding: 4px !important; }
-        .winner-card { padding: 8px !important; }
     }
 
-    /* --- EXTRA SMALL PHONES (≤ 400px) --- */
     @media (max-width: 400px) {
-        [data-testid="stButton"] button {
-            min-height: 36px !important;
-            height: 36px !important;
-            font-size: 0.68rem !important;
-            padding: 2px 0px !important;
-        }
         .board-number { width: 22px; height: 22px; font-size: 0.62rem; }
         .board-table td { padding: 2px 1px !important; }
         .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
-    }
-
-    /* ============================================================ */
-    /* MOBILE RADIO STYLING - make radio buttons big and easy to tap */
-    /* ============================================================ */
-    @media (max-width: 768px) {
-        /* Make radio labels bigger and easier to tap */
-        div[role="radiogroup"] label {
-            font-size: 1.1rem !important;
-            padding: 8px 12px !important;
-            border-radius: 8px !important;
-            margin-bottom: 4px !important;
-            background: rgba(255,255,255,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            min-height: 44px !important;
-            display: flex !important;
-            align-items: center !important;
-        }
-        div[role="radiogroup"] label:hover {
-            background: rgba(255,215,0,0.15) !important;
-            border-color: #FFD700 !important;
-        }
-        /* Bigger radio circles */
-        div[role="radiogroup"] label input[type="radio"] {
-            transform: scale(1.5) !important;
-            margin-right: 12px !important;
-        }
-    }
-
-    /* ============================================================ */
-    /* STREAMLIT RADIO & EXPANDER - Dark theme                  */
-    /* ============================================================ */
-    div[data-testid="stExpander"] {
-        background: rgba(0,0,0,0.2) !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-    }
-    div[role="radiogroup"] {
-        gap: 6px !important;
-    }
-    div[role="radiogroup"] label span {
-        color: #FFFFFF !important;
-        font-weight: bold !important;
-    }
-
-    /* ============================================================ */
-    /* PORTRAIT LOCK + NUCLEAR OPTIONS (for other pages)           */
-    /* ============================================================ */
-    @media (max-width: 768px) and (orientation: portrait) {
-        div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-        }
-        div[data-testid="column"],
-        div[data-testid="stColumn"] {
-            flex: 1 1 0% !important;
-            min-width: 0 !important;
-        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -494,7 +408,7 @@ def init_session_state():
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
-        st.session_state.columns_per_row = 4
+        st.session_state.columns_per_row = 5
     if 'global_synced' not in st.session_state:
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
@@ -513,11 +427,13 @@ def init_session_state():
         st.session_state.show_deposit_msg = False
     if 'deposit_msg_text' not in st.session_state:
         st.session_state.deposit_msg_text = ""
+    if 'flash_msg' not in st.session_state:
+        st.session_state.flash_msg = ""
 
 init_session_state()
 
 # ===================================================================
-# GLOBAL WINNER TRACKING - SHARED ACROSS ALL USERS
+# GLOBAL WINNER TRACKING
 # ===================================================================
 
 def get_global_winners_file():
@@ -727,6 +643,70 @@ def sync_global_cards():
         st.session_state.clicked_numbers = user_cards
     else:
         st.session_state.clicked_numbers = set()
+
+# ===================================================================
+# ✅ QUERY PARAM HANDLER — Processes card taps from the iframe grid
+# ===================================================================
+
+if "select_card" in st.query_params:
+    try:
+        card_id = int(st.query_params["select_card"])
+        
+        sync_global_cards()
+        load_all_data()
+        
+        if st.session_state.current_user:
+            is_taken = card_id in st.session_state.taken_cards
+            is_mine = card_id in st.session_state.clicked_numbers
+            has_max = len(st.session_state.clicked_numbers) >= 2
+            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+            
+            if is_mine:
+                # DESELECT — refund 10 ETB
+                st.session_state.clicked_numbers.discard(card_id)
+                if card_id in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(card_id)
+                if str(card_id) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(card_id)]
+                
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+                save_all_data()
+                
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
+            elif is_taken:
+                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
+            elif has_max:
+                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+            elif user_balance < 10:
+                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+            else:
+                # SELECT — deduct 10 ETB
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+                save_all_data()
+                
+                st.session_state.clicked_numbers.add(card_id)
+                if card_id not in st.session_state.taken_cards:
+                    st.session_state.taken_cards.append(card_id)
+                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+        
+        st.query_params.clear()
+        st.rerun()
+    except (ValueError, TypeError):
+        st.query_params.clear()
 
 # ===================================================================
 # AUTHENTICATION
@@ -1513,15 +1493,15 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - 100% MOBILE COMPATIBLE (RADIO BUTTONS)
+# CARD SELECTION FUNCTION - IFRAME VERSION (100% MOBILE)
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using st.radio — 100% mobile compatible.
+    """Render card selection using an IFRAME — 100% mobile compatible.
     
-    Uses ONLY single Streamlit elements (radio, button).
-    No st.columns anywhere = no mobile stacking possible.
-    Works perfectly on Tecno Spark 10, iPhone, Android, and desktop.
+    The iframe uses its own rendering context so Streamlit's mobile
+    stacking rules cannot reach inside it. Tapping a card navigates
+    the parent URL with ?select_card=N which Streamlit reads.
     """
     
     if st.session_state.current_role == "admin":
@@ -1540,6 +1520,11 @@ def render_card_selection():
     
     sync_global_cards()
     load_all_data()
+    
+    # Show flash message
+    if st.session_state.flash_msg:
+        st.warning(st.session_state.flash_msg)
+        st.session_state.flash_msg = ""
     
     current_time = time.time()
     elapsed = current_time - st.session_state.timer_start_time
@@ -1568,9 +1553,7 @@ def render_card_selection():
     else:
         color = "#FFD700"
     
-    # ============================================================
-    # STATUS HEADER — single HTML block, never stacks
-    # ============================================================
+    # Status header
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
@@ -1587,9 +1570,7 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # ============================================================
-    # STATUS MESSAGES
-    # ============================================================
+    # Status messages
     if not enough_cards:
         st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start! 🎯")
     elif remaining <= 10:
@@ -1597,15 +1578,164 @@ def render_card_selection():
     elif remaining <= 30:
         st.info(f"⏱️ {int(remaining)} seconds remaining... 🎯")
     else:
-        st.info(f"📝 Tap a card to select. {int(remaining)}s left ⏳")
+        st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
     
-    # ============================================================
-    # SHOW YOUR CARDS (with deselect buttons)
-    # ============================================================
+    # Cards per row selector
+    col_options = [4, 5, 6, 7, 8]
+    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 5
+    
+    selected_cols = st.selectbox(
+        f"📊 Cards per row (your view — current: {current_value})",
+        options=col_options,
+        index=col_options.index(current_value),
+        key=f"cards_per_row_select_{st.session_state.current_user}"
+    )
+    
+    if selected_cols != st.session_state.columns_per_row:
+        st.session_state.columns_per_row = selected_cols
+        st.rerun()
+    
+    cols_per_row = st.session_state.columns_per_row
+    
+    # Build grid HTML
+    clicked = st.session_state.clicked_numbers
+    taken = st.session_state.taken_cards
+    
+    cells_html = ""
+    for i in range(1, 202):
+        is_mine = i in clicked
+        is_taken = i in taken and not is_mine
+        
+        if is_mine:
+            bg = "rgba(76,175,80,0.7)"
+            fg = "#FFFFFF"
+            border = "#4CAF50"
+            border_w = "3px"
+        elif is_taken:
+            bg = "rgba(255,0,0,0.2)"
+            fg = "rgba(255,255,255,0.4)"
+            border = "rgba(255,0,0,0.3)"
+            border_w = "2px"
+        else:
+            bg = "linear-gradient(135deg, #FFD700, #FFA500)"
+            fg = "#1a1a2e"
+            border = "rgba(255,255,255,0.2)"
+            border_w = "2px"
+        
+        cells_html += (
+            f'<div class="cell" '
+            f'style="background:{bg}; color:{fg}; border:{border_w} solid {border};" '
+            f'onclick="selectCard({i})">{i}</div>'
+        )
+    
+    num_rows = (201 + cols_per_row - 1) // cols_per_row
+    cell_height = 54
+    total_height = num_rows * cell_height + 40
+    if total_height > 1400:
+        total_height = 1400
+    
+    iframe_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{
+            margin: 0; padding: 0;
+            background: transparent;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }}
+        .grid {{
+            display: grid !important;
+            grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
+            gap: 5px;
+            padding: 8px;
+            width: 100%;
+        }}
+        .cell {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }}
+        .cell:hover {{
+            transform: scale(1.08);
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        }}
+        .cell:active {{
+            transform: scale(0.92);
+        }}
+        @media (max-width: 500px) {{
+            .cell {{
+                height: 42px;
+                font-size: 13px;
+                border-radius: 6px;
+            }}
+            .grid {{
+                gap: 4px;
+                padding: 5px;
+            }}
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="grid">{cells_html}</div>
+        <script>
+            function selectCard(num) {{
+                try {{
+                    var url = new URL(window.parent.location.href);
+                    url.searchParams.set('select_card', num);
+                    window.parent.location.href = url.toString();
+                }} catch (e) {{
+                    try {{
+                        var url2 = new URL(window.top.location.href);
+                        url2.searchParams.set('select_card', num);
+                        window.top.location.href = url2.toString();
+                    }} catch (e2) {{
+                        console.error('Navigation error:', e2);
+                    }}
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    st.markdown(f"""
+    <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
+        <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">
+            🎯 Tap a card to SELECT (10 ETB) or 🟢 green to DESELECT
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    components.html(iframe_html, height=total_height, scrolling=True)
+    
+    st.markdown("""
+    <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
+        🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Selected cards list with deselect buttons
     if your_cards > 0:
         st.markdown("### 📋 Your Selected Cards")
         for cid in sorted(list(st.session_state.clicked_numbers)):
-            if st.button(f"🃏 Card #{cid}  —  ✖ TAP TO DESELECT (Refund 10 ETB)",
+            if st.button(f"🃏 Card #{cid}  —  ✖ DESELECT (Refund 10 ETB)",
                          use_container_width=True, key=f"desel_{cid}"):
                 sync_global_cards()
                 st.session_state.clicked_numbers.discard(cid)
@@ -1623,140 +1753,9 @@ def render_card_selection():
                     st.session_state.card_selection_time
                 )
                 st.success(f"✅ Card #{cid} refunded. +10 ETB")
-                time.sleep(0.5)
+                time.sleep(0.4)
                 st.rerun()
     
-    # ============================================================
-    # SELECT A NEW CARD — RADIO BUTTONS (WORKS ON ALL PHONES)
-    # ============================================================
-    if your_cards < 2:
-        st.markdown("### 🎯 Tap a card to select it")
-        
-        # Get list of available (not-taken) cards
-        available_options = [i for i in range(1, 202)
-                             if i not in st.session_state.taken_cards]
-        
-        if not available_options:
-            st.error("⚠️ All cards are taken! Wait for the next round.")
-        else:
-            # Info box
-            st.markdown("""
-            <div style="background:rgba(255,215,0,0.12);border-left:4px solid #FFD700;padding:10px 14px;border-radius:8px;margin:8px 0;font-size:0.9rem;color:#FFD700;">
-                👇 Tap the <b>circle</b> next to a card number. Then tap the big <b>SELECT</b> button below.
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Use st.radio — single element, never stacks
-            selected = st.radio(
-                "Choose a card:",
-                options=available_options,
-                index=None,
-                key=f"card_picker_{st.session_state.current_user}",
-                label_visibility="collapsed"
-            )
-            
-            if selected is not None:
-                st.success(f"✅ You picked Card #{selected}")
-                if st.button(f"➕ CONFIRM — SELECT CARD #{selected} (10 ETB)",
-                             type="primary",
-                             use_container_width=True,
-                             key=f"confirm_card_{selected}"):
-                    sync_global_cards()
-                    load_all_data()
-                    
-                    i = int(selected)
-                    is_taken = i in st.session_state.taken_cards
-                    has_max = len(st.session_state.clicked_numbers) >= 2
-                    fresh_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                    
-                    if is_taken:
-                        st.error(f"⚠️ Card #{i} was just taken by another player!")
-                    elif has_max:
-                        st.error("⚠️ Max card selection is 2!")
-                    elif fresh_balance < 10:
-                        st.error("💰 ሂሳብዎን ይሙሉ! 💰")
-                    else:
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = fresh_balance - 10
-                        save_all_data()
-                        st.session_state.clicked_numbers.add(i)
-                        if i not in st.session_state.taken_cards:
-                            st.session_state.taken_cards.append(i)
-                        st.session_state.card_owner[str(i)] = st.session_state.current_user
-                        save_global_cards(
-                            st.session_state.taken_cards,
-                            st.session_state.card_owner,
-                            st.session_state.timer_start_time,
-                            st.session_state.card_selection_time
-                        )
-                        st.success(f"✅ Card #{i} selected! -10 ETB")
-                        time.sleep(0.6)
-                        st.rerun()
-    else:
-        st.info("✅ You have 2 cards. Deselect one above to pick another.")
-    
-    # ============================================================
-    # VISUAL GRID — REFERENCE ONLY (all 201 cards)
-    # ============================================================
-    with st.expander("📊 View All 201 Cards (visual reference)", expanded=False):
-        st.caption("🟢 = Yours  |  🔴 = Taken  |  ⬜ = Available")
-        
-        cols_per_row = 10
-        grid_html = f"""
-        <style>
-            .ref-grid {{
-                display: grid !important;
-                grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
-                gap: 3px !important;
-                padding: 8px !important;
-                background: rgba(0,0,0,0.2) !important;
-                border-radius: 10px !important;
-            }}
-            .ref-cell {{
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                min-height: 26px !important;
-                height: 26px !important;
-                border-radius: 3px !important;
-                font-weight: bold !important;
-                font-size: 0.65rem !important;
-                border: 1px solid rgba(255,255,255,0.08) !important;
-                box-sizing: border-box !important;
-                font-family: Arial, sans-serif !important;
-            }}
-            .ref-available {{
-                background: rgba(255,255,255,0.05) !important;
-                color: #FFFFFF !important;
-            }}
-            .ref-mine {{
-                background: rgba(76,175,80,0.7) !important;
-                color: #FFFFFF !important;
-                border-color: #4CAF50 !important;
-                border-width: 2px !important;
-            }}
-            .ref-taken {{
-                background: rgba(255,0,0,0.3) !important;
-                color: rgba(255,255,255,0.4) !important;
-            }}
-        </style>
-        <div class="ref-grid">
-        """
-        for i in range(1, 202):
-            is_mine = i in st.session_state.clicked_numbers
-            is_taken = i in st.session_state.taken_cards
-            if is_mine:
-                cls = "ref-cell ref-mine"
-            elif is_taken:
-                cls = "ref-cell ref-taken"
-            else:
-                cls = "ref-cell ref-available"
-            grid_html += f'<div class="{cls}">{i}</div>'
-        grid_html += '</div>'
-        st.markdown(grid_html, unsafe_allow_html=True)
-    
-    # ============================================================
-    # PROGRESS
-    # ============================================================
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
     
