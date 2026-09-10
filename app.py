@@ -286,46 +286,6 @@ st.markdown("""
         .board-table td { padding: 2px 1px !important; }
         .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
     }
-
-    /* ✅ RESPONSIVE CARD GRID — keeps cards side-by-side on mobile */
-    .cards-grid-responsive {
-        display: grid !important;
-        gap: 8px;
-        width: 100%;
-        margin: 8px 0;
-    }
-    .cards-grid-responsive > div {
-        min-width: 0 !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-    }
-    @media (max-width: 700px) {
-        .cards-grid-responsive {
-            gap: 6px !important;
-        }
-        .cards-grid-responsive table td {
-            padding: 2px 1px !important;
-        }
-        .cards-grid-responsive table td div {
-            width: 24px !important;
-            height: 24px !important;
-            font-size: 0.65rem !important;
-        }
-        .cards-grid-responsive table td:first-child,
-        .cards-grid-responsive table td:nth-child(2),
-        .cards-grid-responsive table td:nth-child(3),
-        .cards-grid-responsive table td:nth-child(4),
-        .cards-grid-responsive table td:nth-child(5) {
-            padding: 2px 1px !important;
-        }
-    }
-    @media (max-width: 420px) {
-        .cards-grid-responsive table td div {
-            width: 20px !important;
-            height: 20px !important;
-            font-size: 0.58rem !important;
-        }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1363,7 +1323,7 @@ def distribute_prizes(winners):
 # ✅ CARD HTML BUILDER — Returns HTML string (no st.markdown call)
 # ===================================================================
 
-def build_card_html(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
+def build_card_html(card_id, called_numbers=None, is_winner=False, winning_pattern=None, compact=False):
     """Build the HTML string for a single bingo card. Returns a string."""
     if called_numbers is None:
         called_numbers = []
@@ -1383,18 +1343,34 @@ def build_card_html(card_id, called_numbers=None, is_winner=False, winning_patte
         title_color = '#FFFFFF'
         card_class = ''
     
+    # Compact mode: smaller padding/cell sizes for multi-card iframe grid
+    if compact:
+        pad = "2px"
+        title_size = "0.7rem"
+        cell_size = "22px"
+        cell_font = "0.58rem"
+        star_font = "0.75rem"
+        header_font = "0.55rem"
+    else:
+        pad = "3px 1px"
+        title_size = "0.85rem"
+        cell_size = "30px"
+        cell_font = "0.72rem"
+        star_font = "1rem"
+        header_font = "0.7rem"
+    
     html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:8px;margin:0;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:0.85rem;font-weight:bold;margin-bottom:6px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:12px;padding:6px;margin:0;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:{title_size};font-weight:bold;margin-bottom:5px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
             {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
         </div>
         <table style="width:100%;border-collapse:collapse;">
             <tr>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">B</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">I</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">N</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">G</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">O</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:{header_font};">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:{header_font};">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:{header_font};">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:{header_font};">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:{header_font};">O</td>
             </tr>
     """
     
@@ -1404,7 +1380,7 @@ def build_card_html(card_id, called_numbers=None, is_winner=False, winning_patte
             value = cells[row_idx][col_idx]
             
             if value == 'F':
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1rem;border:2px solid #FFD700;">★</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:{cell_size};height:{cell_size};border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:{star_font};border:2px solid #FFD700;">★</div></td>'
             else:
                 num = int(value)
                 is_called = num in called_numbers
@@ -1412,11 +1388,11 @@ def build_card_html(card_id, called_numbers=None, is_winner=False, winning_patte
                 if is_called and is_winner:
                     style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
                 elif is_called:
-                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;transform:scale(1.05);'
+                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;'
                 else:
                     style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
                 
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;{style}font-weight:bold;font-size:0.72rem;border:2px solid;">{value}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:{pad};text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:{cell_size};height:{cell_size};border-radius:50%;{style}font-weight:bold;font-size:{cell_font};border:2px solid;">{value}</div></td>'
         html += '</tr>'
     
     html += '</table>'
@@ -1424,32 +1400,23 @@ def build_card_html(card_id, called_numbers=None, is_winner=False, winning_patte
     total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.75rem;margin-top:5px;font-weight:bold;text-shadow:0 0 30px rgba(255,215,0,0.3);">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.6rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:4px;font-weight:bold;text-shadow:0 0 30px rgba(255,215,0,0.3);">🎉🏆 WINNER! 🏆🎉</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total_called}/24 called</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.55rem;margin-top:2px;">✅ {total_called}/24</div>'
     html += '</div>'
     
     return html
 
 # ===================================================================
-# DISPLAY FUNCTIONS
+# ✅ DISPLAY CARDS GRID — Uses IFRAME (bypasses Streamlit mobile stacking)
 # ===================================================================
 
-def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
-    """Display a single bingo card."""
-    if not st.session_state.winner_declared:
-        sync_global_winners()
+def display_cards_grid(card_ids, called_numbers=None, is_winner=False, winning_patterns=None, cols=2, iframe_height=None):
+    """✅ Display multiple bingo cards inside an IFRAME using CSS grid.
     
-    html = build_card_html(card_id, called_numbers, is_winner, winning_pattern)
-    if html:
-        st.markdown(html, unsafe_allow_html=True)
-
-def display_cards_grid(card_ids, called_numbers=None, is_winner=False, winning_patterns=None, cols=2):
-    """✅ Display multiple bingo cards inside ONE markdown block using CSS grid.
-    
-    This bypasses Streamlit's mobile column stacking — cards always stay
-    side-by-side on phones because they're inside a single HTML block.
+    Iframes have their own layout context, so Streamlit's mobile column
+    stacking rules cannot reach inside. This guarantees cards stay
+    side-by-side on phones in portrait orientation.
     """
     if not card_ids:
         return
@@ -1462,23 +1429,89 @@ def display_cards_grid(card_ids, called_numbers=None, is_winner=False, winning_p
     if winning_patterns is None:
         winning_patterns = {}
     
-    # Build all card HTML strings
+    # Build all card HTML strings (compact mode for multi-card grids)
     cards_html = ""
     for card_id in card_ids:
         cards_html += build_card_html(
             card_id,
             called_numbers,
             is_winner,
-            winning_patterns.get(card_id)
+            winning_patterns.get(card_id),
+            compact=(cols >= 2)  # compact when 2+ per row
         )
     
-    # Wrap in a responsive CSS grid
-    grid_html = f"""
-    <div class="cards-grid-responsive" style="grid-template-columns: repeat({cols}, minmax(0, 1fr)) !important;">
-        {cards_html}
-    </div>
+    # Build the full iframe HTML
+    iframe_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{
+            margin: 0; padding: 0;
+            background: transparent;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+            color: #FFFFFF;
+        }}
+        .cards-grid {{
+            display: grid !important;
+            grid-template-columns: repeat({cols}, minmax(0, 1fr)) !important;
+            gap: 6px;
+            padding: 4px;
+            width: 100%;
+        }}
+        @media (max-width: 420px) {{
+            .cards-grid {{
+                gap: 4px;
+                padding: 2px;
+            }}
+        }}
+        @keyframes winnerPulse {{
+            0% {{ box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }}
+            100% {{ box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }}
+        }}
+        @keyframes winnerCardPulse {{
+            0% {{ transform: scale(1); }}
+            100% {{ transform: scale(1.02); }}
+        }}
+        .winner-card {{
+            animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="cards-grid">{cards_html}</div>
+    </body>
+    </html>
     """
-    st.markdown(grid_html, unsafe_allow_html=True)
+    
+    # Auto-calculate height if not provided
+    if iframe_height is None:
+        num_rows = (len(card_ids) + cols - 1) // cols
+        # Each card roughly 260px tall (compact mode)
+        iframe_height = num_rows * 280 + 20
+        if iframe_height > 1600:
+            iframe_height = 1600
+    
+    components.html(iframe_html, height=iframe_height, scrolling=True)
+
+# ===================================================================
+# SINGLE CARD DISPLAY (kept for compatibility)
+# ===================================================================
+
+def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
+    """Display a single bingo card using the iframe method."""
+    display_cards_grid(
+        [card_id],
+        called_numbers,
+        is_winner,
+        {card_id: winning_pattern} if winning_pattern else {},
+        cols=1,
+        iframe_height=290
+    )
 
 def display_master_board():
     if not st.session_state.winner_declared:
@@ -2238,8 +2271,7 @@ if st.session_state.game_started:
         
         st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
         
-        # ✅ FIXED: Use display_cards_grid (CSS grid inside ONE markdown block)
-        #    instead of st.columns(3) which stacks vertically on mobile.
+        # ✅ FIXED: Iframe-based grid — cards stay side-by-side on mobile portrait
         if st.session_state.winners_list:
             all_winner_cards = []
             winner_card_patterns = {}
@@ -2249,13 +2281,13 @@ if st.session_state.game_started:
                     all_winner_cards.append(card_id)
                     winner_card_patterns[card_id] = ", ".join(winner.get("patterns", ["BINGO!"]))
             
-            # 3 cards per row on desktop, still 3 on mobile (responsive CSS shrinks them)
+            # 2 cards per row on mobile (fits phone portrait width nicely)
             display_cards_grid(
                 all_winner_cards,
                 list(st.session_state.called_numbers),
                 is_winner=True,
                 winning_patterns=winner_card_patterns,
-                cols=3
+                cols=2
             )
         
         if st.session_state.winners_list:
@@ -2313,13 +2345,12 @@ if st.session_state.game_started:
         with cards_col:
             if all_player_cards:
                 st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
-                # ✅ FIXED: Use display_cards_grid with cols=1 (narrow sidebar — 1 card per row is fine)
-                #    but if you prefer 2 side-by-side on mobile, change cols=2
+                # ✅ FIXED: Iframe-based grid — your 2 cards stay side-by-side on mobile
                 display_cards_grid(
                     all_player_cards,
                     list(st.session_state.called_numbers),
                     is_winner=False,
-                    cols=1
+                    cols=2
                 )
             else:
                 st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
