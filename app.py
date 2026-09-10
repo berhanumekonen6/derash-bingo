@@ -13,6 +13,13 @@ st.set_page_config(
 )
 
 # ===================================================================
+# ✅ VIEWPORT META — FORCES PROPER SCALING ON SMARTPHONES
+# ===================================================================
+st.markdown("""
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+""", unsafe_allow_html=True)
+
+# ===================================================================
 # CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
 # ===================================================================
 
@@ -310,6 +317,81 @@ st.markdown("""
         .board-number { width: 22px; height: 22px; font-size: 0.62rem; }
         .board-table td { padding: 2px 1px !important; }
         .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
+    }
+
+    /* ============================================================ */
+    /* ✅ PORTRAIT LOCK: Force Streamlit columns to stay HORIZONTAL */
+    /* even when the phone is held vertically (portrait).          */
+    /* Streamlit normally stacks columns in portrait; we prevent it */
+    /* ============================================================ */
+    @media (max-width: 768px) and (orientation: portrait) {
+        /* Force EVERY horizontal block to keep its row layout */
+        div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
+            gap: 4px !important;
+        }
+
+        /* Force EVERY column to share the space equally */
+        div[data-testid="column"],
+        div[data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 0% !important;
+            min-width: 0 !important;
+            width: auto !important;
+            max-width: none !important;
+        }
+
+        /* Make sure buttons inside stay fitted */
+        div[data-testid="column"] > div,
+        div[data-testid="column"] > div > div {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        /* Card button styling for portrait */
+        div[data-testid="column"] button {
+            width: 100% !important;
+            min-height: 44px !important;
+            height: 44px !important;
+            font-size: 0.75rem !important;
+            padding: 2px 1px !important;
+            border-radius: 6px !important;
+            white-space: nowrap !important;
+        }
+    }
+
+    /* Ultra-narrow portrait screens (e.g. iPhone SE) */
+    @media (max-width: 400px) and (orientation: portrait) {
+        div[data-testid="column"] button {
+            min-height: 38px !important;
+            height: 38px !important;
+            font-size: 0.68rem !important;
+        }
+    }
+
+    /* ============================================================ */
+    /* NUCLEAR OPTION: kill any wrapping on mobile portrait         */
+    /* Higher specificity than Streamlit's default media queries    */
+    /* ============================================================ */
+    @media (max-width: 768px) {
+        section.main div[data-testid="stHorizontalBlock"],
+        section.main div[data-testid="stHorizontalBlock"] > div,
+        .stApp div[data-testid="stHorizontalBlock"],
+        .stApp div[data-testid="stHorizontalBlock"] > div {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+        }
+        section.main div[data-testid="column"],
+        .stApp div[data-testid="column"] {
+            flex: 1 1 0% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            width: auto !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
