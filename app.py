@@ -2113,7 +2113,7 @@ if st.session_state.game_started:
         board_col, cards_col = st.columns([2, 1])
         
         with board_col:
-            display_master_board()
+            display_master_board() 
         
         with cards_col:
             if all_player_cards:
