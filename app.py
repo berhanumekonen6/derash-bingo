@@ -207,7 +207,6 @@ st.markdown("""
         user-select: none !important;
         -webkit-tap-highlight-color: transparent !important;
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        text-decoration: none !important;
     }
     .card-btn:hover {
         transform: scale(1.05);
@@ -233,7 +232,6 @@ st.markdown("""
         color: rgba(255, 255, 255, 0.3) !important;
         cursor: not-allowed !important;
         opacity: 0.6 !important;
-        pointer-events: none !important;
     }
     .card-btn.taken:hover {
         transform: none !important;
@@ -1294,7 +1292,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     
-    st.html(html)
+    st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
     """Display the BINGO board"""
@@ -1438,11 +1436,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION - USING HTML LINKS WITH DEFAULT 4 COLUMNS
+# CARD SELECTION - USING HTML BUTTONS WITH DEFAULT 4 COLUMNS
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid using HTML links - DEFAULT 4 COLUMNS"""
+    """Render card selection grid using HTML buttons - DEFAULT 4 COLUMNS"""
     
     remaining = st.session_state.card_selection_time
     minutes = int(remaining // 60)
@@ -1482,58 +1480,85 @@ def render_card_selection():
     elif st.session_state.card_selection_time <= 30:
         st.info(f"⏱️ {int(st.session_state.card_selection_time)} seconds remaining...")
     
-    # Build HTML grid with <a> links (these work on mobile!)
+    # Build HTML grid with buttons - DEFAULT 4 COLUMNS
     html = '<div class="cards-grid-container"><div class="cards-grid">'
     
     for i in range(1, 202):
         is_clicked = i in st.session_state.clicked_numbers
         is_taken = i in st.session_state.taken_cards
+        is_disabled = (len(st.session_state.clicked_numbers) >= 2 and not is_clicked) or is_taken
         
-        if is_taken and not is_clicked:
-            html += f'<div class="card-btn taken">{i}<span class="tick-mark">🔒</span></div>'
+        if is_taken:
+            html += f'<div class="card-btn taken" style="border-color:rgba(255,0,0,0.2);background:rgba(255,0,0,0.1);color:rgba(255,255,255,0.3);cursor:not-allowed;opacity:0.6;">{i}<span class="tick-mark">🔒</span></div>'
         elif is_clicked:
-            html += f'<a class="card-btn selected" href="?deselect={i}"><span class="tick-mark">✓</span>{i}</a>'
+            html += f'<div class="card-btn selected" onclick="deselectCard({i})" style="cursor:pointer;"><span class="tick-mark">✓</span>{i}</div>'
         else:
-            html += f'<a class="card-btn" href="?select={i}">{i}</a>'
+            html += f'<div class="card-btn" onclick="selectCard({i})" style="cursor:pointer;">{i}</div>'
     
     html += '</div></div>'
     
+    # Add JavaScript for card selection
+    html += """
+    <script>
+        function selectCard(cardId) {
+            fetch(window.location.pathname + '?select=' + cardId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function() {
+                location.reload();
+            }).catch(function() {
+                location.reload();
+            });
+        }
+        
+        function deselectCard(cardId) {
+            fetch(window.location.pathname + '?deselect=' + cardId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function() {
+                location.reload();
+            }).catch(function() {
+                location.reload();
+            });
+        }
+    </script>
+    """
+    
     st.markdown(html, unsafe_allow_html=True)
     
-    # ============================================================
-    # Handle selection/deselection via query params
-    # ============================================================
+    # Handle card selection via query params
     if 'select' in st.query_params:
-        try:
-            card_id = int(st.query_params['select'])
-            if len(st.session_state.clicked_numbers) < 2 and card_id not in st.session_state.taken_cards:
-                user = st.session_state.user_db.get(st.session_state.current_user, {})
-                if user.get("balance", 0) >= 10:
-                    st.session_state.clicked_numbers.add(card_id)
-                    st.session_state.taken_cards.append(card_id)
-                    st.session_state.user_db[st.session_state.current_user]["balance"] = user.get("balance", 0) - 10
-                    save_all_data()
-                else:
-                    st.error("❌ Insufficient balance! You need 10 ETB to select a card.")
-        except:
-            pass
+        card_id = int(st.query_params['select'])
+        if len(st.session_state.clicked_numbers) < 2 and card_id not in st.session_state.taken_cards:
+            # Check if user has enough balance
+            user = st.session_state.user_db.get(st.session_state.current_user, {})
+            if user.get("balance", 0) >= 10:
+                st.session_state.clicked_numbers.add(card_id)
+                st.session_state.taken_cards.append(card_id)
+                # Deduct balance
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user.get("balance", 0) - 10
+                save_all_data()
+            else:
+                st.error("❌ Insufficient balance! You need 10 ETB to select a card.")
         st.query_params.clear()
         st.rerun()
     
     if 'deselect' in st.query_params:
-        try:
-            card_id = int(st.query_params['deselect'])
-            if card_id in st.session_state.clicked_numbers:
-                st.session_state.clicked_numbers.remove(card_id)
-                if card_id in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(card_id)
-                if st.session_state.selected_card == card_id:
-                    st.session_state.selected_card = None
-                if st.session_state.current_user in st.session_state.user_db:
-                    st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
-                    save_all_data()
-        except:
-            pass
+        card_id = int(st.query_params['deselect'])
+        if card_id in st.session_state.clicked_numbers:
+            st.session_state.clicked_numbers.remove(card_id)
+            if card_id in st.session_state.taken_cards:
+                st.session_state.taken_cards.remove(card_id)
+            if st.session_state.selected_card == card_id:
+                st.session_state.selected_card = None
+            # Refund balance
+            if st.session_state.current_user in st.session_state.user_db:
+                st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                save_all_data()
         st.query_params.clear()
         st.rerun()
     
