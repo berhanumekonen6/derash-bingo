@@ -2394,6 +2394,3 @@ if st.session_state.selected_card is not None and len(st.session_state.called_nu
 elif st.session_state.selected_card is None and not st.session_state.game_started:
     time.sleep(0.5)
     st.rerun()
-
-    if __name__ == "__main__":
-    main()
