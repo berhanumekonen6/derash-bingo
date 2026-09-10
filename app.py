@@ -2125,8 +2125,8 @@ if st.session_state.game_started:
                     with narrow_card_col:
                         display_selected_card(card_id, list(st.session_state.called_numbers), False)
             else:
-                st.warning("⚠️ You don't have any cards in this game!")
-                st.info("💡 Wait for the next round to select cards.")
+                st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
+                st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
         
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
