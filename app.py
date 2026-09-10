@@ -1294,7 +1294,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)
 
 def display_master_board():
     """Display the BINGO board"""
