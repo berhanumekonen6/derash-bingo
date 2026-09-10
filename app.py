@@ -614,13 +614,11 @@ def sync_global_cards():
     """
     global_taken, global_owner, global_timer_start, global_timer_value = load_global_cards()
     
-    # ALWAYS use file data as the source of truth
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
     st.session_state.timer_start_time = global_timer_start
     st.session_state.card_selection_time = global_timer_value
     
-    # Rebuild the current user's clicked_numbers from the file (owner map)
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
@@ -724,7 +722,6 @@ def logout_user():
     st.session_state.current_user = None
     st.session_state.current_role = None
     st.session_state.global_synced = False
-    # Clear the previous user's local card state
     st.session_state.clicked_numbers = set()
     st.session_state.taken_cards = []
     st.session_state.card_owner = {}
@@ -1421,18 +1418,12 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - CARDS INDEPENDENT OF BROWSER/LOGIN
+# CARD SELECTION FUNCTION
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection grid with Cards per row selector (default 4)
-    - Cards stored in JSON file (independent of browser/login)
-    - Column selector is ACTIVE (per player)
-    - Card select/deselect is ACTIVE
-    - Admin cannot play
-    """
+    """Render card selection grid with Cards per row selector (default 4)"""
     
-    # PREVENT ADMIN FROM PLAYING
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
@@ -1451,7 +1442,6 @@ def render_card_selection():
         """, unsafe_allow_html=True)
         return
     
-    # ✅ CRITICAL: Always refresh from file to get other players' updates
     sync_global_cards()
     load_all_data()
     
@@ -1511,7 +1501,6 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    # CARDS PER ROW - PER PLAYER (ACTIVE - STORED IN SESSION STATE)
     col_options = [2, 3, 4, 5, 6, 8, 10]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 4
     
@@ -1558,7 +1547,6 @@ def render_card_selection():
     for i in range(1, 202):
         col_idx = (i - 1) % cols_per_row
         with cols[col_idx]:
-            # Check file-derived state
             is_clicked = i in st.session_state.clicked_numbers
             is_taken = i in st.session_state.taken_cards
             is_taken_by_other = is_taken and not is_clicked
@@ -1590,12 +1578,10 @@ def render_card_selection():
                 type=btn_type,
                 disabled=is_disabled
             ):
-                # Re-load from file one more time to avoid race conditions
                 sync_global_cards()
                 load_all_data()
                 
                 if is_clicked:
-                    # DESELECT - Remove your card and REFUND 10 ETB
                     st.session_state.clicked_numbers.discard(i)
                     if i in st.session_state.taken_cards:
                         st.session_state.taken_cards.remove(i)
@@ -1616,7 +1602,6 @@ def render_card_selection():
                     )
                     st.rerun()
                 else:
-                    # SELECT
                     if has_max_cards:
                         st.error("⚠️ Max card selection is 2!")
                     elif is_taken_by_other:
@@ -1624,7 +1609,6 @@ def render_card_selection():
                     elif not has_balance:
                         st.error("💰 ሂሳብዎን ይሙሉ! 💰")
                     else:
-                        # Re-check the file doesn't already have this card (race condition guard)
                         fresh_taken, fresh_owner, _, _ = load_global_cards()
                         if i in fresh_taken:
                             st.error("⚠️ This card was just taken by another player! Please refresh.")
@@ -1649,7 +1633,6 @@ def render_card_selection():
                             )
                             st.rerun()
     
-    # Status messages
     if len(st.session_state.clicked_numbers) >= 2:
         st.success("✅ Maximum 2 cards selected! Click a 🟢 green card to DESELECT it (refund 10 ETB).")
     elif len(st.session_state.clicked_numbers) > 0:
@@ -1660,7 +1643,6 @@ def render_card_selection():
         else:
             st.info("👆 Click a number to select it (max 2 cards). Each card costs 10 ETB.")
     
-    # Selected cards preview with deselect buttons
     if len(st.session_state.clicked_numbers) > 0:
         st.markdown("### 📋 Your Selected Cards")
         selected_list = list(st.session_state.clicked_numbers)
@@ -1788,7 +1770,7 @@ if st.session_state.current_role == "admin":
     st.markdown("---")
 
 # ===================================================================
-# USER INFO - ADMIN BALANCE ALWAYS 0
+# USER INFO
 # ===================================================================
 
 user = st.session_state.user_db.get(st.session_state.current_user, {})
@@ -2111,6 +2093,7 @@ if st.session_state.game_started:
             time.sleep(0.5)
             st.rerun()
     else:
+        # Show game status header
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -2126,6 +2109,7 @@ if st.session_state.game_started:
         </div>
         """, unsafe_allow_html=True)
         
+        # ✅ BINGO Board (left) + Player Cards stacked vertically in narrower column (right)
         board_col, cards_col = st.columns([2, 1])
         
         with board_col:
@@ -2133,9 +2117,13 @@ if st.session_state.game_started:
         
         with cards_col:
             if all_player_cards:
-                st.markdown("### 📋🍀 የእርስዎ ካርቴላ")
+                st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
+                # ✅ Stack cards vertically: Card 1 on top, Card 2 below
+                # ✅ Wrapped in a narrower inner column so the card doesn't stretch too wide
                 for card_id in all_player_cards:
-                    display_selected_card(card_id, list(st.session_state.called_numbers), False)
+                    narrow_card_col = st.columns([1])[0]
+                    with narrow_card_col:
+                        display_selected_card(card_id, list(st.session_state.called_numbers), False)
             else:
                 st.warning("⚠️ You don't have any cards in this game!")
                 st.info("💡 Wait for the next round to select cards.")
@@ -2143,8 +2131,9 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-    
+    # ============================================================
+    # GAME NOT STARTED - SHOW CARD SELECTION
+    # ============================================================
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2157,11 +2146,11 @@ else:
         
         st.rerun()
     
+    # ✅ Only show card selection UI while game hasn't started
     if not st.session_state.game_started:
+        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         render_card_selection()
-    else:
-        st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if st.session_state.clicked_numbers else -1
-        st.rerun()
+    # else: game just started, let the top block take over on next rerun
 
 # ===================================================================
 # FOOTER
