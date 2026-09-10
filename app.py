@@ -2141,7 +2141,7 @@ else:
         if len(st.session_state.clicked_numbers) > 0:
             st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         else:
-            st.warning("⚠️ You don't have any cards selected! The game has started without you.")
+            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም! The game has started without you.")
             st.session_state.selected_card = -1
         
         st.rerun()
