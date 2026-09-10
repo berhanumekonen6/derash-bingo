@@ -433,6 +433,48 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
+# ✅ GLOBAL TIMER — NEVER STOPS, ALWAYS COUNTS GLOBALLY
+# ===================================================================
+
+def get_global_timer_file():
+    return "bingo_global_timer.json"
+
+def load_global_timer():
+    """Load the globally-synced timer start time and total duration."""
+    try:
+        if os.path.exists(get_global_timer_file()):
+            with open(get_global_timer_file(), "r") as f:
+                data = json.load(f)
+                return data.get("timer_start_time", time.time()), data.get("card_selection_time", 60)
+    except:
+        pass
+    return time.time(), 60
+
+def save_global_timer(timer_start_time, card_selection_time):
+    """Save the globally-synced timer start time and total duration."""
+    try:
+        data = {
+            "timer_start_time": timer_start_time,
+            "card_selection_time": card_selection_time
+        }
+        with open(get_global_timer_file(), "w") as f:
+            json.dump(data, f)
+        return True
+    except:
+        return False
+
+def get_remaining_time():
+    """Calculate remaining time globally — never stops counting."""
+    timer_start, total_time = load_global_timer()
+    elapsed = time.time() - timer_start
+    remaining = max(0, total_time - elapsed)
+    return remaining
+
+# Initialize global timer file on first run
+if not os.path.exists(get_global_timer_file()):
+    save_global_timer(time.time(), 60)
+
+# ===================================================================
 # GLOBAL WINNER TRACKING
 # ===================================================================
 
@@ -628,8 +670,11 @@ def sync_global_cards():
     
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-    st.session_state.timer_start_time = global_timer_start
-    st.session_state.card_selection_time = global_timer_value
+    
+    # ✅ Also sync from the global timer file (authoritative source)
+    timer_start, timer_value = load_global_timer()
+    st.session_state.timer_start_time = timer_start
+    st.session_state.card_selection_time = timer_value
     
     current_user = st.session_state.current_user
     if current_user:
@@ -1526,9 +1571,8 @@ def render_card_selection():
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
     
-    current_time = time.time()
-    elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, st.session_state.card_selection_time - elapsed)
+    # ✅ GLOBAL TIMER — never stops, always counts from global file
+    remaining = get_remaining_time()
     st.session_state.card_selection_time = remaining
     
     minutes = int(remaining // 60)
@@ -1757,7 +1801,7 @@ def render_card_selection():
                 st.rerun()
     
     progress = 1 - (remaining / 60) if remaining > 0 else 1
-    st.progress(progress)
+    st.progress(min(progress, 1.0))
     
     if enough_cards:
         st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
@@ -1877,18 +1921,19 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# TIMER
+# ✅ TIMER — GLOBALLY SYNCED, NEVER STOPS COUNTING
 # ===================================================================
 
-if st.session_state.game_started:
-    pass
-else:
-    current_time = time.time()
-    elapsed = current_time - st.session_state.timer_start_time
-    remaining = max(0, st.session_state.card_selection_time - elapsed)
+if not st.session_state.game_started:
+    # Always read the global timer — authoritative source
+    remaining = get_remaining_time()
     st.session_state.card_selection_time = remaining
     
-    if remaining <= 0 and not st.session_state.game_started:
+    # ✅ Sync the session's timer_start_time from the global file
+    global_timer_start, global_timer_value = load_global_timer()
+    st.session_state.timer_start_time = global_timer_start
+    
+    if remaining <= 0:
         total_selected = len(st.session_state.taken_cards)
         min_cards_required = 3
         
@@ -1908,16 +1953,8 @@ else:
             )
             st.rerun()
         else:
-            st.session_state.timer_start_time = time.time()
-            st.session_state.card_selection_time = 30
-            save_global_cards(
-                st.session_state.taken_cards,
-                st.session_state.card_owner,
-                st.session_state.timer_start_time,
-                30
-            )
+            # ✅ NEVER RESET — keep counting globally, just show warning
             st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
-            st.rerun()
 
 # ===================================================================
 # SYNC GLOBAL WINNERS
@@ -2012,6 +2049,7 @@ if st.session_state.current_role == "admin":
             st.session_state.clicked_numbers = set()
             
             clear_global_winners()
+            save_global_timer(st.session_state.timer_start_time, 60)  # ✅ Save global timer
             save_global_cards([], {}, st.session_state.timer_start_time, 60)
             
             st.success("🔄 New game started! Select your cards for the next round.")
@@ -2166,6 +2204,7 @@ if st.session_state.game_started:
             st.session_state.clicked_numbers = set()
             
             clear_global_winners()
+            save_global_timer(st.session_state.timer_start_time, 60)  # ✅ Save global timer
             save_global_cards([], {}, st.session_state.timer_start_time, 60)
             st.success("🔄 New game started! Select your cards for the next round.")
             time.sleep(0.5)
