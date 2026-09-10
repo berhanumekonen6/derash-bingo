@@ -286,6 +286,46 @@ st.markdown("""
         .board-table td { padding: 2px 1px !important; }
         .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
     }
+
+    /* ✅ RESPONSIVE CARD GRID — keeps cards side-by-side on mobile */
+    .cards-grid-responsive {
+        display: grid !important;
+        gap: 8px;
+        width: 100%;
+        margin: 8px 0;
+    }
+    .cards-grid-responsive > div {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    @media (max-width: 700px) {
+        .cards-grid-responsive {
+            gap: 6px !important;
+        }
+        .cards-grid-responsive table td {
+            padding: 2px 1px !important;
+        }
+        .cards-grid-responsive table td div {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 0.65rem !important;
+        }
+        .cards-grid-responsive table td:first-child,
+        .cards-grid-responsive table td:nth-child(2),
+        .cards-grid-responsive table td:nth-child(3),
+        .cards-grid-responsive table td:nth-child(4),
+        .cards-grid-responsive table td:nth-child(5) {
+            padding: 2px 1px !important;
+        }
+    }
+    @media (max-width: 420px) {
+        .cards-grid-responsive table td div {
+            width: 20px !important;
+            height: 20px !important;
+            font-size: 0.58rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1320,19 +1360,17 @@ def distribute_prizes(winners):
     )
 
 # ===================================================================
-# DISPLAY FUNCTIONS
+# ✅ CARD HTML BUILDER — Returns HTML string (no st.markdown call)
 # ===================================================================
 
-def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
-    if not st.session_state.winner_declared:
-        sync_global_winners()
-    
+def build_card_html(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
+    """Build the HTML string for a single bingo card. Returns a string."""
     if called_numbers is None:
         called_numbers = []
     
     card = get_card(card_id)
     if not card:
-        return
+        return ""
     
     cells = card["cells"]
     
@@ -1346,17 +1384,17 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         card_class = ''
     
     html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:8px;margin:0;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:2px solid {border_color};transition:all 0.3s ease;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:0.85rem;font-weight:bold;margin-bottom:6px;text-shadow:0 0 20px rgba(255,215,0,0.1);">
             {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
         </div>
         <table style="width:100%;border-collapse:collapse;">
             <tr>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">N</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">G</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;min-width:30px;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">O</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">O</td>
             </tr>
     """
     
@@ -1366,7 +1404,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
             value = cells[row_idx][col_idx]
             
             if value == 'F':
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1rem;border:2px solid #FFD700;">★</div></td>'
             else:
                 num = int(value)
                 is_called = num in called_numbers
@@ -1378,7 +1416,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
                 else:
                     style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
                 
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;{style}font-weight:bold;font-size:0.8rem;border:2px solid;">{value}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;{style}font-weight:bold;font-size:0.72rem;border:2px solid;">{value}</div></td>'
         html += '</tr>'
     
     html += '</table>'
@@ -1386,13 +1424,61 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.9rem;margin-top:6px;font-weight:bold;text-shadow:0 0 30px rgba(255,215,0,0.3);">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.75rem;margin-top:5px;font-weight:bold;text-shadow:0 0 30px rgba(255,215,0,0.3);">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.6rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     
-    st.markdown(html, unsafe_allow_html=True)
+    return html
+
+# ===================================================================
+# DISPLAY FUNCTIONS
+# ===================================================================
+
+def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
+    """Display a single bingo card."""
+    if not st.session_state.winner_declared:
+        sync_global_winners()
+    
+    html = build_card_html(card_id, called_numbers, is_winner, winning_pattern)
+    if html:
+        st.markdown(html, unsafe_allow_html=True)
+
+def display_cards_grid(card_ids, called_numbers=None, is_winner=False, winning_patterns=None, cols=2):
+    """✅ Display multiple bingo cards inside ONE markdown block using CSS grid.
+    
+    This bypasses Streamlit's mobile column stacking — cards always stay
+    side-by-side on phones because they're inside a single HTML block.
+    """
+    if not card_ids:
+        return
+    
+    if not st.session_state.winner_declared:
+        sync_global_winners()
+    
+    if called_numbers is None:
+        called_numbers = []
+    if winning_patterns is None:
+        winning_patterns = {}
+    
+    # Build all card HTML strings
+    cards_html = ""
+    for card_id in card_ids:
+        cards_html += build_card_html(
+            card_id,
+            called_numbers,
+            is_winner,
+            winning_patterns.get(card_id)
+        )
+    
+    # Wrap in a responsive CSS grid
+    grid_html = f"""
+    <div class="cards-grid-responsive" style="grid-template-columns: repeat({cols}, minmax(0, 1fr)) !important;">
+        {cards_html}
+    </div>
+    """
+    st.markdown(grid_html, unsafe_allow_html=True)
 
 def display_master_board():
     if not st.session_state.winner_declared:
@@ -1542,12 +1628,7 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using an IFRAME — 100% mobile compatible.
-    
-    The iframe uses its own rendering context so Streamlit's mobile
-    stacking rules cannot reach inside it. Tapping a card navigates
-    the parent URL with ?select_card=N which Streamlit reads.
-    """
+    """Render card selection using an IFRAME — 100% mobile compatible."""
     
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1925,11 +2006,9 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # ===================================================================
 
 if not st.session_state.game_started:
-    # Always read the global timer — authoritative source
     remaining = get_remaining_time()
     st.session_state.card_selection_time = remaining
     
-    # ✅ Sync the session's timer_start_time from the global file
     global_timer_start, global_timer_value = load_global_timer()
     st.session_state.timer_start_time = global_timer_start
     
@@ -1953,7 +2032,6 @@ if not st.session_state.game_started:
             )
             st.rerun()
         else:
-            # ✅ NEVER RESET — keep counting globally, just show warning
             st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
 
 # ===================================================================
@@ -2049,7 +2127,7 @@ if st.session_state.current_role == "admin":
             st.session_state.clicked_numbers = set()
             
             clear_global_winners()
-            save_global_timer(st.session_state.timer_start_time, 60)  # ✅ Save global timer
+            save_global_timer(st.session_state.timer_start_time, 60)
             save_global_cards([], {}, st.session_state.timer_start_time, 60)
             
             st.success("🔄 New game started! Select your cards for the next round.")
@@ -2160,10 +2238,9 @@ if st.session_state.game_started:
         
         st.markdown("### 🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉")
         
+        # ✅ FIXED: Use display_cards_grid (CSS grid inside ONE markdown block)
+        #    instead of st.columns(3) which stacks vertically on mobile.
         if st.session_state.winners_list:
-            card_cols = st.columns(3)
-            card_idx = 0
-            
             all_winner_cards = []
             winner_card_patterns = {}
             
@@ -2172,11 +2249,14 @@ if st.session_state.game_started:
                     all_winner_cards.append(card_id)
                     winner_card_patterns[card_id] = ", ".join(winner.get("patterns", ["BINGO!"]))
             
-            for card_id in all_winner_cards:
-                with card_cols[card_idx % 3]:
-                    winning_pattern_name = winner_card_patterns.get(card_id, "BINGO!")
-                    display_selected_card(card_id, list(st.session_state.called_numbers), True, winning_pattern_name)
-                    card_idx += 1
+            # 3 cards per row on desktop, still 3 on mobile (responsive CSS shrinks them)
+            display_cards_grid(
+                all_winner_cards,
+                list(st.session_state.called_numbers),
+                is_winner=True,
+                winning_patterns=winner_card_patterns,
+                cols=3
+            )
         
         if st.session_state.winners_list:
             st.markdown("### 🏆 አሸናፊዎች 🏆")
@@ -2204,7 +2284,7 @@ if st.session_state.game_started:
             st.session_state.clicked_numbers = set()
             
             clear_global_winners()
-            save_global_timer(st.session_state.timer_start_time, 60)  # ✅ Save global timer
+            save_global_timer(st.session_state.timer_start_time, 60)
             save_global_cards([], {}, st.session_state.timer_start_time, 60)
             st.success("🔄 New game started! Select your cards for the next round.")
             time.sleep(0.5)
@@ -2233,10 +2313,14 @@ if st.session_state.game_started:
         with cards_col:
             if all_player_cards:
                 st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
-                for card_id in all_player_cards:
-                    narrow_card_col = st.columns([1])[0]
-                    with narrow_card_col:
-                        display_selected_card(card_id, list(st.session_state.called_numbers), False)
+                # ✅ FIXED: Use display_cards_grid with cols=1 (narrow sidebar — 1 card per row is fine)
+                #    but if you prefer 2 side-by-side on mobile, change cols=2
+                display_cards_grid(
+                    all_player_cards,
+                    list(st.session_state.called_numbers),
+                    is_winner=False,
+                    cols=1
+                )
             else:
                 st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
                 st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
