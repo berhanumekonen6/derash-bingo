@@ -2125,8 +2125,8 @@ if st.session_state.game_started:
                     with narrow_card_col:
                         display_selected_card(card_id, list(st.session_state.called_numbers), False)
             else:
-                st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
-                st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+                st.warning("⚠️ በዚህ ጨዋታ ውስጥ ካርቴላ የለዎትም!")
+                st.info("💡 ለቀጣዩ ዙር ካርቴላ ለመምረጥ ይጠብቁ።")
         
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
@@ -2141,7 +2141,8 @@ else:
         if len(st.session_state.clicked_numbers) > 0:
             st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
         else:
-            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም! The game has started without you.")
+            st.warning("⚠️ በዚህ ጨዋታ ውስጥ ካርቴላ የለዎትም!")
+            st.info("💡 ለቀጣዩ ዙር ካርቴላ ለመምረጥ ይጠብቁ።")
             st.session_state.selected_card = -1
         
         st.rerun()
