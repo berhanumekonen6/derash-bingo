@@ -429,9 +429,10 @@ def init_session_state():
         st.session_state.deposit_msg_text = ""
     if 'flash_msg' not in st.session_state:
         st.session_state.flash_msg = ""
-    # ✅ Celebration timing — 3 seconds
     if 'celebration_start_time' not in st.session_state:
         st.session_state.celebration_start_time = None
+    if 'auto_return_done' not in st.session_state:
+        st.session_state.auto_return_done = False
 
 init_session_state()
 
@@ -498,7 +499,6 @@ def sync_global_winners():
             st.session_state.auto_called_count = auto_called_count
         st.session_state.game_over = game_over
         st.session_state.prize_distributed = prize_distributed
-        # ✅ Record when the celebration first appeared so we can time 3s
         if st.session_state.celebration_start_time is None and ts > 0:
             st.session_state.celebration_start_time = ts
         return True
@@ -510,7 +510,7 @@ def sync_global_winners():
 
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
-CELEBRATION_DURATION = 3  # ✅ 3 seconds celebration before auto-return
+CELEBRATION_DURATION = 3
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -632,7 +632,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER — never stops, shared by all users
+# ✅ GLOBAL TIMER
 # ===================================================================
 
 def get_global_timer_file():
@@ -683,7 +683,7 @@ def mark_game_started_globally():
     save_global_timer(timer_start, 0, True)
 
 # ===================================================================
-# ✅ GAME STATE — called numbers, auto-call count, etc.
+# ✅ GAME STATE
 # ===================================================================
 
 def get_game_state_file():
@@ -732,36 +732,7 @@ def clear_game_state():
         return False
 
 # ===================================================================
-# SYNC GLOBAL CARDS + GLOBAL TIMER
-# ===================================================================
-
-def sync_global_cards():
-    global_taken, global_owner, _, _ = load_global_cards()
-    
-    st.session_state.taken_cards = list(global_taken)
-    st.session_state.card_owner = dict(global_owner)
-    
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
-    st.session_state.game_started = game_started
-    
-    load_game_state()
-    
-    current_user = st.session_state.current_user
-    if current_user:
-        user_cards = set()
-        for card_id_str, owner in global_owner.items():
-            if owner == current_user:
-                try:
-                    user_cards.add(int(card_id_str))
-                except (ValueError, TypeError):
-                    pass
-        st.session_state.clicked_numbers = user_cards
-    else:
-        st.session_state.clicked_numbers = set()
-
-# ===================================================================
-# ✅ RESET FOR NEXT ROUND — used by auto-return and buttons
+# ✅ RESET FOR NEXT ROUND
 # ===================================================================
 
 def reset_for_next_round():
@@ -787,11 +758,60 @@ def reset_for_next_round():
     st.session_state.taken_cards = []
     st.session_state.card_owner = {}
     st.session_state.celebration_start_time = None
+    st.session_state.auto_return_done = False
     
     save_game_state()
 
 # ===================================================================
-# ✅ QUERY PARAM HANDLER — Processes card taps
+# ✅ SYNC GLOBAL CARDS + STALE-GAME RECOVERY
+# ===================================================================
+
+def sync_global_cards():
+    global_taken, global_owner, _, _ = load_global_cards()
+    
+    st.session_state.taken_cards = list(global_taken)
+    st.session_state.card_owner = dict(global_owner)
+    
+    remaining, game_started = get_global_remaining_time()
+    st.session_state.card_selection_time = remaining
+    st.session_state.game_started = game_started
+    
+    load_game_state()
+    
+    # ✅ STALE-GAME RECOVERY:
+    # If the game is "started" but the winner is already declared, or
+    # all 75 numbers have been called, or there are no cards at all,
+    # reset everything so the next round can begin.
+    called_count = len(st.session_state.called_numbers)
+    winner_done = st.session_state.winner_declared
+    no_cards = len(st.session_state.taken_cards) == 0
+    all_called = called_count >= 75
+    
+    if winner_done or all_called or (game_started and no_cards):
+        reset_for_next_round()
+        # Reload fresh state
+        global_taken, global_owner, _, _ = load_global_cards()
+        st.session_state.taken_cards = list(global_taken)
+        st.session_state.card_owner = dict(global_owner)
+        remaining, game_started = get_global_remaining_time()
+        st.session_state.card_selection_time = remaining
+        st.session_state.game_started = game_started
+    
+    current_user = st.session_state.current_user
+    if current_user:
+        user_cards = set()
+        for card_id_str, owner in global_owner.items():
+            if owner == current_user:
+                try:
+                    user_cards.add(int(card_id_str))
+                except (ValueError, TypeError):
+                    pass
+        st.session_state.clicked_numbers = user_cards
+    else:
+        st.session_state.clicked_numbers = set()
+
+# ===================================================================
+# ✅ QUERY PARAM HANDLER
 # ===================================================================
 
 if "select_card" in st.query_params:
@@ -839,7 +859,6 @@ if "select_card" in st.query_params:
                     st.session_state.taken_cards.append(card_id)
                 st.session_state.card_owner[str(card_id)] = st.session_state.current_user
                 
-                # Start global timer if the very first card was just picked
                 timer_start, duration, game_started = load_global_timer()
                 if not game_started and (time.time() - timer_start) > 3600:
                     reset_global_timer(60)
@@ -897,6 +916,10 @@ def login_user(username, password):
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
+        # ✅ After sync, if a stale game was recovered, ensure clean state
+        if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
+            reset_for_next_round()
+            sync_global_cards()
         return True, "✅ Admin login successful!"
     
     if username not in st.session_state.user_db:
@@ -908,6 +931,10 @@ def login_user(username, password):
         st.session_state.current_role = st.session_state.user_db[username]["role"]
         load_all_data()
         sync_global_cards()
+        # ✅ After sync, if a stale game was recovered, ensure clean state
+        if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
+            reset_for_next_round()
+            sync_global_cards()
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
 
@@ -1392,7 +1419,6 @@ def check_for_winners():
         st.session_state.winner_declared = True
         st.session_state.game_over = True
         st.session_state.auto_call_started = False
-        # ✅ Record celebration start time (used for 3-second auto-return)
         st.session_state.celebration_start_time = time.time()
         distribute_prizes(winners_found)
         save_game_state()
@@ -1408,7 +1434,6 @@ def check_for_winners():
         )
 
 def distribute_prizes(winners):
-    # ✅ Prize = total_cards_selected × 8 ETB, split equally among all winners
     if st.session_state.prize_distributed:
         return
     
@@ -1655,7 +1680,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - IFRAME VERSION (100% MOBILE)
+# CARD SELECTION FUNCTION - IFRAME VERSION
 # ===================================================================
 
 def render_card_selection():
@@ -1678,7 +1703,6 @@ def render_card_selection():
     sync_global_cards()
     load_all_data()
     
-    # ✅ Global timer — same for everyone, never stops
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     
@@ -1694,7 +1718,6 @@ def render_card_selection():
         st.rerun()
         return
     
-    # Show flash message
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -1706,7 +1729,6 @@ def render_card_selection():
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
     
-    # ✅ GLOBAL count — shows the total cards selected by ALL users
     total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
@@ -1722,7 +1744,6 @@ def render_card_selection():
     else:
         color = "#FFD700"
     
-    # Status header — shows GLOBAL count
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
@@ -1748,7 +1769,6 @@ def render_card_selection():
     else:
         st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
     
-    # Cards per row selector
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
     
@@ -2050,7 +2070,7 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# TIMER (GLOBAL) — auto-start game at 0:00 with 3+ cards
+# TIMER — auto-start game at 0:00 with 3+ cards
 # ===================================================================
 
 if not st.session_state.game_started:
@@ -2117,13 +2137,12 @@ if st.session_state.game_started and not st.session_state.winner_declared:
                 st.rerun()
 
 # ===================================================================
-# ✅ 3-SECOND CELEBRATION AUTO-RETURN (runs for EVERY user)
+# 3-SECOND CELEBRATION AUTO-RETURN
 # ===================================================================
 
 if st.session_state.winner_declared and st.session_state.celebration_start_time:
     elapsed = time.time() - st.session_state.celebration_start_time
     if elapsed >= CELEBRATION_DURATION:
-        # ✅ Auto return everyone to the card-selection board for the next round
         reset_for_next_round()
         st.rerun()
 
