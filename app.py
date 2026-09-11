@@ -632,53 +632,41 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER — file-backed, shared across ALL users
+# ✅ GLOBAL TIMER — shared across ALL users (in-memory, single process)
 # ===================================================================
 
+@st.cache_resource
+def _get_shared_timer_store():
+    """A single shared dict for the whole Streamlit process.
+    All sessions read/write the same object, so the timer is global.
+    """
+    return {
+        "timer_start": time.time(),
+        "duration": 60,
+        "game_started": False,
+    }
+
+
 def get_global_timer_file():
+    """Kept for compatibility — no longer used."""
     return "bingo_global_timer.json"
 
 
-def _init_global_timer():
-    """Create the timer file if it doesn't exist yet."""
-    if not os.path.exists(get_global_timer_file()):
-        try:
-            with open(get_global_timer_file(), "w") as f:
-                json.dump({
-                    "timer_start": time.time(),
-                    "duration": 60,
-                    "game_started": False
-                }, f)
-        except:
-            pass
-
-
 def load_global_timer():
-    """Returns (timer_start, duration, game_started).
-    Reads fresh from disk so all users see the same value."""
-    _init_global_timer()
-    try:
-        with open(get_global_timer_file(), "r") as f:
-            data = json.load(f)
-            return (data.get("timer_start", time.time()),
-                    data.get("duration", 60),
-                    data.get("game_started", False))
-    except:
-        return time.time(), 60, False
+    """Returns (timer_start, duration, game_started) — from the shared store."""
+    store = _get_shared_timer_store()
+    return (store.get("timer_start", time.time()),
+            store.get("duration", 60),
+            store.get("game_started", False))
 
 
 def save_global_timer(timer_start, duration=60, game_started=False):
-    """Writes the timer to disk. Only called on reset / start."""
-    try:
-        with open(get_global_timer_file(), "w") as f:
-            json.dump({
-                "timer_start": timer_start,
-                "duration": duration,
-                "game_started": game_started
-            }, f)
-        return True
-    except:
-        return False
+    """Writes to the shared store (visible to all users instantly)."""
+    store = _get_shared_timer_store()
+    store["timer_start"] = timer_start
+    store["duration"] = duration
+    store["game_started"] = game_started
+    return True
 
 
 def reset_global_timer(duration=60):
@@ -689,7 +677,7 @@ def reset_global_timer(duration=60):
 
 
 def mark_game_started_globally():
-    """Marks the game started on disk."""
+    """Marks the game started in the shared store."""
     timer_start, duration, _ = load_global_timer()
     save_global_timer(timer_start, duration, True)
 
@@ -697,8 +685,8 @@ def mark_game_started_globally():
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
 
-    Reads the shared disk file every tick so ALL users see the same value.
-    Only writes the file when the timer crosses 0:00.
+    Reads the SHARED in-memory store every tick so ALL users see the
+    same value. Only writes when the timer crosses 0:00.
     """
     timer_start, duration, game_started = load_global_timer()
 
