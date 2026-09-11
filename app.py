@@ -24,6 +24,44 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
+# ✅ AUTO-CLEAN URL — strips ?u= and any leftovers back to base URL
+# ===================================================================
+st.markdown("""
+<script>
+(function() {
+    try {
+        var url = new URL(window.location.href);
+        var changed = false;
+
+        // Remove ?u= if present (Streamlit Cloud iframe artifact)
+        if (url.searchParams.has('u')) {
+            url.searchParams.delete('u');
+            changed = true;
+        }
+
+        // Remove the /~/+ path segment Streamlit adds in sandboxed iframes
+        var path = url.pathname;
+        if (path.indexOf('/~/+') !== -1) {
+            path = path.replace('/~/+', '');
+            url.pathname = path;
+            changed = true;
+        }
+
+        // If the URL has nothing left after cleanup, go back to base
+        if (changed) {
+            var newUrl = url.origin + path;
+            if (url.search) newUrl += url.search;
+            // replaceState = no reload, no new history entry
+            window.history.replaceState(null, '', newUrl);
+        }
+    } catch (e) {
+        // Silent fail — not critical
+    }
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ===================================================================
 # CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
 # ===================================================================
 
@@ -1755,7 +1793,7 @@ def render_card_selection():
         # Clickable link only if actionable
         if is_mine or not is_taken:
             cells_html += (
-                f'<a href="?u={st.session_state.current_user}&select_card={i}" '
+                f'<a href="?select_card={i}" '
                 f'style="display:flex;align-items:center;justify-content:center;'
                 f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
                 f'background:{bg};color:{fg};border:{border_w} solid {border};'
@@ -1814,14 +1852,6 @@ def render_card_selection():
 if "select_card" in st.query_params:
     try:
         card_id = int(st.query_params["select_card"])
-        url_user = st.query_params.get("u", None)
-
-        if (not st.session_state.logged_in) and url_user:
-            load_all_data()
-            if url_user in st.session_state.user_db:
-                st.session_state.logged_in = True
-                st.session_state.current_user = url_user
-                st.session_state.current_role = st.session_state.user_db[url_user].get("role", "player")
 
         sync_global_cards()
         load_all_data()
@@ -1873,8 +1903,6 @@ if "select_card" in st.query_params:
                 st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
 
         st.query_params.clear()
-        if url_user:
-            st.query_params["u"] = url_user
         st.rerun()
     except (ValueError, TypeError):
         st.query_params.clear()
