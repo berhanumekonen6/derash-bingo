@@ -669,7 +669,15 @@ def get_global_remaining_time():
     if game_started:
         return 0, True
     elapsed = time.time() - timer_start
-    remaining = max(0, duration - elapsed)
+    remaining = duration - elapsed
+
+    # If the timer has hit 0:00 without the game starting,
+    # RESET it back to a fresh 60 seconds and keep counting.
+    if remaining <= 0:
+        new_start = time.time()
+        save_global_timer(new_start, 60, False)
+        return 60, False
+
     save_global_timer(timer_start, remaining, game_started)
     return remaining, False
 
