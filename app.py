@@ -1618,8 +1618,8 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using real Streamlit buttons.
-    Works 100% on phone and PC — no iframe, no sandbox issues."""
+    """Card selection using real Streamlit buttons in a CSS Grid.
+    Works 100% on phone and PC — no iframe, no column stacking."""
     
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1720,16 +1720,24 @@ def render_card_selection():
     
     cols_per_row = st.session_state.columns_per_row
     
-    # ── CSS to make the grid of buttons look like the iframe version ──
+    # ── CSS Grid layout: wrap all buttons in a grid ──
     st.markdown(f"""
     <style>
-        /* Tighten the grid gaps between card buttons */
-        div[data-testid="stHorizontalBlock"] {{
-            gap: 5px !important;
-            margin-bottom: 5px !important;
+        /* Force the grid container that holds all card buttons */
+        .card-grid-container div[data-testid="stVerticalBlock"] {{
+            display: grid !important;
+            grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
+            gap: 6px !important;
+            width: 100% !important;
         }}
-        /* Card button look */
-        div[data-testid="stHorizontalBlock"] button {{
+        /* Each button wrapper becomes a grid cell */
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] {{
+            width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+        }}
+        /* Button visual */
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
             height: 52px !important;
             min-height: 52px !important;
             padding: 0 !important;
@@ -1744,39 +1752,49 @@ def render_card_selection():
             width: 100% !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
         }}
-        div[data-testid="stHorizontalBlock"] button:hover:not(:disabled) {{
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:hover:not(:disabled) {{
             transform: scale(1.08) !important;
             box-shadow: 0 0 15px rgba(255,215,0,0.5) !important;
             border-color: #FFD700 !important;
         }}
-        div[data-testid="stHorizontalBlock"] button:active:not(:disabled) {{
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:active:not(:disabled) {{
             transform: scale(0.92) !important;
         }}
-        /* Green "mine" buttons (kind=secondary) */
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"]:not(:disabled) {{
+        /* Green (mine) */
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button[kind="secondary"]:not(:disabled) {{
             background: rgba(76,175,80,0.7) !important;
             color: #FFFFFF !important;
             border: 3px solid #4CAF50 !important;
         }}
-        /* Red "taken" buttons (disabled) */
-        div[data-testid="stHorizontalBlock"] button:disabled {{
+        /* Red (taken) */
+        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:disabled {{
             background: rgba(255,0,0,0.2) !important;
             color: rgba(255,255,255,0.4) !important;
             border: 2px solid rgba(255,0,0,0.3) !important;
             opacity: 1 !important;
             cursor: not-allowed !important;
         }}
-        /* Mobile adjustments */
-        @media (max-width: 500px) {{
-            div[data-testid="stHorizontalBlock"] button {{
+        /* Mobile: smaller cells, same layout */
+        @media (max-width: 768px) {{
+            .card-grid-container div[data-testid="stVerticalBlock"] {{
+                gap: 4px !important;
+            }}
+            .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
                 height: 44px !important;
                 min-height: 44px !important;
                 font-size: 13px !important;
                 border-radius: 6px !important;
             }}
-            div[data-testid="stHorizontalBlock"] {{
-                gap: 4px !important;
-                margin-bottom: 4px !important;
+        }}
+        @media (max-width: 400px) {{
+            .card-grid-container div[data-testid="stVerticalBlock"] {{
+                gap: 3px !important;
+            }}
+            .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
+                height: 38px !important;
+                min-height: 38px !important;
+                font-size: 11px !important;
+                border-radius: 5px !important;
             }}
         }}
     </style>
@@ -1793,81 +1811,76 @@ def render_card_selection():
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     
-    # ── Render 201 real Streamlit buttons in rows ──
-    for row_start in range(1, 202, cols_per_row):
-        row_cols = st.columns(cols_per_row)
-        for offset in range(cols_per_row):
-            card_id = row_start + offset
-            if card_id > 201:
-                break
-            
-            with row_cols[offset]:
-                is_mine = card_id in clicked
-                is_taken = card_id in taken and not is_mine
-                
-                if is_mine:
-                    label = f"🟢{card_id}"
-                    btn_type = "secondary"
-                    disabled = False
-                elif is_taken:
-                    label = f"🔒{card_id}"
-                    btn_type = "secondary"
-                    disabled = True
+    # ── Render all 201 buttons inside a wrapper div ──
+    st.markdown('<div class="card-grid-container">', unsafe_allow_html=True)
+    
+    for card_id in range(1, 202):
+        is_mine = card_id in clicked
+        is_taken = card_id in taken and not is_mine
+        
+        if is_mine:
+            label = f"🟢{card_id}"
+            btn_type = "secondary"
+            disabled = False
+        elif is_taken:
+            label = f"🔒{card_id}"
+            btn_type = "secondary"
+            disabled = True
+        else:
+            label = f"{card_id}"
+            btn_type = "primary"
+            disabled = False
+        
+        clicked_now = st.button(
+            label,
+            key=f"card_{card_id}_{st.session_state.current_user}",
+            use_container_width=True,
+            type=btn_type,
+            disabled=disabled
+        )
+        
+        if clicked_now:
+            if not is_mine and not is_taken:
+                if len(st.session_state.clicked_numbers) >= 2:
+                    st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                    st.rerun()
+                elif balance < 10:
+                    st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                    st.rerun()
                 else:
-                    label = f"{card_id}"
-                    btn_type = "primary"
-                    disabled = False
-                
-                clicked_now = st.button(
-                    label,
-                    key=f"card_{card_id}_{st.session_state.current_user}",
-                    use_container_width=True,
-                    type=btn_type,
-                    disabled=disabled
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
+                    save_all_data()
+                    st.session_state.clicked_numbers.add(card_id)
+                    if card_id not in st.session_state.taken_cards:
+                        st.session_state.taken_cards.append(card_id)
+                    st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                    save_global_cards(
+                        st.session_state.taken_cards,
+                        st.session_state.card_owner,
+                        st.session_state.timer_start_time,
+                        st.session_state.card_selection_time
+                    )
+                    st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+                    st.rerun()
+            
+            elif is_mine:
+                st.session_state.clicked_numbers.discard(card_id)
+                if card_id in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(card_id)
+                if str(card_id) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(card_id)]
+                st.session_state.user_db[st.session_state.current_user]["balance"] = balance + 10
+                save_all_data()
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
                 )
-                
-                if clicked_now:
-                    # ── SELECT ──
-                    if not is_mine and not is_taken:
-                        if len(st.session_state.clicked_numbers) >= 2:
-                            st.session_state.flash_msg = "⚠️ Max card selection is 2!"
-                            st.rerun()
-                        elif balance < 10:
-                            st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
-                            st.rerun()
-                        else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
-                            save_all_data()
-                            st.session_state.clicked_numbers.add(card_id)
-                            if card_id not in st.session_state.taken_cards:
-                                st.session_state.taken_cards.append(card_id)
-                            st.session_state.card_owner[str(card_id)] = st.session_state.current_user
-                            save_global_cards(
-                                st.session_state.taken_cards,
-                                st.session_state.card_owner,
-                                st.session_state.timer_start_time,
-                                st.session_state.card_selection_time
-                            )
-                            st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
-                            st.rerun()
-                    
-                    # ── DESELECT ──
-                    elif is_mine:
-                        st.session_state.clicked_numbers.discard(card_id)
-                        if card_id in st.session_state.taken_cards:
-                            st.session_state.taken_cards.remove(card_id)
-                        if str(card_id) in st.session_state.card_owner:
-                            del st.session_state.card_owner[str(card_id)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = balance + 10
-                        save_all_data()
-                        save_global_cards(
-                            st.session_state.taken_cards,
-                            st.session_state.card_owner,
-                            st.session_state.timer_start_time,
-                            st.session_state.card_selection_time
-                        )
-                        st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
-                        st.rerun()
+                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
+                st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
