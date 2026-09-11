@@ -433,6 +433,11 @@ def init_session_state():
         st.session_state.celebration_start_time = None
     if 'auto_return_done' not in st.session_state:
         st.session_state.auto_return_done = False
+    # ✅ Timer state — kept in session_state so it never depends on file I/O
+    if 'session_timer_start' not in st.session_state:
+        st.session_state.session_timer_start = time.time()
+    if 'session_game_started' not in st.session_state:
+        st.session_state.session_game_started = False
 
 init_session_state()
 
@@ -632,87 +637,72 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER — STABLE VERSION
+# ✅ GLOBAL TIMER — session-state based (no file writes, no jitter)
 # ===================================================================
 
 def get_global_timer_file():
+    """Kept for compatibility only — not used anymore."""
     return "bingo_global_timer.json"
 
-def save_global_timer(timer_start_time, card_selection_time, game_started):
-    """Save the timer state.
-    ⚠️ `card_selection_time` here is the DURATION (e.g. 60), NOT the remaining time.
-    Only reset_global_timer() and mark_game_started_globally() should call this."""
-    try:
-        data = {
-            "timer_start_time": timer_start_time,
-            "card_selection_time": card_selection_time,
-            "game_started": game_started,
-            "timestamp": time.time()
-        }
-        with open(get_global_timer_file(), "w") as f:
-            json.dump(data, f)
-        return True
-    except:
-        return False
-
-def load_global_timer():
-    try:
-        if os.path.exists(get_global_timer_file()):
-            with open(get_global_timer_file(), "r") as f:
-                data = json.load(f)
-                return (data.get("timer_start_time", time.time()),
-                        data.get("card_selection_time", 60),
-                        data.get("game_started", False))
-    except:
-        pass
-    return time.time(), 60, False
 
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
 
-    Rules:
-      • Counts down 60 → 0 normally.
-      • When it hits 0:00:
-          – If 3+ cards are selected globally → return (0, False) so the
-            caller can mark the game as started.
-          – If fewer than 3 cards are selected → reset back to a fresh
-            1:00 and keep counting normally.
+    The timer lives entirely in st.session_state, so there is no file
+    I/O involved. The 0:00 reset fires exactly once per crossing
+    because session_timer_start is only updated when we cross 0.
     """
-    timer_start, duration, game_started = load_global_timer()
-    if game_started:
+    if 'session_timer_start' not in st.session_state:
+        st.session_state.session_timer_start = time.time()
+    if 'session_game_started' not in st.session_state:
+        st.session_state.session_game_started = False
+
+    if st.session_state.session_game_started:
         return 0, True
 
-    elapsed = time.time() - timer_start
-    remaining = duration - elapsed
+    elapsed = time.time() - st.session_state.session_timer_start
+    remaining = 60 - elapsed
 
     if remaining <= 0:
-        # ── Timer reached 0:00 — decide what to do ──
-        # Read how many cards are selected globally (fresh from disk).
+        # Count cards selected globally (fresh from disk).
         global_taken, _, _, _ = load_global_cards()
         if len(global_taken) >= 3:
             # Enough cards — hold at 0:00 so the caller can start the game.
             return 0, False
         else:
-            # Not enough cards — reset back to 1:00 and keep counting.
-            new_start = time.time()
-            save_global_timer(new_start, 60, False)
+            # Not enough cards — reset to a fresh 1:00.
+            st.session_state.session_timer_start = time.time()
             return 60, False
 
     return remaining, False
 
 
+def save_global_timer(timer_start_time, card_selection_time, game_started):
+    """No-op — the timer is stored in st.session_state now."""
+    return True
+
+
+def load_global_timer():
+    """Returns the session-state timer for compatibility."""
+    if 'session_timer_start' not in st.session_state:
+        st.session_state.session_timer_start = time.time()
+    if 'session_game_started' not in st.session_state:
+        st.session_state.session_game_started = False
+    return (st.session_state.session_timer_start,
+            60,
+            st.session_state.session_game_started)
+
+
 def reset_global_timer(duration=60):
-    """Reset the timer for a new round. This is the ONLY place that
-    should set a fresh timer_start_time."""
-    timer_start = time.time()
-    save_global_timer(timer_start, duration, False)
-    return timer_start
+    """Reset the timer for a new round."""
+    st.session_state.session_timer_start = time.time()
+    st.session_state.session_game_started = False
+    return st.session_state.session_timer_start
 
 
 def mark_game_started_globally():
-    """Mark the game as started without disturbing the timer start or duration."""
-    timer_start, duration, _ = load_global_timer()
-    save_global_timer(timer_start, duration, True)
+    """Mark the game as started."""
+    st.session_state.session_game_started = True
 
 # ===================================================================
 # ✅ GLOBAL CALLER LOCK — ensures all players see the SAME number
@@ -875,14 +865,13 @@ def sync_global_cards():
     
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
-    st.session_state.game_started = game_started
+    # ⚠️ Only turn the game ON — never let a stale disk flag turn it OFF.
+    if game_started:
+        st.session_state.game_started = True
     
     load_game_state()
     
     # ✅ STALE-GAME RECOVERY:
-    # If the game is "started" but the winner is already declared, or
-    # all 75 numbers have been called, or there are no cards at all,
-    # reset everything so the next round can begin.
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     no_cards = len(st.session_state.taken_cards) == 0
@@ -896,7 +885,8 @@ def sync_global_cards():
         st.session_state.card_owner = dict(global_owner)
         remaining, game_started = get_global_remaining_time()
         st.session_state.card_selection_time = remaining
-        st.session_state.game_started = game_started
+        if game_started:
+            st.session_state.game_started = True
     
     current_user = st.session_state.current_user
     if current_user:
@@ -918,12 +908,12 @@ def sync_global_cards():
 def maybe_start_game():
     """Flip the game to 'started' the moment BOTH conditions are true:
        1. 3+ cards are selected globally
-       2. the shared timer has reached 0:00 (not reset to 1:00)
+       2. the shared timer has reached 0:00
 
-    ⚠️ This does NOT call get_global_remaining_time() again — it uses the
-    value that sync_global_cards() already wrote into
-    st.session_state.card_selection_time, so the 0:00 → 1:00 reset only
-    fires once per crossing."""
+    ⚠️ Uses the value already stored in st.session_state.card_selection_time
+    by sync_global_cards() — does NOT call get_global_remaining_time() again,
+    so the 0:00 → 1:00 reset only fires once per crossing.
+    """
     if st.session_state.game_started:
         return
 
@@ -981,7 +971,6 @@ def login_user(username, password):
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
-        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -996,7 +985,6 @@ def login_user(username, password):
         st.session_state.current_role = st.session_state.user_db[username]["role"]
         load_all_data()
         sync_global_cards()
-        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -1043,8 +1031,6 @@ def logout_user():
         st.session_state.timer_start_time,
         st.session_state.card_selection_time
     )
-    timer_start, duration, _ = load_global_timer()
-    save_global_timer(timer_start, duration, st.session_state.game_started)
     
     st.session_state.logged_in = False
     st.session_state.current_user = None
@@ -1745,12 +1731,11 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - REAL BUTTONS VERSION
+# CARD SELECTION FUNCTION
 # ===================================================================
 
 def render_card_selection():
-    """Card selection — rendered as HTML links in the parent DOM.
-    Works 100% on phone and PC, no iframe, no sandbox issues."""
+    """Card selection — rendered as HTML links in the parent DOM."""
 
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1769,10 +1754,9 @@ def render_card_selection():
     sync_global_cards()
     load_all_data()
 
-    # ✅ Run the top-level game-start check.
     maybe_start_game()
 
-    # ✅ Use the cached remaining value from sync_global_cards()/maybe_start_game().
+    # ✅ Reuse the cached value
     remaining = st.session_state.card_selection_time
     game_started = st.session_state.game_started
 
@@ -1857,7 +1841,6 @@ def render_card_selection():
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
 
-    # Build cell HTML
     cells_html = ""
     for i in range(1, 202):
         is_mine = i in clicked
@@ -1882,7 +1865,6 @@ def render_card_selection():
             border_w = "2px"
             cursor = "pointer"
 
-        # Clickable link only if actionable
         if is_mine or not is_taken:
             cells_html += (
                 f'<a href="?u={st.session_state.current_user}&select_card={i}" '
@@ -1938,7 +1920,7 @@ def render_card_selection():
         st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s) to start. Timer keeps running... 🃏")
 
 # ===================================================================
-# ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
+# ✅ QUERY PARAM HANDLER
 # ===================================================================
 
 if "select_card" in st.query_params:
@@ -1946,7 +1928,6 @@ if "select_card" in st.query_params:
         card_id = int(st.query_params["select_card"])
         url_user = st.query_params.get("u", None)
 
-        # ── Restore login if session was lost during page reload ──
         if (not st.session_state.logged_in) and url_user:
             load_all_data()
             if url_user in st.session_state.user_db:
@@ -2003,7 +1984,6 @@ if "select_card" in st.query_params:
                 )
                 st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
 
-        # Keep ?u= so subsequent clicks still work; drop only select_card
         st.query_params.clear()
         if url_user:
             st.query_params["u"] = url_user
