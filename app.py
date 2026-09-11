@@ -433,7 +433,7 @@ def init_session_state():
         st.session_state.celebration_start_time = None
     if 'auto_return_done' not in st.session_state:
         st.session_state.auto_return_done = False
-    # ✅ Timer state — kept in session_state so it never depends on file I/O
+    # ✅ Timer state — session-state based, no file I/O
     if 'session_timer_start' not in st.session_state:
         st.session_state.session_timer_start = time.time()
     if 'session_game_started' not in st.session_state:
@@ -647,11 +647,7 @@ def get_global_timer_file():
 
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
-
-    The timer lives entirely in st.session_state, so there is no file
-    I/O involved. The 0:00 reset fires exactly once per crossing
-    because session_timer_start is only updated when we cross 0.
-    """
+    Timer lives in st.session_state. The 0:00 reset fires once per crossing."""
     if 'session_timer_start' not in st.session_state:
         st.session_state.session_timer_start = time.time()
     if 'session_game_started' not in st.session_state:
@@ -664,13 +660,10 @@ def get_global_remaining_time():
     remaining = 60 - elapsed
 
     if remaining <= 0:
-        # Count cards selected globally (fresh from disk).
         global_taken, _, _, _ = load_global_cards()
         if len(global_taken) >= 3:
-            # Enough cards — hold at 0:00 so the caller can start the game.
             return 0, False
         else:
-            # Not enough cards — reset to a fresh 1:00.
             st.session_state.session_timer_start = time.time()
             return 60, False
 
@@ -732,20 +725,16 @@ def save_caller_lock(last_called_at, last_called_by):
         return False
 
 def try_global_call():
-    """Attempt to be the caller for the next number.
-    Returns the newly called number if we WON the race, else None."""
+    """Attempt to be the caller for the next number."""
     lock = load_caller_lock()
     now = time.time()
     last_at = lock.get("last_called_at", 0)
 
-    # Cooldown: 2 seconds between global calls
     if now - last_at < 2.0:
         return None
 
-    # We won the race — claim the lock immediately
     save_caller_lock(now, st.session_state.current_user)
 
-    # Read current state fresh from disk (so no races)
     load_game_state()
     current_called = set(st.session_state.called_numbers)
 
@@ -792,6 +781,9 @@ def save_game_state():
         pass
 
 def load_game_state():
+    """Load shared game state from disk.
+    ⚠️ DO NOT overwrite st.session_state.game_started — the authoritative
+    flag is st.session_state.session_game_started, kept in memory only."""
     try:
         if os.path.exists(get_game_state_file()):
             with open(get_game_state_file(), "r") as f:
@@ -804,6 +796,7 @@ def load_game_state():
                 st.session_state.winner_declared = data.get("winner_declared", False)
                 st.session_state.game_over = data.get("game_over", False)
                 st.session_state.prize_distributed = data.get("prize_distributed", False)
+                # game_started is NOT loaded from disk — kept in session state only
     except:
         pass
 
@@ -826,7 +819,6 @@ def reset_for_next_round():
     reset_global_timer(60)
     save_global_cards([], {}, time.time(), 60)
     
-    # Clear the caller lock so the next round starts fresh
     try:
         if os.path.exists(get_caller_lock_file()):
             os.remove(get_caller_lock_file())
@@ -865,13 +857,13 @@ def sync_global_cards():
     
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
-    # ⚠️ Only turn the game ON — never let a stale disk flag turn it OFF.
+    # ⚠️ Only ever turn the game ON — never let a stale disk flag turn it OFF.
     if game_started:
         st.session_state.game_started = True
     
     load_game_state()
     
-    # ✅ STALE-GAME RECOVERY:
+    # STALE-GAME RECOVERY
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     no_cards = len(st.session_state.taken_cards) == 0
@@ -879,7 +871,6 @@ def sync_global_cards():
     
     if winner_done or all_called or (game_started and no_cards):
         reset_for_next_round()
-        # Reload fresh state
         global_taken, global_owner, _, _ = load_global_cards()
         st.session_state.taken_cards = list(global_taken)
         st.session_state.card_owner = dict(global_owner)
@@ -902,7 +893,7 @@ def sync_global_cards():
         st.session_state.clicked_numbers = set()
 
 # ===================================================================
-# ✅ START-THE-GAME CHECK — runs on every rerun, at top level
+# ✅ START-THE-GAME CHECK
 # ===================================================================
 
 def maybe_start_game():
@@ -910,19 +901,29 @@ def maybe_start_game():
        1. 3+ cards are selected globally
        2. the shared timer has reached 0:00
 
-    ⚠️ Uses the value already stored in st.session_state.card_selection_time
-    by sync_global_cards() — does NOT call get_global_remaining_time() again,
-    so the 0:00 → 1:00 reset only fires once per crossing.
+    Uses the value already cached in st.session_state.card_selection_time
+    by sync_global_cards(), plus a fallback that reads the raw session
+    timer directly — so the game always starts even if the cache is stale.
     """
     if st.session_state.game_started:
         return
 
-    remaining = st.session_state.card_selection_time
     total_now = len(st.session_state.taken_cards)
     min_required = 3
+    if total_now < min_required:
+        return
 
-    if remaining <= 0 and total_now >= min_required:
-        mark_game_started_globally()
+    # Primary check — cached value from sync_global_cards()
+    remaining = st.session_state.card_selection_time
+
+    # Fallback check — read the raw session timer
+    if remaining > 0 and 'session_timer_start' in st.session_state:
+        raw_elapsed = time.time() - st.session_state.session_timer_start
+        if raw_elapsed >= 60:
+            remaining = 0
+
+    if remaining <= 0:
+        st.session_state.session_game_started = True
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
         if len(st.session_state.clicked_numbers) > 0:
@@ -1735,8 +1736,6 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Card selection — rendered as HTML links in the parent DOM."""
-
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
@@ -1756,22 +1755,10 @@ def render_card_selection():
 
     maybe_start_game()
 
-    # ✅ Reuse the cached value
     remaining = st.session_state.card_selection_time
     game_started = st.session_state.game_started
 
-    total_selected_now = len(st.session_state.taken_cards)
-    min_cards_required_now = 3
-
-    if remaining <= 0 and total_selected_now >= min_cards_required_now and not game_started:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
+    if game_started:
         st.rerun()
         return
 
