@@ -32,31 +32,22 @@ st.markdown("""
     try {
         var url = new URL(window.location.href);
         var changed = false;
-
-        // Remove ?u= if present (Streamlit Cloud iframe artifact)
         if (url.searchParams.has('u')) {
             url.searchParams.delete('u');
             changed = true;
         }
-
-        // Remove the /~/+ path segment Streamlit adds in sandboxed iframes
         var path = url.pathname;
         if (path.indexOf('/~/+') !== -1) {
             path = path.replace('/~/+', '');
             url.pathname = path;
             changed = true;
         }
-
-        // If the URL has nothing left after cleanup, go back to base
         if (changed) {
             var newUrl = url.origin + path;
             if (url.search) newUrl += url.search;
-            // replaceState = no reload, no new history entry
             window.history.replaceState(null, '', newUrl);
         }
-    } catch (e) {
-        // Silent fail — not critical
-    }
+    } catch (e) {}
 })();
 </script>
 """, unsafe_allow_html=True)
@@ -324,7 +315,51 @@ st.markdown("""
         .board-table td { padding: 2px 1px !important; }
         .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
     }
+
+    /* ── Loading overlay: appears for a moment when a card is tapped ── */
+    #card-loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 2147483647;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 20px;
+        color: #FFD700;
+        font-size: 1.4rem;
+        font-weight: bold;
+        font-family: Arial, sans-serif;
+    }
+    #card-loading-overlay.active { display: flex !important; }
+    @keyframes card-spin { to { transform: rotate(360deg); } }
+    #card-loading-overlay .spinner {
+        width: 64px; height: 64px;
+        border: 5px solid rgba(255, 215, 0, 0.25);
+        border-top-color: #FFD700;
+        border-radius: 50%;
+        animation: card-spin 0.8s linear infinite;
+    }
+    #card-loading-overlay .msg {
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
 </style>
+<div id="card-loading-overlay">
+    <div class="spinner"></div>
+    <div class="msg">🎯 Processing your card...</div>
+</div>
+<script>
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href*="select_card"]');
+        if (link) {
+            var ov = document.getElementById('card-loading-overlay');
+            if (ov) ov.classList.add('active');
+        }
+    }, true);
+</script>
 """, unsafe_allow_html=True)
 
 # ===================================================================
@@ -816,10 +851,6 @@ def sync_global_cards():
     
     load_game_state()
     
-    # ✅ STALE-GAME RECOVERY:
-    # If the game is "started" but the winner is already declared, or
-    # all 75 numbers have been called, or there are no cards at all,
-    # reset everything so the next round can begin.
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     no_cards = len(st.session_state.taken_cards) == 0
@@ -827,7 +858,6 @@ def sync_global_cards():
     
     if winner_done or all_called or (game_started and no_cards):
         reset_for_next_round()
-        # Reload fresh state
         global_taken, global_owner, _, _ = load_global_cards()
         st.session_state.taken_cards = list(global_taken)
         st.session_state.card_owner = dict(global_owner)
@@ -888,7 +918,6 @@ def login_user(username, password):
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
-        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -903,7 +932,6 @@ def login_user(username, password):
         st.session_state.current_role = st.session_state.user_db[username]["role"]
         load_all_data()
         sync_global_cards()
-        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -1845,7 +1873,7 @@ def render_card_selection():
     else:
         st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
 
-        # ===================================================================
+# ===================================================================
 # ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
 # ===================================================================
 
@@ -2038,13 +2066,11 @@ if not st.session_state.game_started:
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
     
-    # If timer hit 0 but not enough cards, reset the timer and stay here
     if remaining <= 0 and total_selected_now < min_cards_required_now:
         reset_global_timer(60)
         st.session_state.card_selection_time = 60
         remaining = 60
     
-    # Only start when BOTH conditions are met
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
