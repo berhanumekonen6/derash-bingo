@@ -697,8 +697,9 @@ def get_global_remaining_time():
     remaining = duration - elapsed
 
     if remaining <= 0:
-        global_taken, _, _, _ = load_global_cards()
-        if len(global_taken) >= 3:
+        # ✅ Use the in-session card list (always accurate)
+        total_now = len(st.session_state.taken_cards)
+        if total_now >= 3:
             # Hold at 0:00 so maybe_start_game() can flip the game on
             return 0, False
         else:
@@ -792,8 +793,7 @@ def save_game_state():
 
 def load_game_state():
     """Load shared game state from disk.
-    ⚠️ Does NOT overwrite game_started — the authoritative flag is
-    st.session_state.session_game_started, kept in memory only."""
+    ⚠️ Does NOT overwrite game_started — that flag lives in session/state only."""
     try:
         if os.path.exists(get_game_state_file()):
             with open(get_game_state_file(), "r") as f:
@@ -928,6 +928,7 @@ def maybe_start_game():
         else:
             st.session_state.selected_card = -1
         save_game_state()
+        st.rerun()   # ✅ force immediate transition into the game
 
 # ===================================================================
 # AUTHENTICATION
