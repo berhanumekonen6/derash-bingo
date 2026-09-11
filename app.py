@@ -433,11 +433,6 @@ def init_session_state():
         st.session_state.celebration_start_time = None
     if 'auto_return_done' not in st.session_state:
         st.session_state.auto_return_done = False
-    # Cached timer value for the current tick — prevents multiple resets
-    if 'tick_remaining' not in st.session_state:
-        st.session_state.tick_remaining = 60
-    if 'tick_game_started' not in st.session_state:
-        st.session_state.tick_game_started = False
 
 init_session_state()
 
@@ -672,13 +667,17 @@ def load_global_timer():
         pass
     return time.time(), 60, False
 
-def _compute_and_maybe_reset_timer():
-    """Internal: compute the remaining time, and if it hits 0 with <3 cards,
-    reset the timer to a fresh 60s. Returns (remaining, game_started).
+def get_global_remaining_time():
+    """Returns (remaining_seconds, game_started).
 
-    ⚠️ This is the ONLY place that resets the timer at 0:00. It is called
-    exactly ONCE per rerun (by sync_global_cards). All other code must
-    read the cached values in st.session_state.tick_remaining."""
+    Rules:
+      • Counts down 60 → 0 normally.
+      • When it hits 0:00:
+          – If 3+ cards are selected globally → return (0, False) so the
+            caller can mark the game as started.
+          – If fewer than 3 cards are selected → reset back to a fresh
+            1:00 and keep counting normally.
+    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -687,23 +686,20 @@ def _compute_and_maybe_reset_timer():
     remaining = duration - elapsed
 
     if remaining <= 0:
+        # ── Timer reached 0:00 — decide what to do ──
+        # Read how many cards are selected globally (fresh from disk).
         global_taken, _, _, _ = load_global_cards()
         if len(global_taken) >= 3:
             # Enough cards — hold at 0:00 so the caller can start the game.
             return 0, False
         else:
-            # Not enough cards — reset the timer to a fresh 60s.
+            # Not enough cards — reset back to 1:00 and keep counting.
             new_start = time.time()
             save_global_timer(new_start, 60, False)
             return 60, False
 
     return remaining, False
 
-def get_global_remaining_time():
-    """Public wrapper — returns the cached value for this tick if it exists,
-    otherwise computes it. Only sync_global_cards() should call this."""
-    remaining, game_started = _compute_and_maybe_reset_timer()
-    return remaining, game_started
 
 def reset_global_timer(duration=60):
     """Reset the timer for a new round. This is the ONLY place that
@@ -711,6 +707,7 @@ def reset_global_timer(duration=60):
     timer_start = time.time()
     save_global_timer(timer_start, duration, False)
     return timer_start
+
 
 def mark_game_started_globally():
     """Mark the game as started without disturbing the timer start or duration."""
@@ -863,8 +860,6 @@ def reset_for_next_round():
     st.session_state.card_owner = {}
     st.session_state.celebration_start_time = None
     st.session_state.auto_return_done = False
-    st.session_state.tick_remaining = 60
-    st.session_state.tick_game_started = False
     
     save_game_state()
 
@@ -873,23 +868,21 @@ def reset_for_next_round():
 # ===================================================================
 
 def sync_global_cards():
-    """Sync cards and timer from disk. This is the ONLY place that reads
-    the timer, so the 0:00 reset fires exactly once per crossing."""
     global_taken, global_owner, _, _ = load_global_cards()
     
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
     
-    # ✅ Read the timer ONCE per tick and cache it
     remaining, game_started = get_global_remaining_time()
-    st.session_state.tick_remaining = remaining
-    st.session_state.tick_game_started = game_started
     st.session_state.card_selection_time = remaining
     st.session_state.game_started = game_started
     
     load_game_state()
     
     # ✅ STALE-GAME RECOVERY:
+    # If the game is "started" but the winner is already declared, or
+    # all 75 numbers have been called, or there are no cards at all,
+    # reset everything so the next round can begin.
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     no_cards = len(st.session_state.taken_cards) == 0
@@ -902,8 +895,6 @@ def sync_global_cards():
         st.session_state.taken_cards = list(global_taken)
         st.session_state.card_owner = dict(global_owner)
         remaining, game_started = get_global_remaining_time()
-        st.session_state.tick_remaining = remaining
-        st.session_state.tick_game_started = game_started
         st.session_state.card_selection_time = remaining
         st.session_state.game_started = game_started
     
@@ -927,15 +918,16 @@ def sync_global_cards():
 def maybe_start_game():
     """Flip the game to 'started' the moment BOTH conditions are true:
        1. 3+ cards are selected globally
-       2. the shared timer has reached 0:00
+       2. the shared timer has reached 0:00 (not reset to 1:00)
 
-    ⚠️ Reads the CACHED timer value set by sync_global_cards() — does NOT
-    call get_global_remaining_time() again, so the 0:00 reset only fires
-    once per crossing (inside sync_global_cards)."""
+    ⚠️ This does NOT call get_global_remaining_time() again — it uses the
+    value that sync_global_cards() already wrote into
+    st.session_state.card_selection_time, so the 0:00 → 1:00 reset only
+    fires once per crossing."""
     if st.session_state.game_started:
         return
 
-    remaining = st.session_state.get('tick_remaining', 60)
+    remaining = st.session_state.card_selection_time
     total_now = len(st.session_state.taken_cards)
     min_required = 3
 
@@ -989,6 +981,7 @@ def login_user(username, password):
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
+        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -1003,6 +996,7 @@ def login_user(username, password):
         st.session_state.current_role = st.session_state.user_db[username]["role"]
         load_all_data()
         sync_global_cards()
+        # ✅ After sync, if a stale game was recovered, ensure clean state
         if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
             reset_for_next_round()
             sync_global_cards()
@@ -1772,14 +1766,15 @@ def render_card_selection():
         """, unsafe_allow_html=True)
         return
 
-    # ✅ DO NOT call sync_global_cards() here — it's already been called
-    # at the top level of the app, and calling it again would re-trigger
-    # the 0:00 → 1:00 reset on the same tick.
+    sync_global_cards()
     load_all_data()
 
-    # ✅ Use the cached timer value set by sync_global_cards() at the top.
-    remaining = st.session_state.get('tick_remaining', st.session_state.card_selection_time)
-    game_started = st.session_state.get('tick_game_started', st.session_state.game_started)
+    # ✅ Run the top-level game-start check.
+    maybe_start_game()
+
+    # ✅ Use the cached remaining value from sync_global_cards()/maybe_start_game().
+    remaining = st.session_state.card_selection_time
+    game_started = st.session_state.game_started
 
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
@@ -1959,8 +1954,7 @@ if "select_card" in st.query_params:
                 st.session_state.current_user = url_user
                 st.session_state.current_role = st.session_state.user_db[url_user].get("role", "player")
 
-        # ✅ DO NOT call sync_global_cards() here — the card data is
-        # already up to date in session state from the top-level sync.
+        sync_global_cards()
         load_all_data()
 
         if st.session_state.current_user:
@@ -2111,7 +2105,7 @@ balance = user.get("balance", 0)
 if st.session_state.current_user == "admin":
     balance = 0.0
     if "admin" in st.session_state.user_db:
-                st.session_state.user_db["admin"]["balance"] = 0.0
+        st.session_state.user_db["admin"]["balance"] = 0.0
         save_all_data()
 
 st.sidebar.markdown(f"""
@@ -2131,43 +2125,28 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# SYNC GLOBAL STATE — this is the ONLY place that reads the timer
+# SYNC GLOBAL STATE
 # ===================================================================
 
 sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# ✅ START THE GAME (TOP-LEVEL) — runs on every rerun
+# ✅ START THE GAME (TOP-LEVEL)
 # ===================================================================
-# As soon as 3+ cards are selected AND the shared timer has reached 0:00,
-# the game flips to started here. This block runs BEFORE the game-loop
-# branches below, so the BINGO board renders immediately on the same tick.
 maybe_start_game()
 
 # ===================================================================
-# TIMER — DO NOT call get_global_remaining_time() again here.
-# The value was already computed and cached by sync_global_cards().
-# Calling it again would re-trigger the 0:00 → 1:00 reset on the same
-# tick and pin the display near 0:59.
-# ===================================================================
-
-# ===================================================================
-# AUTO-CALL NUMBERS — GLOBAL (all players see the same sequence)
+# AUTO-CALL NUMBERS — GLOBAL
 # ===================================================================
 
 if st.session_state.game_started and not st.session_state.winner_declared:
-    # Everyone polls the shared lock. Exactly one client wins per 2 seconds.
     just_called = try_global_call()
-
-    # Refresh local view of called numbers from disk so this client
-    # catches up with whatever any other client has done
     load_game_state()
 
     if just_called is not None:
         st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
 
-    # Keep all clients synchronized
     time.sleep(0.5)
     st.rerun()
 
@@ -2381,10 +2360,8 @@ st.markdown(f"""
 # AUTO-RERUN — keeps the app ticking
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
-    # Game is running — rerun fast so numbers are called promptly
     time.sleep(0.5)
     st.rerun()
 elif not st.session_state.game_started:
-    # Card-selection screen — tick the timer once per second
     time.sleep(1)
     st.rerun()
