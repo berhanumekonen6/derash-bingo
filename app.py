@@ -632,13 +632,16 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER
+# ✅ GLOBAL TIMER — STABLE VERSION
 # ===================================================================
 
 def get_global_timer_file():
     return "bingo_global_timer.json"
 
 def save_global_timer(timer_start_time, card_selection_time, game_started):
+    """Save the timer state.
+    ⚠️ `card_selection_time` here is the DURATION (e.g. 60), NOT the remaining time.
+    Only reset_global_timer() and mark_game_started_globally() should call this."""
     try:
         data = {
             "timer_start_time": timer_start_time,
@@ -665,29 +668,32 @@ def load_global_timer():
     return time.time(), 60, False
 
 def get_global_remaining_time():
+    """Returns (remaining_seconds, game_started).
+    ⚠️ READ-ONLY — this function NEVER writes to disk.
+    The timer file is only written by reset_global_timer() and
+    mark_game_started_globally(), so the countdown stays perfectly stable.
+    The countdown is now always: remaining = duration - (now - timer_start)."""
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
-
-    # ✅ FIX: The timer STOPS at 0:00 and holds there.
-    # It does NOT reset back to 60. The game will only start once
-    # 3+ cards are selected AND the timer has reached 0:00.
     if remaining < 0:
         remaining = 0
-
-    save_global_timer(timer_start, remaining, game_started)
+    # ❌ DO NOT save here — that was causing the countdown to jitter.
     return remaining, False
 
 def reset_global_timer(duration=60):
+    """Reset the timer for a new round. This is the ONLY place that
+    should set a fresh timer_start_time."""
     timer_start = time.time()
     save_global_timer(timer_start, duration, False)
     return timer_start
 
 def mark_game_started_globally():
-    timer_start, _, _ = load_global_timer()
-    save_global_timer(timer_start, 0, True)
+    """Mark the game as started without disturbing the timer start or duration."""
+    timer_start, duration, _ = load_global_timer()
+    save_global_timer(timer_start, duration, True)
 
 # ===================================================================
 # ✅ GLOBAL CALLER LOCK — ensures all players see the SAME number
@@ -2088,7 +2094,7 @@ if not st.session_state.game_started:
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
     
-    # ✅ Timer now stops at 0:00 (does not reset). Game starts only when
+    # ✅ Timer stops at 0:00 (does not reset). Game starts only when
     # BOTH 3+ cards are selected AND the timer has reached 0:00.
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
