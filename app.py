@@ -912,6 +912,35 @@ def sync_global_cards():
         st.session_state.clicked_numbers = set()
 
 # ===================================================================
+# ✅ START-THE-GAME CHECK — runs on every rerun, at top level
+# ===================================================================
+
+def maybe_start_game():
+    """Flip the game to 'started' the moment BOTH conditions are true:
+       1. 3+ cards are selected globally
+       2. the shared timer has reached 0:00 (not reset to 1:00)
+    Also handles the reset-to-1:00 case when cards are insufficient."""
+    if st.session_state.game_started:
+        return
+
+    remaining, game_started_flag = get_global_remaining_time()
+    st.session_state.card_selection_time = remaining
+
+    total_now = len(st.session_state.taken_cards)
+    min_required = 3
+
+    # Case A: time is up AND enough cards → start the game globally
+    if remaining <= 0 and total_now >= min_required and not game_started_flag:
+        mark_game_started_globally()
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.session_state.selected_card = -1
+        save_game_state()
+
+# ===================================================================
 # AUTHENTICATION
 # ===================================================================
 
@@ -1739,18 +1768,18 @@ def render_card_selection():
     sync_global_cards()
     load_all_data()
 
+    # ✅ Run the top-level game-start check (safe to call multiple times).
+    maybe_start_game()
+
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
 
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
 
-    # ✅ FIXED BEHAVIOR:
-    # The timer counts 60 → 0 and STOPS at 0:00 (does not reset).
-    # The game starts as soon as BOTH conditions are true:
-    #   1. 3+ cards are selected globally
-    #   2. the timer has reached 0:00
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
+        # The top-level maybe_start_game() already handles this, but keep
+        # this as a safety net in case we land here mid-tick.
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2103,28 +2132,20 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# TIMER — auto-start game when 3+ cards selected AND time reaches 0
+# ✅ START THE GAME (TOP-LEVEL) — runs on every rerun
+# ===================================================================
+# As soon as 3+ cards are selected AND the shared timer has reached 0:00,
+# the game flips to started here. This block runs BEFORE the game-loop
+# branches below, so the BINGO board renders immediately on the same tick.
+maybe_start_game()
+
+# ===================================================================
+# TIMER — keep ticking while on the card-selection screen
 # ===================================================================
 
 if not st.session_state.game_started:
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
-    
-    total_selected_now = len(st.session_state.taken_cards)
-    min_cards_required_now = 3
-    
-    # ✅ Timer stops at 0:00 (does not reset). Game starts only when
-    # BOTH 3+ cards are selected AND the timer has reached 0:00.
-    if remaining <= 0 and total_selected_now >= min_cards_required_now:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
-        st.rerun()
 
 # ===================================================================
 # AUTO-CALL NUMBERS — GLOBAL (all players see the same sequence)
