@@ -669,19 +669,37 @@ def load_global_timer():
 
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
-    ⚠️ READ-ONLY — this function NEVER writes to disk.
-    The timer file is only written by reset_global_timer() and
-    mark_game_started_globally(), so the countdown stays perfectly stable.
-    The countdown is now always: remaining = duration - (now - timer_start)."""
+
+    Rules:
+      • Counts down 60 → 0 normally.
+      • When it hits 0:00:
+          – If 3+ cards are selected globally → return (0, False) so the
+            caller can mark the game as started.
+          – If fewer than 3 cards are selected → reset back to a fresh
+            1:00 and keep counting normally.
+    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
+
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
-    if remaining < 0:
-        remaining = 0
-    # ❌ DO NOT save here — that was causing the countdown to jitter.
+
+    if remaining <= 0:
+        # ── Timer reached 0:00 — decide what to do ──
+        # Read how many cards are selected globally (fresh from disk).
+        global_taken, _, _, _ = load_global_cards()
+        if len(global_taken) >= 3:
+            # Enough cards — hold at 0:00 so the caller can start the game.
+            return 0, False
+        else:
+            # Not enough cards — reset back to 1:00 and keep counting.
+            new_start = time.time()
+            save_global_timer(new_start, 60, False)
+            return 60, False
+
     return remaining, False
+
 
 def reset_global_timer(duration=60):
     """Reset the timer for a new round. This is the ONLY place that
@@ -689,6 +707,7 @@ def reset_global_timer(duration=60):
     timer_start = time.time()
     save_global_timer(timer_start, duration, False)
     return timer_start
+
 
 def mark_game_started_globally():
     """Mark the game as started without disturbing the timer start or duration."""
