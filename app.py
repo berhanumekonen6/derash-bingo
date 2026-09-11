@@ -683,6 +683,68 @@ def mark_game_started_globally():
     save_global_timer(timer_start, 0, True)
 
 # ===================================================================
+# ✅ GLOBAL CALLER LOCK — ensures all players see the SAME number
+# ===================================================================
+
+def get_caller_lock_file():
+    return "bingo_caller_lock.json"
+
+def load_caller_lock():
+    try:
+        if os.path.exists(get_caller_lock_file()):
+            with open(get_caller_lock_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return {"last_called_at": 0, "last_called_by": None}
+
+def save_caller_lock(last_called_at, last_called_by):
+    try:
+        with open(get_caller_lock_file(), "w") as f:
+            json.dump({
+                "last_called_at": last_called_at,
+                "last_called_by": last_called_by
+            }, f)
+        return True
+    except:
+        return False
+
+def try_global_call():
+    """Attempt to be the caller for the next number.
+    Returns the newly called number if we WON the race, else None."""
+    lock = load_caller_lock()
+    now = time.time()
+    last_at = lock.get("last_called_at", 0)
+
+    # Cooldown: 2 seconds between global calls
+    if now - last_at < 2.0:
+        return None
+
+    # We won the race — claim the lock immediately
+    save_caller_lock(now, st.session_state.current_user)
+
+    # Read current state fresh from disk (so no races)
+    load_game_state()
+    current_called = set(st.session_state.called_numbers)
+
+    if len(current_called) >= 75:
+        return None
+
+    available = [i for i in range(1, 76) if i not in current_called]
+    if not available:
+        return None
+
+    called_num = random.choice(available)
+    st.session_state.called_numbers.add(called_num)
+    st.session_state.last_called_number = called_num
+    st.session_state.auto_called_count = len(st.session_state.called_numbers)
+    save_game_state()
+
+    check_for_winners()
+
+    return called_num
+
+# ===================================================================
 # ✅ GAME STATE
 # ===================================================================
 
@@ -741,6 +803,13 @@ def reset_for_next_round():
     clear_game_state()
     reset_global_timer(60)
     save_global_cards([], {}, time.time(), 60)
+    
+    # Clear the caller lock so the next round starts fresh
+    try:
+        if os.path.exists(get_caller_lock_file()):
+            os.remove(get_caller_lock_file())
+    except:
+        pass
     
     st.session_state.selected_card = None
     st.session_state.clicked_numbers = set()
@@ -2025,40 +2094,23 @@ if not st.session_state.game_started:
         st.rerun()
 
 # ===================================================================
-# AUTO-CALL NUMBERS
+# AUTO-CALL NUMBERS — GLOBAL (all players see the same sequence)
 # ===================================================================
 
 if st.session_state.game_started and not st.session_state.winner_declared:
-    if not st.session_state.auto_call_started:
-        st.session_state.auto_call_started = True
-        st.session_state.last_call_time = time.time()
-        if len(st.session_state.called_numbers) < 75:
-            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-            if available:
-                called_num = random.choice(available)
-                st.session_state.called_numbers.add(called_num)
-                st.session_state.last_called_number = called_num
-                st.session_state.auto_called_count += 1
-                st.session_state.last_call_time = time.time()
-                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
-                check_for_winners()
-                save_game_state()
-                st.rerun()
-    
-    if len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
-        current_time = time.time()
-        if current_time - st.session_state.last_call_time >= 2.0:
-            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
-            if available:
-                called_num = random.choice(available)
-                st.session_state.called_numbers.add(called_num)
-                st.session_state.last_called_number = called_num
-                st.session_state.auto_called_count += 1
-                st.session_state.last_call_time = current_time
-                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
-                check_for_winners()
-                save_game_state()
-                st.rerun()
+    # Everyone polls the shared lock. Exactly one client wins per 2 seconds.
+    just_called = try_global_call()
+
+    # Refresh local view of called numbers from disk so this client
+    # catches up with whatever any other client has done
+    load_game_state()
+
+    if just_called is not None:
+        st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+
+    # Keep all clients synchronized
+    time.sleep(0.5)
+    st.rerun()
 
 # ===================================================================
 # 3-SECOND CELEBRATION AUTO-RETURN
