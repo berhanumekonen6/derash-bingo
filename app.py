@@ -433,11 +433,6 @@ def init_session_state():
         st.session_state.celebration_start_time = None
     if 'auto_return_done' not in st.session_state:
         st.session_state.auto_return_done = False
-    # ✅ Timer state — session-state based, no file I/O
-    if 'session_timer_start' not in st.session_state:
-        st.session_state.session_timer_start = time.time()
-    if 'session_game_started' not in st.session_state:
-        st.session_state.session_game_started = False
 
 init_session_state()
 
@@ -637,68 +632,96 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER — session-state based (no file writes, no jitter)
+# ✅ GLOBAL TIMER — file-backed, shared across ALL users
 # ===================================================================
 
 def get_global_timer_file():
-    """Kept for compatibility only — not used anymore."""
     return "bingo_global_timer.json"
+
+
+def _init_global_timer():
+    """Create the timer file if it doesn't exist yet."""
+    if not os.path.exists(get_global_timer_file()):
+        try:
+            with open(get_global_timer_file(), "w") as f:
+                json.dump({
+                    "timer_start": time.time(),
+                    "duration": 60,
+                    "game_started": False
+                }, f)
+        except:
+            pass
+
+
+def load_global_timer():
+    """Returns (timer_start, duration, game_started).
+    Reads fresh from disk so all users see the same value."""
+    _init_global_timer()
+    try:
+        with open(get_global_timer_file(), "r") as f:
+            data = json.load(f)
+            return (data.get("timer_start", time.time()),
+                    data.get("duration", 60),
+                    data.get("game_started", False))
+    except:
+        return time.time(), 60, False
+
+
+def save_global_timer(timer_start, duration=60, game_started=False):
+    """Writes the timer to disk. Only called on reset / start."""
+    try:
+        with open(get_global_timer_file(), "w") as f:
+            json.dump({
+                "timer_start": timer_start,
+                "duration": duration,
+                "game_started": game_started
+            }, f)
+        return True
+    except:
+        return False
+
+
+def reset_global_timer(duration=60):
+    """Resets the SHARED timer. Called once per cycle, not every tick."""
+    new_start = time.time()
+    save_global_timer(new_start, duration, False)
+    return new_start
+
+
+def mark_game_started_globally():
+    """Marks the game started on disk."""
+    timer_start, duration, _ = load_global_timer()
+    save_global_timer(timer_start, duration, True)
 
 
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
-    Timer lives in st.session_state. The 0:00 reset fires once per crossing."""
-    if 'session_timer_start' not in st.session_state:
-        st.session_state.session_timer_start = time.time()
-    if 'session_game_started' not in st.session_state:
-        st.session_state.session_game_started = False
 
-    if st.session_state.session_game_started:
+    Reads the shared disk file every tick so ALL users see the same value.
+    Only writes the file when the timer crosses 0:00.
+    """
+    timer_start, duration, game_started = load_global_timer()
+
+    if game_started:
         return 0, True
 
-    elapsed = time.time() - st.session_state.session_timer_start
-    remaining = 60 - elapsed
+    elapsed = time.time() - timer_start
+    remaining = duration - elapsed
 
     if remaining <= 0:
         global_taken, _, _, _ = load_global_cards()
         if len(global_taken) >= 3:
+            # Hold at 0:00 so maybe_start_game() can flip the game on
             return 0, False
         else:
-            st.session_state.session_timer_start = time.time()
+            # Reset the SHARED timer once per crossing
+            reset_global_timer(60)
             return 60, False
 
     return remaining, False
 
-
-def save_global_timer(timer_start_time, card_selection_time, game_started):
-    """No-op — the timer is stored in st.session_state now."""
-    return True
-
-
-def load_global_timer():
-    """Returns the session-state timer for compatibility."""
-    if 'session_timer_start' not in st.session_state:
-        st.session_state.session_timer_start = time.time()
-    if 'session_game_started' not in st.session_state:
-        st.session_state.session_game_started = False
-    return (st.session_state.session_timer_start,
-            60,
-            st.session_state.session_game_started)
-
-
-def reset_global_timer(duration=60):
-    """Reset the timer for a new round."""
-    st.session_state.session_timer_start = time.time()
-    st.session_state.session_game_started = False
-    return st.session_state.session_timer_start
-
-
-def mark_game_started_globally():
-    """Mark the game as started."""
-    st.session_state.session_game_started = True
-
 # ===================================================================
-# ✅ GLOBAL CALLER LOCK — ensures all players see the SAME number
+# ✅ GLOBAL CALLER LOCK
 # ===================================================================
 
 def get_caller_lock_file():
@@ -725,7 +748,6 @@ def save_caller_lock(last_called_at, last_called_by):
         return False
 
 def try_global_call():
-    """Attempt to be the caller for the next number."""
     lock = load_caller_lock()
     now = time.time()
     last_at = lock.get("last_called_at", 0)
@@ -782,8 +804,8 @@ def save_game_state():
 
 def load_game_state():
     """Load shared game state from disk.
-    ⚠️ DO NOT overwrite st.session_state.game_started — the authoritative
-    flag is st.session_state.session_game_started, kept in memory only."""
+    ⚠️ Does NOT overwrite game_started — the authoritative flag is
+    st.session_state.session_game_started, kept in memory only."""
     try:
         if os.path.exists(get_game_state_file()):
             with open(get_game_state_file(), "r") as f:
@@ -796,7 +818,6 @@ def load_game_state():
                 st.session_state.winner_declared = data.get("winner_declared", False)
                 st.session_state.game_over = data.get("game_over", False)
                 st.session_state.prize_distributed = data.get("prize_distributed", False)
-                # game_started is NOT loaded from disk — kept in session state only
     except:
         pass
 
@@ -857,7 +878,6 @@ def sync_global_cards():
     
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
-    # ⚠️ Only ever turn the game ON — never let a stale disk flag turn it OFF.
     if game_started:
         st.session_state.game_started = True
     
@@ -897,13 +917,9 @@ def sync_global_cards():
 # ===================================================================
 
 def maybe_start_game():
-    """Flip the game to 'started' the moment BOTH conditions are true:
+    """Start the game the moment BOTH conditions are true:
        1. 3+ cards are selected globally
-       2. the shared timer has reached 0:00
-
-    Uses the value already cached in st.session_state.card_selection_time
-    by sync_global_cards(), plus a fallback that reads the raw session
-    timer directly — so the game always starts even if the cache is stale.
+       2. the SHARED timer has reached 0:00
     """
     if st.session_state.game_started:
         return
@@ -913,17 +929,10 @@ def maybe_start_game():
     if total_now < min_required:
         return
 
-    # Primary check — cached value from sync_global_cards()
-    remaining = st.session_state.card_selection_time
-
-    # Fallback check — read the raw session timer
-    if remaining > 0 and 'session_timer_start' in st.session_state:
-        raw_elapsed = time.time() - st.session_state.session_timer_start
-        if raw_elapsed >= 60:
-            remaining = 0
+    remaining, game_started = get_global_remaining_time()
 
     if remaining <= 0:
-        st.session_state.session_game_started = True
+        mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
         if len(st.session_state.clicked_numbers) > 0:
