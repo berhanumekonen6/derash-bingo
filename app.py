@@ -1618,8 +1618,7 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Card selection — rendered as HTML links in the parent DOM.
-    Works 100% on phone and PC, no iframe, no sandbox issues."""
+    """Card selection with @st.fragment — click any card without page reload."""
 
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1635,179 +1634,166 @@ def render_card_selection():
         """, unsafe_allow_html=True)
         return
 
-    sync_global_cards()
-    load_all_data()
+    # ── Fragment: only this part reruns when a card is clicked ──
+    @st.fragment(run_every=None)
+    def card_grid_fragment():
+        # Re-sync state each fragment rerun
+        sync_global_cards()
+        load_all_data()
 
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
+        remaining, game_started = get_global_remaining_time()
+        st.session_state.card_selection_time = remaining
 
-    total_selected_now = len(st.session_state.taken_cards)
-    min_cards_required_now = 3
+        total_selected_now = len(st.session_state.taken_cards)
+        min_cards_required_now = 3
 
-    # If timer hit 0 but not enough cards, reset the timer and stay here
-    if remaining <= 0 and total_selected_now < min_cards_required_now:
-        reset_global_timer(60)
-        st.session_state.card_selection_time = 60
-        remaining = 60
+        if remaining <= 0 and total_selected_now < min_cards_required_now:
+            reset_global_timer(60)
+            st.session_state.card_selection_time = 60
+            remaining = 60
 
-    # Only start when BOTH conditions are met
-    if remaining <= 0 and total_selected_now >= min_cards_required_now:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        if remaining <= 0 and total_selected_now >= min_cards_required_now:
+            mark_game_started_globally()
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            if len(st.session_state.clicked_numbers) > 0:
+                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+            else:
+                st.session_state.selected_card = -1
+            save_game_state()
+            st.rerun()
+
+        if st.session_state.flash_msg:
+            st.warning(st.session_state.flash_msg)
+            st.session_state.flash_msg = ""
+
+        minutes = int(remaining // 60)
+        seconds = int(remaining % 60)
+        time_str = f"{minutes:01d}:{seconds:02d}"
+
+        user = st.session_state.user_db.get(st.session_state.current_user, {})
+        balance = user.get("balance", 0)
+
+        total_selected = len(st.session_state.taken_cards)
+        your_cards = len(st.session_state.clicked_numbers)
+        available = 201 - total_selected
+        min_cards_required = 3
+        enough_cards = total_selected >= min_cards_required
+
+        if not enough_cards:
+            color = "#FF9800"
+        elif remaining <= 10:
+            color = "#E53935"
+        elif remaining <= 30:
+            color = "#FF9800"
         else:
-            st.session_state.selected_card = -1
-        save_game_state()
-        st.rerun()
-        return
+            color = "#FFD700"
 
-    if st.session_state.flash_msg:
-        st.warning(st.session_state.flash_msg)
-        st.session_state.flash_msg = ""
-
-    minutes = int(remaining // 60)
-    seconds = int(remaining % 60)
-    time_str = f"{minutes:01d}:{seconds:02d}"
-
-    user = st.session_state.user_db.get(st.session_state.current_user, {})
-    balance = user.get("balance", 0)
-
-    total_selected = len(st.session_state.taken_cards)
-    your_cards = len(st.session_state.clicked_numbers)
-    available = 201 - total_selected
-    min_cards_required = 3
-    enough_cards = total_selected >= min_cards_required
-
-    if not enough_cards:
-        color = "#FF9800"
-    elif remaining <= 10:
-        color = "#E53935"
-    elif remaining <= 30:
-        color = "#FF9800"
-    else:
-        color = "#FFD700"
-
-    st.markdown(f"""
-    <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
-        <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
-            ⌚ {time_str}
+        st.markdown(f"""
+        <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
+            <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
+                ⌚ {time_str}
+            </div>
+            <div style="font-size:0.9rem;color:#FFFFFF;line-height:1.9;">
+                🟢 <b>Your Cards:</b> {your_cards}/2 &nbsp;|&nbsp;
+                📊 <b>Global:</b> {total_selected}/201 &nbsp;|&nbsp;
+                ⬜ <b>Available:</b> {available}
+            </div>
+            <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">
+                💰 {balance:.2f} ETB
+            </div>
         </div>
-        <div style="font-size:0.9rem;color:#FFFFFF;line-height:1.9;">
-            🟢 <b>Your Cards:</b> {your_cards}/2 &nbsp;|&nbsp;
-            📊 <b>Global:</b> {total_selected}/201 &nbsp;|&nbsp;
-            ⬜ <b>Available:</b> {available}
-        </div>
-        <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">
-            💰 {balance:.2f} ETB
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    if not enough_cards:
-        st.warning(f"⚠️ Waiting for {min_cards_required - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
-    else:
-        st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
-
-    col_options = [4, 5, 6, 7, 8]
-    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
-
-    selected_cols = st.selectbox(
-        f"📊 Cards per row (your view — current: {current_value})",
-        options=col_options,
-        index=col_options.index(current_value),
-        key=f"cards_per_row_select_{st.session_state.current_user}"
-    )
-
-    if selected_cols != st.session_state.columns_per_row:
-        st.session_state.columns_per_row = selected_cols
-        st.rerun()
-
-    cols_per_row = st.session_state.columns_per_row
-
-    clicked = st.session_state.clicked_numbers
-    taken = st.session_state.taken_cards
-
-    # Build cell HTML
-    cells_html = ""
-    for i in range(1, 202):
-        is_mine = i in clicked
-        is_taken = i in taken and not is_mine
-
-        if is_mine:
-            bg = "rgba(76,175,80,0.7)"
-            fg = "#FFFFFF"
-            border = "#4CAF50"
-            border_w = "3px"
-            cursor = "pointer"
-        elif is_taken:
-            bg = "rgba(255,0,0,0.2)"
-            fg = "rgba(255,255,255,0.4)"
-            border = "rgba(255,0,0,0.3)"
-            border_w = "2px"
-            cursor = "not-allowed"
+        if not enough_cards:
+            st.warning(f"⚠️ Waiting for {min_cards_required - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
         else:
-            bg = "linear-gradient(135deg, #FFD700, #FFA500)"
-            fg = "#1a1a2e"
-            border = "rgba(255,255,255,0.2)"
-            border_w = "2px"
-            cursor = "pointer"
+            st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
 
-        # Clickable link only if actionable
-        if is_mine or not is_taken:
-            cells_html += (
-                f'<a href="?u={st.session_state.current_user}&select_card={i}" '
-                f'style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-decoration:none;'
-                f'text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;'
-                f'-webkit-tap-highlight-color:transparent;">{i}</a>'
-            )
-        else:
-            cells_html += (
-                f'<div style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;">{i}</div>'
-            )
+        clicked = st.session_state.clicked_numbers
+        taken = st.session_state.taken_cards
 
-    st.markdown(f"""
-    <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
-        <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">
-            🎯 Tap a card to SELECT (10 ETB) or 🟢 green to DESELECT
+        # Build cell HTML
+        cells_html = ""
+        for i in range(1, 202):
+            is_mine = i in clicked
+            is_taken = i in taken and not is_mine
+
+            if is_mine:
+                bg = "rgba(76,175,80,0.7)"
+                fg = "#FFFFFF"
+                border = "#4CAF50"
+                border_w = "3px"
+                cursor = "pointer"
+            elif is_taken:
+                bg = "rgba(255,0,0,0.2)"
+                fg = "rgba(255,255,255,0.4)"
+                border = "rgba(255,0,0,0.3)"
+                border_w = "2px"
+                cursor = "not-allowed"
+            else:
+                bg = "linear-gradient(135deg, #FFD700, #FFA500)"
+                fg = "#1a1a2e"
+                border = "rgba(255,255,255,0.2)"
+                border_w = "2px"
+                cursor = "pointer"
+
+            if is_mine or not is_taken:
+                cells_html += (
+                    f'<a href="?select_card={i}" '
+                    f'style="display:flex;align-items:center;justify-content:center;'
+                    f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
+                    f'background:{bg};color:{fg};border:{border_w} solid {border};'
+                    f'cursor:{cursor};text-decoration:none;'
+                    f'text-shadow:0 1px 2px rgba(0,0,0,0.3);'
+                    f'user-select:none;-webkit-user-select:none;'
+                    f'-webkit-tap-highlight-color:transparent;">{i}</a>'
+                )
+            else:
+                cells_html += (
+                    f'<div style="display:flex;align-items:center;justify-content:center;'
+                    f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
+                    f'background:{bg};color:{fg};border:{border_w} solid {border};'
+                    f'cursor:{cursor};text-shadow:0 1px 2px rgba(0,0,0,0.3);'
+                    f'user-select:none;-webkit-user-select:none;">{i}</div>'
+                )
+
+        st.markdown(f"""
+        <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
+            <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">
+                🎯 Tap a card to SELECT (10 ETB) or 🟢 green to DESELECT
+            </div>
         </div>
-    </div>
 
-    <div style="
-        display:grid;
-        grid-template-columns:repeat({cols_per_row}, minmax(0, 1fr));
-        gap:6px;
-        padding:8px;
-        background:rgba(0,0,0,0.15);
-        border-radius:10px;
-        border:1px solid rgba(255,255,255,0.08);
-        max-height:70vh;
-        overflow-y:auto;
-    ">
-        {cells_html}
-    </div>
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(6, minmax(0, 1fr));
+            gap:6px;
+            padding:8px;
+            background:rgba(0,0,0,0.15);
+            border-radius:10px;
+            border:1px solid rgba(255,255,255,0.08);
+            max-height:70vh;
+            overflow-y:auto;
+        ">
+            {cells_html}
+        </div>
 
-    <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
-        🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
-    </div>
-    """, unsafe_allow_html=True)
+        <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
+            🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
+        </div>
+        """, unsafe_allow_html=True)
 
-    progress = 1 - (remaining / 60) if remaining > 0 else 1
-    st.progress(progress)
+        progress = 1 - (remaining / 60) if remaining > 0 else 1
+        st.progress(progress)
 
-    if enough_cards:
-        st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
-    else:
-        st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
+        if enough_cards:
+            st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
+        else:
+            st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
+
+    # Call the fragment
+    card_grid_fragment()
 
 # ===================================================================
 # ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
