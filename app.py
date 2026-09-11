@@ -2111,7 +2111,8 @@ balance = user.get("balance", 0)
 if st.session_state.current_user == "admin":
     balance = 0.0
     if "admin" in st.session_state.user_db:
-        st.session_state.user_db["admin"]["balance"] = 0.0        save_all_data()
+                st.session_state.user_db["admin"]["balance"] = 0.0
+        save_all_data()
 
 st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
