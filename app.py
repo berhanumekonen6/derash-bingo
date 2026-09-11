@@ -1618,9 +1618,9 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Card selection using real Streamlit buttons in a CSS Grid.
-    Works 100% on phone and PC — no iframe, no column stacking."""
-    
+    """Card selection using real Streamlit buttons + JS grid layout.
+    Works 100% on phone and PC."""
+
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
@@ -1634,13 +1634,13 @@ def render_card_selection():
         </div>
         """, unsafe_allow_html=True)
         return
-    
+
     sync_global_cards()
     load_all_data()
-    
+
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
-    
+
     if game_started or remaining <= 0:
         mark_game_started_globally()
         st.session_state.game_started = True
@@ -1652,24 +1652,24 @@ def render_card_selection():
         save_game_state()
         st.rerun()
         return
-    
+
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
-    
+
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
-    
+
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
-    
+
     total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
-    
+
     if not enough_cards:
         color = "#FF9800"
     elif remaining <= 10:
@@ -1678,7 +1678,7 @@ def render_card_selection():
         color = "#FF9800"
     else:
         color = "#FFD700"
-    
+
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
@@ -1694,7 +1694,7 @@ def render_card_selection():
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if not enough_cards:
         st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start! 🎯")
     elif remaining <= 10:
@@ -1703,103 +1703,23 @@ def render_card_selection():
         st.info(f"⏱️ {int(remaining)} seconds remaining... 🎯")
     else:
         st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
-    
+
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
-    
+
     selected_cols = st.selectbox(
         f"📊 Cards per row (your view — current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
         key=f"cards_per_row_select_{st.session_state.current_user}"
     )
-    
+
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
         st.rerun()
-    
+
     cols_per_row = st.session_state.columns_per_row
-    
-    # ── CSS Grid layout: wrap all buttons in a grid ──
-    st.markdown(f"""
-    <style>
-        /* Force the grid container that holds all card buttons */
-        .card-grid-container div[data-testid="stVerticalBlock"] {{
-            display: grid !important;
-            grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
-            gap: 6px !important;
-            width: 100% !important;
-        }}
-        /* Each button wrapper becomes a grid cell */
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] {{
-            width: 100% !important;
-            min-width: 0 !important;
-            margin: 0 !important;
-        }}
-        /* Button visual */
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
-            height: 52px !important;
-            min-height: 52px !important;
-            padding: 0 !important;
-            font-size: 15px !important;
-            font-weight: bold !important;
-            border-radius: 8px !important;
-            border: 2px solid rgba(255,255,255,0.2) !important;
-            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
-            color: #1a1a2e !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
-            transition: transform 0.1s ease, box-shadow 0.1s ease !important;
-            width: 100% !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-        }}
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:hover:not(:disabled) {{
-            transform: scale(1.08) !important;
-            box-shadow: 0 0 15px rgba(255,215,0,0.5) !important;
-            border-color: #FFD700 !important;
-        }}
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:active:not(:disabled) {{
-            transform: scale(0.92) !important;
-        }}
-        /* Green (mine) */
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button[kind="secondary"]:not(:disabled) {{
-            background: rgba(76,175,80,0.7) !important;
-            color: #FFFFFF !important;
-            border: 3px solid #4CAF50 !important;
-        }}
-        /* Red (taken) */
-        .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button:disabled {{
-            background: rgba(255,0,0,0.2) !important;
-            color: rgba(255,255,255,0.4) !important;
-            border: 2px solid rgba(255,0,0,0.3) !important;
-            opacity: 1 !important;
-            cursor: not-allowed !important;
-        }}
-        /* Mobile: smaller cells, same layout */
-        @media (max-width: 768px) {{
-            .card-grid-container div[data-testid="stVerticalBlock"] {{
-                gap: 4px !important;
-            }}
-            .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
-                height: 44px !important;
-                min-height: 44px !important;
-                font-size: 13px !important;
-                border-radius: 6px !important;
-            }}
-        }}
-        @media (max-width: 400px) {{
-            .card-grid-container div[data-testid="stVerticalBlock"] {{
-                gap: 3px !important;
-            }}
-            .card-grid-container div[data-testid="stVerticalBlock"] > div[data-testid="stButton"] button {{
-                height: 38px !important;
-                min-height: 38px !important;
-                font-size: 11px !important;
-                border-radius: 5px !important;
-            }}
-        }}
-    </style>
-    """, unsafe_allow_html=True)
-    
+
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
         <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">
@@ -1807,90 +1727,162 @@ def render_card_selection():
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
-    
-    # ── Render all 201 buttons inside a wrapper div ──
-    st.markdown('<div class="card-grid-container">', unsafe_allow_html=True)
-    
-    for card_id in range(1, 202):
-        is_mine = card_id in clicked
-        is_taken = card_id in taken and not is_mine
-        
-        if is_mine:
-            label = f"🟢{card_id}"
-            btn_type = "secondary"
-            disabled = False
-        elif is_taken:
-            label = f"🔒{card_id}"
-            btn_type = "secondary"
-            disabled = True
-        else:
-            label = f"{card_id}"
-            btn_type = "primary"
-            disabled = False
-        
-        clicked_now = st.button(
-            label,
-            key=f"card_{card_id}_{st.session_state.current_user}",
-            use_container_width=True,
-            type=btn_type,
-            disabled=disabled
-        )
-        
-        if clicked_now:
-            if not is_mine and not is_taken:
-                if len(st.session_state.clicked_numbers) >= 2:
-                    st.session_state.flash_msg = "⚠️ Max card selection is 2!"
-                    st.rerun()
-                elif balance < 10:
-                    st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
-                    st.rerun()
-                else:
-                    st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
+
+    # Marker element — JS uses this to locate and grid-ify the button container
+    st.markdown('<div id="card-grid-marker" style="height:0;overflow:hidden;"></div>', unsafe_allow_html=True)
+
+    # Render all 201 buttons inside one container
+    card_container = st.container()
+    with card_container:
+        for card_id in range(1, 202):
+            is_mine = card_id in clicked
+            is_taken = card_id in taken and not is_mine
+
+            if is_mine:
+                label = f"🟢{card_id}"
+                btn_type = "secondary"
+                disabled = False
+            elif is_taken:
+                label = f"🔒{card_id}"
+                btn_type = "secondary"
+                disabled = True
+            else:
+                label = f"{card_id}"
+                btn_type = "primary"
+                disabled = False
+
+            clicked_now = st.button(
+                label,
+                key=f"card_{card_id}_{st.session_state.current_user}",
+                use_container_width=True,
+                type=btn_type,
+                disabled=disabled
+            )
+
+            if clicked_now:
+                if not is_mine and not is_taken:
+                    if len(st.session_state.clicked_numbers) >= 2:
+                        st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                        st.rerun()
+                    elif balance < 10:
+                        st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                        st.rerun()
+                    else:
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
+                        save_all_data()
+                        st.session_state.clicked_numbers.add(card_id)
+                        if card_id not in st.session_state.taken_cards:
+                            st.session_state.taken_cards.append(card_id)
+                        st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                        save_global_cards(
+                            st.session_state.taken_cards,
+                            st.session_state.card_owner,
+                            st.session_state.timer_start_time,
+                            st.session_state.card_selection_time
+                        )
+                        st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+                        st.rerun()
+
+                elif is_mine:
+                    st.session_state.clicked_numbers.discard(card_id)
+                    if card_id in st.session_state.taken_cards:
+                        st.session_state.taken_cards.remove(card_id)
+                    if str(card_id) in st.session_state.card_owner:
+                        del st.session_state.card_owner[str(card_id)]
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = balance + 10
                     save_all_data()
-                    st.session_state.clicked_numbers.add(card_id)
-                    if card_id not in st.session_state.taken_cards:
-                        st.session_state.taken_cards.append(card_id)
-                    st.session_state.card_owner[str(card_id)] = st.session_state.current_user
                     save_global_cards(
                         st.session_state.taken_cards,
                         st.session_state.card_owner,
                         st.session_state.timer_start_time,
                         st.session_state.card_selection_time
                     )
-                    st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+                    st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
                     st.rerun()
-            
-            elif is_mine:
-                st.session_state.clicked_numbers.discard(card_id)
-                if card_id in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(card_id)
-                if str(card_id) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(card_id)]
-                st.session_state.user_db[st.session_state.current_user]["balance"] = balance + 10
-                save_all_data()
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
-                st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
+
+    # JS: force grid layout on the actual DOM (survives Streamlit rerenders)
+    components.html(f"""
+    <script>
+    (function() {{
+        const COLS = {cols_per_row};
+        let attempts = 0;
+        const maxAttempts = 40;
+
+        function applyGrid() {{
+            attempts++;
+            try {{
+                const doc = window.parent.document;
+                const marker = doc.getElementById("card-grid-marker");
+                if (!marker) {{ if (attempts < maxAttempts) setTimeout(applyGrid, 150); return; }}
+
+                let gridRoot = marker.closest('[data-testid="stVerticalBlock"]');
+                if (!gridRoot) {{ if (attempts < maxAttempts) setTimeout(applyGrid, 150); return; }}
+
+                const buttons = gridRoot.querySelectorAll(':scope > div[data-testid="stElementContainer"]');
+                if (buttons.length < 2) {{ if (attempts < maxAttempts) setTimeout(applyGrid, 150); return; }}
+
+                gridRoot.style.display = "grid";
+                gridRoot.style.gridTemplateColumns = "repeat(" + COLS + ", minmax(0, 1fr))";
+                gridRoot.style.gap = "5px";
+                gridRoot.style.width = "100%";
+                gridRoot.style.maxHeight = "70vh";
+                gridRoot.style.overflowY = "auto";
+                gridRoot.style.padding = "6px";
+                gridRoot.style.background = "rgba(0,0,0,0.15)";
+                gridRoot.style.borderRadius = "10px";
+                gridRoot.style.border = "1px solid rgba(255,255,255,0.08)";
+
+                buttons.forEach(function(el) {{
+                    el.style.width = "100%";
+                    el.style.minWidth = "0";
+                    el.style.margin = "0";
+                    const btn = el.querySelector("button");
+                    if (btn) {{
+                        btn.style.width = "100%";
+                        btn.style.height = "50px";
+                        btn.style.minHeight = "50px";
+                        btn.style.padding = "0";
+                        btn.style.fontSize = "14px";
+                        btn.style.fontWeight = "bold";
+                        btn.style.borderRadius = "8px";
+                    }}
+                }});
+
+                const isMobile = window.parent.innerWidth <= 768;
+                if (isMobile) {{
+                    gridRoot.style.gap = "4px";
+                    buttons.forEach(function(el) {{
+                        const btn = el.querySelector("button");
+                        if (btn) {{
+                            btn.style.height = "42px";
+                            btn.style.minHeight = "42px";
+                            btn.style.fontSize = "12px";
+                        }}
+                    }});
+                }}
+            }} catch (e) {{
+                if (attempts < maxAttempts) setTimeout(applyGrid, 150);
+            }}
+        }}
+
+        setTimeout(applyGrid, 100);
+        setInterval(applyGrid, 1500);
+    }})();
+    </script>
+    """, height=0)
+
     st.markdown("""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
         🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
     </div>
     """, unsafe_allow_html=True)
-    
+
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
-    
+
     if enough_cards:
         st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
