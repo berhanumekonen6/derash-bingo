@@ -811,72 +811,6 @@ def sync_global_cards():
         st.session_state.clicked_numbers = set()
 
 # ===================================================================
-# ✅ QUERY PARAM HANDLER
-# ===================================================================
-
-if "select_card" in st.query_params:
-    try:
-        card_id = int(st.query_params["select_card"])
-        
-        sync_global_cards()
-        load_all_data()
-        
-        if st.session_state.current_user:
-            is_taken = card_id in st.session_state.taken_cards
-            is_mine = card_id in st.session_state.clicked_numbers
-            has_max = len(st.session_state.clicked_numbers) >= 2
-            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-            
-            if is_mine:
-                st.session_state.clicked_numbers.discard(card_id)
-                if card_id in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(card_id)
-                if str(card_id) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(card_id)]
-                
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                save_all_data()
-                
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
-            elif is_taken:
-                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
-            elif has_max:
-                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
-            elif user_balance < 10:
-                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
-            else:
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                save_all_data()
-                
-                st.session_state.clicked_numbers.add(card_id)
-                if card_id not in st.session_state.taken_cards:
-                    st.session_state.taken_cards.append(card_id)
-                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
-                
-                timer_start, duration, game_started = load_global_timer()
-                if not game_started and (time.time() - timer_start) > 3600:
-                    reset_global_timer(60)
-                
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
-        
-        st.query_params.clear()
-        st.rerun()
-    except (ValueError, TypeError):
-        st.query_params.clear()
-
-# ===================================================================
 # AUTHENTICATION
 # ===================================================================
 
@@ -1680,11 +1614,12 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - IFRAME VERSION
+# CARD SELECTION FUNCTION - REAL BUTTONS VERSION
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using an IFRAME — 100% mobile compatible."""
+    """Render card selection using real Streamlit buttons.
+    Works 100% on phone and PC — no iframe, no sandbox issues."""
     
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1785,122 +1720,67 @@ def render_card_selection():
     
     cols_per_row = st.session_state.columns_per_row
     
-    clicked = st.session_state.clicked_numbers
-    taken = st.session_state.taken_cards
-    
-    cells_html = ""
-    for i in range(1, 202):
-        is_mine = i in clicked
-        is_taken = i in taken and not is_mine
-        
-        if is_mine:
-            bg = "rgba(76,175,80,0.7)"
-            fg = "#FFFFFF"
-            border = "#4CAF50"
-            border_w = "3px"
-        elif is_taken:
-            bg = "rgba(255,0,0,0.2)"
-            fg = "rgba(255,255,255,0.4)"
-            border = "rgba(255,0,0,0.3)"
-            border_w = "2px"
-        else:
-            bg = "linear-gradient(135deg, #FFD700, #FFA500)"
-            fg = "#1a1a2e"
-            border = "rgba(255,255,255,0.2)"
-            border_w = "2px"
-        
-        cells_html += (
-            f'<div class="cell" '
-            f'style="background:{bg}; color:{fg}; border:{border_w} solid {border};" '
-            f'onclick="selectCard({i})">{i}</div>'
-        )
-    
-    num_rows = (201 + cols_per_row - 1) // cols_per_row
-    cell_height = 54
-    total_height = num_rows * cell_height + 40
-    if total_height > 1400:
-        total_height = 1400
-    
-    iframe_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    # ── CSS to make the grid of buttons look like the iframe version ──
+    st.markdown(f"""
     <style>
-        * {{ box-sizing: border-box; }}
-        html, body {{
-            margin: 0; padding: 0;
-            background: transparent;
-            font-family: Arial, sans-serif;
-            overflow-x: hidden;
+        /* Tighten the grid gaps between card buttons */
+        div[data-testid="stHorizontalBlock"] {{
+            gap: 5px !important;
+            margin-bottom: 5px !important;
         }}
-        .grid {{
-            display: grid !important;
-            grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
-            gap: 5px;
-            padding: 8px;
-            width: 100%;
+        /* Card button look */
+        div[data-testid="stHorizontalBlock"] button {{
+            height: 52px !important;
+            min-height: 52px !important;
+            padding: 0 !important;
+            font-size: 15px !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            border: 2px solid rgba(255,255,255,0.2) !important;
+            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+            color: #1a1a2e !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+            transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+            width: 100% !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
         }}
-        .cell {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 48px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            text-align: center;
-            transition: transform 0.1s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        div[data-testid="stHorizontalBlock"] button:hover:not(:disabled) {{
+            transform: scale(1.08) !important;
+            box-shadow: 0 0 15px rgba(255,215,0,0.5) !important;
+            border-color: #FFD700 !important;
         }}
-        .cell:hover {{
-            transform: scale(1.08);
-            z-index: 10;
-            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        div[data-testid="stHorizontalBlock"] button:active:not(:disabled) {{
+            transform: scale(0.92) !important;
         }}
-        .cell:active {{
-            transform: scale(0.92);
+        /* Green "mine" buttons (kind=secondary) */
+        div[data-testid="stHorizontalBlock"] button[kind="secondary"]:not(:disabled) {{
+            background: rgba(76,175,80,0.7) !important;
+            color: #FFFFFF !important;
+            border: 3px solid #4CAF50 !important;
         }}
+        /* Red "taken" buttons (disabled) */
+        div[data-testid="stHorizontalBlock"] button:disabled {{
+            background: rgba(255,0,0,0.2) !important;
+            color: rgba(255,255,255,0.4) !important;
+            border: 2px solid rgba(255,0,0,0.3) !important;
+            opacity: 1 !important;
+            cursor: not-allowed !important;
+        }}
+        /* Mobile adjustments */
         @media (max-width: 500px) {{
-            .cell {{
-                height: 42px;
-                font-size: 13px;
-                border-radius: 6px;
+            div[data-testid="stHorizontalBlock"] button {{
+                height: 44px !important;
+                min-height: 44px !important;
+                font-size: 13px !important;
+                border-radius: 6px !important;
             }}
-            .grid {{
-                gap: 4px;
-                padding: 5px;
+            div[data-testid="stHorizontalBlock"] {{
+                gap: 4px !important;
+                margin-bottom: 4px !important;
             }}
         }}
     </style>
-    </head>
-    <body>
-        <div class="grid">{cells_html}</div>
-        <script>
-            function selectCard(num) {{
-                try {{
-                    var url = new URL(window.parent.location.href);
-                    url.searchParams.set('select_card', num);
-                    window.parent.location.href = url.toString();
-                }} catch (e) {{
-                    try {{
-                        var url2 = new URL(window.top.location.href);
-                        url2.searchParams.set('select_card', num);
-                        window.top.location.href = url2.toString();
-                    }} catch (e2) {{
-                        console.error('Navigation error:', e2);
-                    }}
-                }}
-            }}
-        </script>
-    </body>
-    </html>
-    """
+    """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
@@ -1910,37 +1790,90 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    components.html(iframe_html, height=total_height, scrolling=True)
+    clicked = st.session_state.clicked_numbers
+    taken = st.session_state.taken_cards
+    
+    # ── Render 201 real Streamlit buttons in rows ──
+    for row_start in range(1, 202, cols_per_row):
+        row_cols = st.columns(cols_per_row)
+        for offset in range(cols_per_row):
+            card_id = row_start + offset
+            if card_id > 201:
+                break
+            
+            with row_cols[offset]:
+                is_mine = card_id in clicked
+                is_taken = card_id in taken and not is_mine
+                
+                if is_mine:
+                    label = f"🟢{card_id}"
+                    btn_type = "secondary"
+                    disabled = False
+                elif is_taken:
+                    label = f"🔒{card_id}"
+                    btn_type = "secondary"
+                    disabled = True
+                else:
+                    label = f"{card_id}"
+                    btn_type = "primary"
+                    disabled = False
+                
+                clicked_now = st.button(
+                    label,
+                    key=f"card_{card_id}_{st.session_state.current_user}",
+                    use_container_width=True,
+                    type=btn_type,
+                    disabled=disabled
+                )
+                
+                if clicked_now:
+                    # ── SELECT ──
+                    if not is_mine and not is_taken:
+                        if len(st.session_state.clicked_numbers) >= 2:
+                            st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                            st.rerun()
+                        elif balance < 10:
+                            st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                            st.rerun()
+                        else:
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
+                            save_all_data()
+                            st.session_state.clicked_numbers.add(card_id)
+                            if card_id not in st.session_state.taken_cards:
+                                st.session_state.taken_cards.append(card_id)
+                            st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                            save_global_cards(
+                                st.session_state.taken_cards,
+                                st.session_state.card_owner,
+                                st.session_state.timer_start_time,
+                                st.session_state.card_selection_time
+                            )
+                            st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+                            st.rerun()
+                    
+                    # ── DESELECT ──
+                    elif is_mine:
+                        st.session_state.clicked_numbers.discard(card_id)
+                        if card_id in st.session_state.taken_cards:
+                            st.session_state.taken_cards.remove(card_id)
+                        if str(card_id) in st.session_state.card_owner:
+                            del st.session_state.card_owner[str(card_id)]
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = balance + 10
+                        save_all_data()
+                        save_global_cards(
+                            st.session_state.taken_cards,
+                            st.session_state.card_owner,
+                            st.session_state.timer_start_time,
+                            st.session_state.card_selection_time
+                        )
+                        st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
+                        st.rerun()
     
     st.markdown("""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
         🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
     </div>
     """, unsafe_allow_html=True)
-    
-    if your_cards > 0:
-        st.markdown("### 📋 Your Selected Cards")
-        for cid in sorted(list(st.session_state.clicked_numbers)):
-            if st.button(f"🃏 Card #{cid}  —  ✖ DESELECT (Refund 10 ETB)",
-                         use_container_width=True, key=f"desel_{cid}"):
-                sync_global_cards()
-                st.session_state.clicked_numbers.discard(cid)
-                if cid in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(cid)
-                if str(cid) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(cid)]
-                if st.session_state.current_user in st.session_state.user_db:
-                    st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
-                    save_all_data()
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.success(f"✅ Card #{cid} refunded. +10 ETB")
-                time.sleep(0.4)
-                st.rerun()
     
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
