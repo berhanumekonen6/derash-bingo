@@ -1684,7 +1684,8 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using an IFRAME — 100% mobile compatible."""
+    """Card selection grid using real Streamlit buttons in a CSS grid.
+    Works on all devices including sandboxed Streamlit Cloud iframes."""
     
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1703,6 +1704,7 @@ def render_card_selection():
     sync_global_cards()
     load_all_data()
     
+    # ✅ GLOBAL TIMER
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     
@@ -1718,6 +1720,7 @@ def render_card_selection():
         st.rerun()
         return
     
+    # Flash message from previous click
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -1744,6 +1747,7 @@ def render_card_selection():
     else:
         color = "#FFD700"
     
+    # Status header
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
@@ -1769,6 +1773,7 @@ def render_card_selection():
     else:
         st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
     
+    # Cards-per-row selector
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
     
@@ -1785,122 +1790,88 @@ def render_card_selection():
     
     cols_per_row = st.session_state.columns_per_row
     
-    clicked = st.session_state.clicked_numbers
-    taken = st.session_state.taken_cards
-    
-    cells_html = ""
-    for i in range(1, 202):
-        is_mine = i in clicked
-        is_taken = i in taken and not is_mine
-        
-        if is_mine:
-            bg = "rgba(76,175,80,0.7)"
-            fg = "#FFFFFF"
-            border = "#4CAF50"
-            border_w = "3px"
-        elif is_taken:
-            bg = "rgba(255,0,0,0.2)"
-            fg = "rgba(255,255,255,0.4)"
-            border = "rgba(255,0,0,0.3)"
-            border_w = "2px"
-        else:
-            bg = "linear-gradient(135deg, #FFD700, #FFA500)"
-            fg = "#1a1a2e"
-            border = "rgba(255,255,255,0.2)"
-            border_w = "2px"
-        
-        cells_html += (
-            f'<div class="cell" '
-            f'style="background:{bg}; color:{fg}; border:{border_w} solid {border};" '
-            f'onclick="selectCard({i})">{i}</div>'
-        )
-    
-    num_rows = (201 + cols_per_row - 1) // cols_per_row
-    cell_height = 54
-    total_height = num_rows * cell_height + 40
-    if total_height > 1400:
-        total_height = 1400
-    
-    iframe_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    # ============================================================
+    # ✅ CSS: force the button container into a 6-column grid on all devices
+    # ============================================================
+    st.markdown(f"""
     <style>
-        * {{ box-sizing: border-box; }}
-        html, body {{
-            margin: 0; padding: 0;
-            background: transparent;
-            font-family: Arial, sans-serif;
-            overflow-x: hidden;
-        }}
-        .grid {{
+        /* Target the Streamlit vertical block that contains our card buttons */
+        div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) {{
             display: grid !important;
             grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
-            gap: 5px;
-            padding: 8px;
-            width: 100%;
+            gap: 6px !important;
+            padding: 8px !important;
+            background: rgba(0,0,0,0.15) !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            max-height: 500px !important;
+            overflow-y: auto !important;
         }}
-        .cell {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 48px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            text-align: center;
-            transition: transform 0.1s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        
+        /* Each button wrapper becomes a grid cell */
+        div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) > div[data-testid="stButton"] {{
+            width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 !important;
         }}
-        .cell:hover {{
-            transform: scale(1.08);
-            z-index: 10;
-            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        
+        /* Style each button */
+        div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) > div[data-testid="stButton"] > button {{
+            width: 100% !important;
+            height: 52px !important;
+            min-height: 52px !important;
+            padding: 2px !important;
+            font-size: 0.85rem !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            border: 2px solid rgba(255,255,255,0.2) !important;
+            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+            color: #1a1a2e !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            transition: transform 0.1s ease !important;
         }}
-        .cell:active {{
-            transform: scale(0.92);
+        
+        /* Selected (green) */
+        div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) > div[data-testid="stButton"] > button[kind="secondary"] {{
+            background: rgba(76,175,80,0.7) !important;
+            color: #FFFFFF !important;
+            border: 3px solid #4CAF50 !important;
         }}
-        @media (max-width: 500px) {{
-            .cell {{
-                height: 42px;
-                font-size: 13px;
-                border-radius: 6px;
+        
+        /* Mobile — 6 columns, smaller buttons */
+        @media (max-width: 768px) {{
+            div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) {{
+                grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
+                gap: 3px !important;
+                padding: 4px !important;
+                max-height: 420px !important;
             }}
-            .grid {{
-                gap: 4px;
-                padding: 5px;
+            div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) > div[data-testid="stButton"] > button {{
+                height: 40px !important;
+                min-height: 40px !important;
+                font-size: 0.7rem !important;
+                border-radius: 6px !important;
+            }}
+        }}
+        
+        /* Very small screens */
+        @media (max-width: 480px) {{
+            div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) {{
+                gap: 2px !important;
+                padding: 3px !important;
+                max-height: 360px !important;
+            }}
+            div[data-testid="stVerticalBlock"]:has(> div[data-testid="stButton"]) > div[data-testid="stButton"] > button {{
+                height: 34px !important;
+                min-height: 34px !important;
+                font-size: 0.6rem !important;
+                border-radius: 5px !important;
+                padding: 1px !important;
             }}
         }}
     </style>
-    </head>
-    <body>
-        <div class="grid">{cells_html}</div>
-        <script>
-            function selectCard(num) {{
-                try {{
-                    var url = new URL(window.parent.location.href);
-                    url.searchParams.set('select_card', num);
-                    window.parent.location.href = url.toString();
-                }} catch (e) {{
-                    try {{
-                        var url2 = new URL(window.top.location.href);
-                        url2.searchParams.set('select_card', num);
-                        window.top.location.href = url2.toString();
-                    }} catch (e2) {{
-                        console.error('Navigation error:', e2);
-                    }}
-                }}
-            }}
-        </script>
-    </body>
-    </html>
-    """
+    """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
@@ -1910,11 +1881,81 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
     
-    components.html(iframe_html, height=total_height, scrolling=True)
+    clicked = st.session_state.clicked_numbers
+    taken = st.session_state.taken_cards
+    
+    # ✅ One real Streamlit button per card — works on any device
+    for i in range(1, 202):
+        is_mine = i in clicked
+        is_taken = i in taken and not is_mine
+        
+        if is_mine:
+            label = f"🟢{i}"
+            btn_kind = "secondary"
+            disabled = False
+        elif is_taken:
+            label = f"🔒{i}"
+            btn_kind = "secondary"
+            disabled = True
+        else:
+            label = f"{i}"
+            btn_kind = "primary"
+            disabled = False
+        
+        if st.button(
+            label,
+            key=f"card_{i}_{st.session_state.current_user}",
+            use_container_width=True,
+            type=btn_kind,
+            disabled=disabled
+        ):
+            if is_mine:
+                # DESELECT
+                st.session_state.clicked_numbers.discard(i)
+                if i in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(i)
+                if str(i) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(i)]
+                if st.session_state.current_user in st.session_state.user_db:
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = (
+                        st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                    )
+                    save_all_data()
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{i} refunded. +10 ETB"
+                st.rerun()
+            else:
+                # SELECT
+                if len(st.session_state.clicked_numbers) >= 2:
+                    st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                    st.rerun()
+                elif balance < 10:
+                    st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                    st.rerun()
+                else:
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = balance - 10
+                    save_all_data()
+                    st.session_state.clicked_numbers.add(i)
+                    if i not in st.session_state.taken_cards:
+                        st.session_state.taken_cards.append(i)
+                    st.session_state.card_owner[str(i)] = st.session_state.current_user
+                    save_global_cards(
+                        st.session_state.taken_cards,
+                        st.session_state.card_owner,
+                        st.session_state.timer_start_time,
+                        st.session_state.card_selection_time
+                    )
+                    st.session_state.flash_msg = f"✅ Card #{i} selected! -10 ETB"
+                    st.rerun()
     
     st.markdown("""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
-        🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
+        🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔒 Red = Taken by others
     </div>
     """, unsafe_allow_html=True)
     
@@ -1923,14 +1964,15 @@ def render_card_selection():
         for cid in sorted(list(st.session_state.clicked_numbers)):
             if st.button(f"🃏 Card #{cid}  —  ✖ DESELECT (Refund 10 ETB)",
                          use_container_width=True, key=f"desel_{cid}"):
-                sync_global_cards()
                 st.session_state.clicked_numbers.discard(cid)
                 if cid in st.session_state.taken_cards:
                     st.session_state.taken_cards.remove(cid)
                 if str(cid) in st.session_state.card_owner:
                     del st.session_state.card_owner[str(cid)]
                 if st.session_state.current_user in st.session_state.user_db:
-                    st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = (
+                        st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                    )
                     save_all_data()
                 save_global_cards(
                     st.session_state.taken_cards,
@@ -1938,8 +1980,7 @@ def render_card_selection():
                     st.session_state.timer_start_time,
                     st.session_state.card_selection_time
                 )
-                st.success(f"✅ Card #{cid} refunded. +10 ETB")
-                time.sleep(0.4)
+                st.session_state.flash_msg = f"✅ Card #{cid} refunded. +10 ETB"
                 st.rerun()
     
     progress = 1 - (remaining / 60) if remaining > 0 else 1
