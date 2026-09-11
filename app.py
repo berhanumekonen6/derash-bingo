@@ -919,7 +919,12 @@ def maybe_start_game():
     """Flip the game to 'started' the moment BOTH conditions are true:
        1. 3+ cards are selected globally
        2. the shared timer has reached 0:00 (not reset to 1:00)
-    Also handles the reset-to-1:00 case when cards are insufficient."""
+    Also handles the reset-to-1:00 case when cards are insufficient.
+
+    ⚠️ This is the ONLY place (besides sync_global_cards) that calls
+    get_global_remaining_time() during a rerun — so the 0:00 → 1:00
+    reset only fires once per crossing, not multiple times per tick.
+    """
     if st.session_state.game_started:
         return
 
@@ -1768,18 +1773,17 @@ def render_card_selection():
     sync_global_cards()
     load_all_data()
 
-    # ✅ Run the top-level game-start check (safe to call multiple times).
-    maybe_start_game()
-
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
+    # ✅ Reuse the timer value that sync_global_cards() / maybe_start_game()
+    # already computed this tick. Do NOT call get_global_remaining_time()
+    # again here — that would re-trigger the 0:00 → 1:00 reset twice per tick
+    # and pin the display near 0:59.
+    remaining = st.session_state.card_selection_time
+    game_started = st.session_state.game_started
 
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
 
-    if remaining <= 0 and total_selected_now >= min_cards_required_now:
-        # The top-level maybe_start_game() already handles this, but keep
-        # this as a safety net in case we land here mid-tick.
+    if remaining <= 0 and total_selected_now >= min_cards_required_now and not game_started:
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2140,12 +2144,11 @@ sync_global_winners()
 maybe_start_game()
 
 # ===================================================================
-# TIMER — keep ticking while on the card-selection screen
+# TIMER — the value is already synced above by maybe_start_game().
+# Do NOT call get_global_remaining_time() again here — that would
+# re-trigger the 0:00 → 1:00 reset on the same tick and cause the
+# display to flicker between 0:59 and 0:00.
 # ===================================================================
-
-if not st.session_state.game_started:
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
 
 # ===================================================================
 # AUTO-CALL NUMBERS — GLOBAL (all players see the same sequence)
