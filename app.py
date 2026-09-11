@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ===================================================================
-# ✅ VIEWPORT META
+# ✅ VIEWPORT META — FORCES PROPER SCALING ON SMARTPHONES
 # ===================================================================
 st.markdown("""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -24,7 +24,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# CUSTOM CSS
+# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
 # ===================================================================
 
 st.markdown("""
@@ -195,6 +195,11 @@ st.markdown("""
         0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
         100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
     }
+    .css-1d391kg, .css-1adrfps {
+        background: rgba(0, 0, 0, 0.3) !important;
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
     .header-timer-container {
         background: rgba(0, 0, 0, 0.2) !important;
         border: 2px solid rgba(255, 215, 0, 0.2) !important;
@@ -229,7 +234,16 @@ st.markdown("""
     .board-number.last-called { background: rgba(229, 57, 53, 0.2) !important; color: #FF6B6B !important; border-color: #E53935 !important; box-shadow: 0 0 20px rgba(229, 57, 53, 0.2); }
     .board-stats { color: rgba(255, 255, 255, 0.7) !important; }
     .board-stats strong { color: #FFD700 !important; }
+    .called-numbers-container { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 15px !important; padding: 15px !important; }
+    .called-numbers-header { color: #FFD700 !important; }
+    .called-number { background: rgba(255, 215, 0, 0.15) !important; color: #FFD700 !important; border: 1px solid rgba(255, 215, 0, 0.1); }
+    .called-number.latest { background: rgba(255, 215, 0, 0.3) !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+    .game-status { background: rgba(0, 0, 0, 0.2) !important; border-left: 4px solid #FFD700 !important; border-radius: 12px !important; padding: 15px !important; margin-top: 15px !important; }
+    .status-message { color: rgba(255, 255, 255, 0.9) !important; }
     .game-state-indicator { background: rgba(0, 0, 0, 0.2) !important; border: 2px solid rgba(255, 255, 255, 0.1) !important; color: #FFFFFF !important; border-radius: 10px !important; padding: 10px 20px !important; text-align: center !important; font-weight: bold !important; }
+    .game-state-waiting { border-color: #FF9800 !important; color: #FFB74D !important; }
+    .game-state-running { border-color: #4CAF50 !important; color: #81C784 !important; }
+    .game-state-finished { border-color: #FFD700 !important; color: #FFD700 !important; }
     .stat-box { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 12px !important; padding: 10px 20px !important; }
     .stat-value { color: #FFD700 !important; font-weight: bold !important; text-shadow: 0 0 20px rgba(255, 215, 0, 0.1); }
     .stat-label { color: rgba(255, 255, 255, 0.6) !important; }
@@ -248,8 +262,13 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
     }
     .user-info { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
+    .user-details h3 { color: #FFFFFF !important; }
+    .user-balance { color: #FFD700 !important; }
+    .winner-name { color: #FFFFFF !important; }
+    .winner-prize { color: #FFD700 !important; }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
+    .selected-cards-preview { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
 
     @media (max-width: 768px) {
         .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
@@ -339,6 +358,7 @@ def get_winner_sound_js():
 # ===================================================================
 
 def init_session_state():
+    """Initialize all session state variables"""
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'current_user' not in st.session_state:
@@ -395,6 +415,14 @@ def init_session_state():
         st.session_state.timer_start_time = time.time()
     if 'celebration_shown' not in st.session_state:
         st.session_state.celebration_shown = False
+    if 'show_insufficient_balance_msg' not in st.session_state:
+        st.session_state.show_insufficient_balance_msg = False
+    if 'show_max_card_msg' not in st.session_state:
+        st.session_state.show_max_card_msg = False
+    if 'show_card_taken_msg' not in st.session_state:
+        st.session_state.show_card_taken_msg = False
+    if 'show_register_success_msg' not in st.session_state:
+        st.session_state.show_register_success_msg = False
     if 'show_deposit_msg' not in st.session_state:
         st.session_state.show_deposit_msg = False
     if 'deposit_msg_text' not in st.session_state:
@@ -1692,7 +1720,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION
+# CARD SELECTION FUNCTION - ADAPTED FROM FIRST ATTACHMENT
 # ===================================================================
 
 def render_card_selection():
@@ -1709,8 +1737,6 @@ def render_card_selection():
         </div>
         """, unsafe_allow_html=True)
         return
-
-    # ⚠️ sync_global_cards() is already called at top level — don't call again here.
 
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
