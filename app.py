@@ -671,12 +671,11 @@ def get_global_remaining_time():
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
 
-    # If the timer has hit 0:00 without the game starting,
-    # RESET it back to a fresh 60 seconds and keep counting.
-    if remaining <= 0:
-        new_start = time.time()
-        save_global_timer(new_start, 60, False)
-        return 60, False
+    # ✅ FIX: The timer STOPS at 0:00 and holds there.
+    # It does NOT reset back to 60. The game will only start once
+    # 3+ cards are selected AND the timer has reached 0:00.
+    if remaining < 0:
+        remaining = 0
 
     save_global_timer(timer_start, remaining, game_started)
     return remaining, False
@@ -1721,9 +1720,11 @@ def render_card_selection():
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
 
-    # Timer NEVER pauses. It counts down to 0 and stays there until
-    # enough cards are selected. When the 3+ threshold is met AND the
-    # timer has expired, the game starts immediately.
+    # ✅ FIXED BEHAVIOR:
+    # The timer counts 60 → 0 and STOPS at 0:00 (does not reset).
+    # The game starts as soon as BOTH conditions are true:
+    #   1. 3+ cards are selected globally
+    #   2. the timer has reached 0:00
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
@@ -2087,8 +2088,8 @@ if not st.session_state.game_started:
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
     
-    # Timer resets back to 1:00 whenever it hits 0:00. It only stops
-    # resetting when we have 3+ cards — then the game starts.
+    # ✅ Timer now stops at 0:00 (does not reset). Game starts only when
+    # BOTH 3+ cards are selected AND the timer has reached 0:00.
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
