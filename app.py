@@ -408,7 +408,7 @@ def init_session_state():
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
-        st.session_state.columns_per_row = 5
+        st.session_state.columns_per_row = 6
     if 'global_synced' not in st.session_state:
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
