@@ -408,7 +408,7 @@ def init_session_state():
     if 'card_owner' not in st.session_state:
         st.session_state.card_owner = {}
     if 'columns_per_row' not in st.session_state:
-        st.session_state.columns_per_row = 6
+        st.session_state.columns_per_row = 5
     if 'global_synced' not in st.session_state:
         st.session_state.global_synced = False
     if 'timer_start_time' not in st.session_state:
@@ -429,10 +429,6 @@ def init_session_state():
         st.session_state.deposit_msg_text = ""
     if 'flash_msg' not in st.session_state:
         st.session_state.flash_msg = ""
-    if 'celebration_start_time' not in st.session_state:
-        st.session_state.celebration_start_time = None
-    if 'auto_return_done' not in st.session_state:
-        st.session_state.auto_return_done = False
 
 init_session_state()
 
@@ -472,11 +468,10 @@ def load_global_winners():
                         data.get("last_called_number", None),
                         data.get("auto_called_count", 0),
                         data.get("game_over", False),
-                        data.get("prize_distributed", False),
-                        data.get("timestamp", 0))
+                        data.get("prize_distributed", False))
     except:
         pass
-    return [], False, set(), None, 0, False, False, 0
+    return [], False, set(), None, 0, False, False
 
 def clear_global_winners():
     try:
@@ -487,7 +482,7 @@ def clear_global_winners():
         return False
 
 def sync_global_winners():
-    winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
+    winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
         st.session_state.winner_declared = winner_declared
@@ -499,8 +494,6 @@ def sync_global_winners():
             st.session_state.auto_called_count = auto_called_count
         st.session_state.game_over = game_over
         st.session_state.prize_distributed = prize_distributed
-        if st.session_state.celebration_start_time is None and ts > 0:
-            st.session_state.celebration_start_time = ts
         return True
     return False
 
@@ -510,7 +503,6 @@ def sync_global_winners():
 
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
-CELEBRATION_DURATION = 3
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -631,248 +623,13 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     except:
         return False
 
-# ===================================================================
-# ✅ GLOBAL TIMER — shared across users in the same process
-# ===================================================================
-
-@st.cache_resource
-def _get_shared_timer_store():
-    return {
-        "timer_start": time.time(),
-        "duration": 60,
-        "game_started": False,
-    }
-
-
-def get_global_timer_file():
-    return "bingo_global_timer.json"
-
-
-def load_global_timer():
-    store = _get_shared_timer_store()
-    return (store.get("timer_start", time.time()),
-            store.get("duration", 60),
-            store.get("game_started", False))
-
-
-def save_global_timer(timer_start, duration=60, game_started=False):
-    store = _get_shared_timer_store()
-    store["timer_start"] = timer_start
-    store["duration"] = duration
-    store["game_started"] = game_started
-    return True
-
-
-def reset_global_timer(duration=60):
-    new_start = time.time()
-    save_global_timer(new_start, duration, False)
-    return new_start
-
-
-def mark_game_started_globally():
-    timer_start, duration, _ = load_global_timer()
-    save_global_timer(timer_start, duration, True)
-
-
-def get_global_remaining_time():
-    """Returns (remaining_seconds, game_started).
-
-    ✅ FIX: Counts cards from BOTH the shared file AND this user's own picks.
-    Whichever is larger wins. This makes it work even when the file isn't
-    shared across Streamlit Cloud containers.
-    """
-    timer_start, duration, game_started = load_global_timer()
-
-    if game_started:
-        return 0, True
-
-    elapsed = time.time() - timer_start
-    remaining = duration - elapsed
-
-    if remaining <= 0:
-        file_taken, _, _, _ = load_global_cards()
-        total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-        if total_now >= 3:
-            return 0, False
-        else:
-            reset_global_timer(60)
-            return 60, False
-
-    return remaining, False
-
-# ===================================================================
-# ✅ GLOBAL CALLER LOCK
-# ===================================================================
-
-def get_caller_lock_file():
-    return "bingo_caller_lock.json"
-
-def load_caller_lock():
-    try:
-        if os.path.exists(get_caller_lock_file()):
-            with open(get_caller_lock_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return {"last_called_at": 0, "last_called_by": None}
-
-def save_caller_lock(last_called_at, last_called_by):
-    try:
-        with open(get_caller_lock_file(), "w") as f:
-            json.dump({
-                "last_called_at": last_called_at,
-                "last_called_by": last_called_by
-            }, f)
-        return True
-    except:
-        return False
-
-def try_global_call():
-    lock = load_caller_lock()
-    now = time.time()
-    last_at = lock.get("last_called_at", 0)
-
-    if now - last_at < 2.0:
-        return None
-
-    save_caller_lock(now, st.session_state.current_user)
-
-    load_game_state()
-    current_called = set(st.session_state.called_numbers)
-
-    if len(current_called) >= 75:
-        return None
-
-    available = [i for i in range(1, 76) if i not in current_called]
-    if not available:
-        return None
-
-    called_num = random.choice(available)
-    st.session_state.called_numbers.add(called_num)
-    st.session_state.last_called_number = called_num
-    st.session_state.auto_called_count = len(st.session_state.called_numbers)
-    save_game_state()
-
-    check_for_winners()
-
-    return called_num
-
-# ===================================================================
-# ✅ GAME STATE
-# ===================================================================
-
-def get_game_state_file():
-    return "bingo_game_state.json"
-
-def save_game_state():
-    try:
-        data = {
-            "called_numbers": list(st.session_state.called_numbers),
-            "last_called_number": st.session_state.last_called_number,
-            "auto_called_count": st.session_state.auto_called_count,
-            "game_started": st.session_state.game_started,
-            "auto_call_started": st.session_state.auto_call_started,
-            "last_call_time": st.session_state.last_call_time,
-            "winner_declared": st.session_state.winner_declared,
-            "game_over": st.session_state.game_over,
-            "prize_distributed": st.session_state.prize_distributed,
-        }
-        with open(get_game_state_file(), "w") as f:
-            json.dump(data, f)
-    except:
-        pass
-
-def load_game_state():
-    try:
-        if os.path.exists(get_game_state_file()):
-            with open(get_game_state_file(), "r") as f:
-                data = json.load(f)
-                st.session_state.called_numbers = set(data.get("called_numbers", []))
-                st.session_state.last_called_number = data.get("last_called_number")
-                st.session_state.auto_called_count = data.get("auto_called_count", 0)
-                st.session_state.auto_call_started = data.get("auto_call_started", False)
-                st.session_state.last_call_time = data.get("last_call_time", time.time())
-                st.session_state.winner_declared = data.get("winner_declared", False)
-                st.session_state.game_over = data.get("game_over", False)
-                st.session_state.prize_distributed = data.get("prize_distributed", False)
-    except:
-        pass
-
-def clear_game_state():
-    try:
-        if os.path.exists(get_game_state_file()):
-            os.remove(get_game_state_file())
-        return True
-    except:
-        return False
-
-# ===================================================================
-# ✅ RESET FOR NEXT ROUND
-# ===================================================================
-
-def reset_for_next_round():
-    clear_global_winners()
-    clear_game_state()
-    reset_global_timer(60)
-    save_global_cards([], {}, time.time(), 60)
-    
-    try:
-        if os.path.exists(get_caller_lock_file()):
-            os.remove(get_caller_lock_file())
-    except:
-        pass
-    
-    st.session_state.selected_card = None
-    st.session_state.clicked_numbers = set()
-    st.session_state.called_numbers = set()
-    st.session_state.last_called_number = None
-    st.session_state.auto_called_count = 0
-    st.session_state.game_started = False
-    st.session_state.auto_call_started = False
-    st.session_state.winner_declared = False
-    st.session_state.game_over = False
-    st.session_state.winners_list = []
-    st.session_state.prize_distributed = False
-    st.session_state.card_selection_time = 60
-    st.session_state.timer_start_time = time.time()
-    st.session_state.taken_cards = []
-    st.session_state.card_owner = {}
-    st.session_state.celebration_start_time = None
-    st.session_state.auto_return_done = False
-    
-    save_game_state()
-
-# ===================================================================
-# ✅ SYNC GLOBAL CARDS + STALE-GAME RECOVERY
-# ===================================================================
-
 def sync_global_cards():
-    global_taken, global_owner, _, _ = load_global_cards()
+    global_taken, global_owner, global_timer_start, global_timer_value = load_global_cards()
     
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-    
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
-    if game_started:
-        st.session_state.game_started = True
-    
-    load_game_state()
-    
-    # ✅ STALE-GAME RECOVERY — only reset on winner or all-called
-    called_count = len(st.session_state.called_numbers)
-    winner_done = st.session_state.winner_declared
-    all_called = called_count >= 75
-    
-    if winner_done or all_called:
-        reset_for_next_round()
-        global_taken, global_owner, _, _ = load_global_cards()
-        st.session_state.taken_cards = list(global_taken)
-        st.session_state.card_owner = dict(global_owner)
-        remaining, game_started = get_global_remaining_time()
-        st.session_state.card_selection_time = remaining
-        if game_started:
-            st.session_state.game_started = True
+    st.session_state.timer_start_time = global_timer_start
+    st.session_state.card_selection_time = global_timer_value
     
     current_user = st.session_state.current_user
     if current_user:
@@ -883,42 +640,73 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
-        # ✅ Merge with existing session picks so we don't lose them
-        st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
-    # If no current user, leave clicked_numbers alone
+        st.session_state.clicked_numbers = user_cards
+    else:
+        st.session_state.clicked_numbers = set()
 
 # ===================================================================
-# ✅ START-THE-GAME CHECK
+# ✅ QUERY PARAM HANDLER — Processes card taps from the iframe grid
 # ===================================================================
 
-def maybe_start_game():
-    """Start the game when BOTH conditions are true:
-       1. 3+ cards selected (from file OR this user's own picks)
-       2. Shared timer reached 0:00
-    """
-    if st.session_state.game_started:
-        return
-
-    # ✅ Count from BOTH sources
-    file_taken, _, _, _ = load_global_cards()
-    total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-    min_required = 3
-
-    if total_now < min_required:
-        return
-
-    remaining, _ = get_global_remaining_time()
-
-    if remaining <= 0:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
+if "select_card" in st.query_params:
+    try:
+        card_id = int(st.query_params["select_card"])
+        
+        sync_global_cards()
+        load_all_data()
+        
+        if st.session_state.current_user:
+            is_taken = card_id in st.session_state.taken_cards
+            is_mine = card_id in st.session_state.clicked_numbers
+            has_max = len(st.session_state.clicked_numbers) >= 2
+            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+            
+            if is_mine:
+                # DESELECT — refund 10 ETB
+                st.session_state.clicked_numbers.discard(card_id)
+                if card_id in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(card_id)
+                if str(card_id) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(card_id)]
+                
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+                save_all_data()
+                
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
+            elif is_taken:
+                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
+            elif has_max:
+                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+            elif user_balance < 10:
+                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+            else:
+                # SELECT — deduct 10 ETB
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+                save_all_data()
+                
+                st.session_state.clicked_numbers.add(card_id)
+                if card_id not in st.session_state.taken_cards:
+                    st.session_state.taken_cards.append(card_id)
+                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+                
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+        
+        st.query_params.clear()
         st.rerun()
+    except (ValueError, TypeError):
+        st.query_params.clear()
 
 # ===================================================================
 # AUTHENTICATION
@@ -960,9 +748,6 @@ def login_user(username, password):
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
-        if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
-            reset_for_next_round()
-            sync_global_cards()
         return True, "✅ Admin login successful!"
     
     if username not in st.session_state.user_db:
@@ -974,9 +759,6 @@ def login_user(username, password):
         st.session_state.current_role = st.session_state.user_db[username]["role"]
         load_all_data()
         sync_global_cards()
-        if st.session_state.winner_declared or len(st.session_state.called_numbers) >= 75:
-            reset_for_next_round()
-            sync_global_cards()
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
 
@@ -1012,19 +794,13 @@ def register_user(username, password, name, phone=""):
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
-    save_all_data()
-    save_game_state()
-    save_global_cards(
-        st.session_state.taken_cards,
-        st.session_state.card_owner,
-        st.session_state.timer_start_time,
-        st.session_state.card_selection_time
-    )
-    
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
     st.session_state.global_synced = False
+    st.session_state.clicked_numbers = set()
+    st.session_state.taken_cards = []
+    st.session_state.card_owner = {}
 
 # ===================================================================
 # ADMIN PANEL
@@ -1459,9 +1235,7 @@ def check_for_winners():
         st.session_state.winner_declared = True
         st.session_state.game_over = True
         st.session_state.auto_call_started = False
-        st.session_state.celebration_start_time = time.time()
         distribute_prizes(winners_found)
-        save_game_state()
         
         save_global_winners(
             winners_found,
@@ -1477,8 +1251,7 @@ def distribute_prizes(winners):
     if st.session_state.prize_distributed:
         return
     
-    total_cards = len(st.session_state.taken_cards)
-    total_prize = total_cards * PRIZE_PER_CARD
+    total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
     
     for winner in winners:
@@ -1720,10 +1493,17 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - ADAPTED FROM FIRST ATTACHMENT
+# CARD SELECTION FUNCTION - IFRAME VERSION (100% MOBILE)
 # ===================================================================
 
 def render_card_selection():
+    """Render card selection using an IFRAME — 100% mobile compatible.
+    
+    The iframe uses its own rendering context so Streamlit's mobile
+    stacking rules cannot reach inside it. Tapping a card navigates
+    the parent URL with ?select_card=N which Streamlit reads.
+    """
+    
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
@@ -1737,33 +1517,33 @@ def render_card_selection():
         </div>
         """, unsafe_allow_html=True)
         return
-
+    
+    sync_global_cards()
+    load_all_data()
+    
+    # Show flash message
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
-
-    remaining = st.session_state.card_selection_time
-    game_started = st.session_state.game_started
-
-    if game_started:
-        st.rerun()
-        return
-
+    
+    current_time = time.time()
+    elapsed = current_time - st.session_state.timer_start_time
+    remaining = max(0, st.session_state.card_selection_time - elapsed)
+    st.session_state.card_selection_time = remaining
+    
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
-
+    
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
-
-    # Count from BOTH sources
-    file_taken, _, _, _ = load_global_cards()
-    total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
+    
+    total_selected = len(st.session_state.taken_cards)
     your_cards = len(st.session_state.clicked_numbers)
     available = 201 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
-
+    
     if not enough_cards:
         color = "#FF9800"
     elif remaining <= 10:
@@ -1772,7 +1552,8 @@ def render_card_selection():
         color = "#FF9800"
     else:
         color = "#FFD700"
-
+    
+    # Status header
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">
@@ -1788,181 +1569,200 @@ def render_card_selection():
         </div>
     </div>
     """, unsafe_allow_html=True)
-
+    
+    # Status messages
     if not enough_cards:
-        st.warning(f"⚠️ Waiting for {min_cards_required - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
+        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start! 🎯")
+    elif remaining <= 10:
+        st.warning(f"⚠️ Only {int(remaining)} seconds left! ⏰")
+    elif remaining <= 30:
+        st.info(f"⏱️ {int(remaining)} seconds remaining... 🎯")
     else:
-        st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
-
+        st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
+    
+    # Cards per row selector
     col_options = [4, 5, 6, 7, 8]
-    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
-
+    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 5
+    
     selected_cols = st.selectbox(
         f"📊 Cards per row (your view — current: {current_value})",
         options=col_options,
         index=col_options.index(current_value),
         key=f"cards_per_row_select_{st.session_state.current_user}"
     )
-
+    
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
         st.rerun()
-
+    
     cols_per_row = st.session_state.columns_per_row
-
+    
+    # Build grid HTML
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
-
+    
     cells_html = ""
     for i in range(1, 202):
         is_mine = i in clicked
         is_taken = i in taken and not is_mine
-
+        
         if is_mine:
             bg = "rgba(76,175,80,0.7)"
             fg = "#FFFFFF"
             border = "#4CAF50"
             border_w = "3px"
-            cursor = "pointer"
         elif is_taken:
             bg = "rgba(255,0,0,0.2)"
             fg = "rgba(255,255,255,0.4)"
             border = "rgba(255,0,0,0.3)"
             border_w = "2px"
-            cursor = "not-allowed"
         else:
             bg = "linear-gradient(135deg, #FFD700, #FFA500)"
             fg = "#1a1a2e"
             border = "rgba(255,255,255,0.2)"
             border_w = "2px"
-            cursor = "pointer"
-
-        if is_mine or not is_taken:
-            cells_html += (
-                f'<a href="?u={st.session_state.current_user}&select_card={i}" '
-                f'style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-decoration:none;'
-                f'text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;'
-                f'-webkit-tap-highlight-color:transparent;">{i}</a>'
-            )
-        else:
-            cells_html += (
-                f'<div style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;">{i}</div>'
-            )
-
+        
+        cells_html += (
+            f'<div class="cell" '
+            f'style="background:{bg}; color:{fg}; border:{border_w} solid {border};" '
+            f'onclick="selectCard({i})">{i}</div>'
+        )
+    
+    num_rows = (201 + cols_per_row - 1) // cols_per_row
+    cell_height = 54
+    total_height = num_rows * cell_height + 40
+    if total_height > 1400:
+        total_height = 1400
+    
+    iframe_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{
+            margin: 0; padding: 0;
+            background: transparent;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }}
+        .grid {{
+            display: grid !important;
+            grid-template-columns: repeat({cols_per_row}, minmax(0, 1fr)) !important;
+            gap: 5px;
+            padding: 8px;
+            width: 100%;
+        }}
+        .cell {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }}
+        .cell:hover {{
+            transform: scale(1.08);
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        }}
+        .cell:active {{
+            transform: scale(0.92);
+        }}
+        @media (max-width: 500px) {{
+            .cell {{
+                height: 42px;
+                font-size: 13px;
+                border-radius: 6px;
+            }}
+            .grid {{
+                gap: 4px;
+                padding: 5px;
+            }}
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="grid">{cells_html}</div>
+        <script>
+            function selectCard(num) {{
+                try {{
+                    var url = new URL(window.parent.location.href);
+                    url.searchParams.set('select_card', num);
+                    window.parent.location.href = url.toString();
+                }} catch (e) {{
+                    try {{
+                        var url2 = new URL(window.top.location.href);
+                        url2.searchParams.set('select_card', num);
+                        window.top.location.href = url2.toString();
+                    }} catch (e2) {{
+                        console.error('Navigation error:', e2);
+                    }}
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
         <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">
             🎯 Tap a card to SELECT (10 ETB) or 🟢 green to DESELECT
         </div>
     </div>
-
-    <div style="
-        display:grid;
-        grid-template-columns:repeat({cols_per_row}, minmax(0, 1fr));
-        gap:6px;
-        padding:8px;
-        background:rgba(0,0,0,0.15);
-        border-radius:10px;
-        border:1px solid rgba(255,255,255,0.08);
-        max-height:70vh;
-        overflow-y:auto;
-    ">
-        {cells_html}
-    </div>
-
+    """, unsafe_allow_html=True)
+    
+    components.html(iframe_html, height=total_height, scrolling=True)
+    
+    st.markdown("""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
         🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
     </div>
     """, unsafe_allow_html=True)
-
+    
+    # Selected cards list with deselect buttons
+    if your_cards > 0:
+        st.markdown("### 📋 Your Selected Cards")
+        for cid in sorted(list(st.session_state.clicked_numbers)):
+            if st.button(f"🃏 Card #{cid}  —  ✖ DESELECT (Refund 10 ETB)",
+                         use_container_width=True, key=f"desel_{cid}"):
+                sync_global_cards()
+                st.session_state.clicked_numbers.discard(cid)
+                if cid in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(cid)
+                if str(cid) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(cid)]
+                if st.session_state.current_user in st.session_state.user_db:
+                    st.session_state.user_db[st.session_state.current_user]["balance"] = st.session_state.user_db[st.session_state.current_user].get("balance", 0) + 10
+                    save_all_data()
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.success(f"✅ Card #{cid} refunded. +10 ETB")
+                time.sleep(0.4)
+                st.rerun()
+    
     progress = 1 - (remaining / 60) if remaining > 0 else 1
     st.progress(progress)
-
+    
     if enough_cards:
-        st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
+        st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
-        st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s) to start. Timer keeps running... 🃏")
-
-# ===================================================================
-# ✅ QUERY PARAM HANDLER
-# ===================================================================
-
-if "select_card" in st.query_params:
-    try:
-        card_id = int(st.query_params["select_card"])
-        url_user = st.query_params.get("u", None)
-
-        if (not st.session_state.logged_in) and url_user:
-            load_all_data()
-            if url_user in st.session_state.user_db:
-                st.session_state.logged_in = True
-                st.session_state.current_user = url_user
-                st.session_state.current_role = st.session_state.user_db[url_user].get("role", "player")
-
-        sync_global_cards()
-        load_all_data()
-
-        if st.session_state.current_user:
-            is_taken = card_id in st.session_state.taken_cards
-            is_mine = card_id in st.session_state.clicked_numbers
-            has_max = len(st.session_state.clicked_numbers) >= 2
-            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-
-            if is_mine:
-                st.session_state.clicked_numbers.discard(card_id)
-                if card_id in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(card_id)
-                if str(card_id) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(card_id)]
-
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                save_all_data()
-
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
-            elif is_taken:
-                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
-            elif has_max:
-                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
-            elif user_balance < 10:
-                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
-            else:
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                save_all_data()
-
-                st.session_state.clicked_numbers.add(card_id)
-                if card_id not in st.session_state.taken_cards:
-                    st.session_state.taken_cards.append(card_id)
-                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
-
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
-
-        st.query_params.clear()
-        if url_user:
-            st.query_params["u"] = url_user
-        st.rerun()
-    except (ValueError, TypeError):
-        st.query_params.clear()
-        st.rerun()
+        st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... 🃏")
 
 # ===================================================================
 # MAIN APP
@@ -2077,40 +1877,93 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# ✅ SYNC GLOBAL STATE
+# TIMER
 # ===================================================================
 
-sync_global_cards()
-sync_global_winners()
+if st.session_state.game_started:
+    pass
+else:
+    current_time = time.time()
+    elapsed = current_time - st.session_state.timer_start_time
+    remaining = max(0, st.session_state.card_selection_time - elapsed)
+    st.session_state.card_selection_time = remaining
+    
+    if remaining <= 0 and not st.session_state.game_started:
+        total_selected = len(st.session_state.taken_cards)
+        min_cards_required = 3
+        
+        if total_selected >= min_cards_required:
+            st.session_state.card_selection_time = 0
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            
+            if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
+                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+            
+            save_global_cards(
+                st.session_state.taken_cards,
+                st.session_state.card_owner,
+                st.session_state.timer_start_time,
+                0
+            )
+            st.rerun()
+        else:
+            st.session_state.timer_start_time = time.time()
+            st.session_state.card_selection_time = 30
+            save_global_cards(
+                st.session_state.taken_cards,
+                st.session_state.card_owner,
+                st.session_state.timer_start_time,
+                30
+            )
+            st.warning(f"⚠️ Only {total_selected}/3 cards selected. Waiting for more players to join...")
+            st.rerun()
 
 # ===================================================================
-# ✅ START THE GAME — top level, runs every tick
+# SYNC GLOBAL WINNERS
 # ===================================================================
-maybe_start_game()
+
+if not st.session_state.winner_declared and not st.session_state.game_started:
+    if sync_global_winners():
+        st.rerun()
+
+if st.session_state.game_started and not st.session_state.winner_declared:
+    if sync_global_winners():
+        st.rerun()
 
 # ===================================================================
 # AUTO-CALL NUMBERS
 # ===================================================================
 
 if st.session_state.game_started and not st.session_state.winner_declared:
-    just_called = try_global_call()
-    load_game_state()
-
-    if just_called is not None:
-        st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-
-    time.sleep(0.5)
-    st.rerun()
-
-# ===================================================================
-# 3-SECOND CELEBRATION AUTO-RETURN
-# ===================================================================
-
-if st.session_state.winner_declared and st.session_state.celebration_start_time:
-    elapsed = time.time() - st.session_state.celebration_start_time
-    if elapsed >= CELEBRATION_DURATION:
-        reset_for_next_round()
-        st.rerun()
+    if not st.session_state.auto_call_started:
+        st.session_state.auto_call_started = True
+        st.session_state.last_call_time = time.time()
+        if len(st.session_state.called_numbers) < 75:
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = time.time()
+                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
+                check_for_winners()
+                st.rerun()
+    
+    if len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
+        current_time = time.time()
+        if current_time - st.session_state.last_call_time >= 2.0:
+            available = [i for i in range(1, 76) if i not in st.session_state.called_numbers]
+            if available:
+                called_num = random.choice(available)
+                st.session_state.called_numbers.add(called_num)
+                st.session_state.last_called_number = called_num
+                st.session_state.auto_called_count += 1
+                st.session_state.last_call_time = current_time
+                st.markdown(get_number_sound_js(called_num), unsafe_allow_html=True)
+                check_for_winners()
+                st.rerun()
 
 # ===================================================================
 # GAME LOOP - ADMIN CANNOT PLAY
@@ -2123,10 +1976,13 @@ if st.session_state.current_role == "admin":
         display_master_board()
         
         if st.session_state.winner_declared:
+            total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+            prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+            
             st.markdown("""
             <div style="background:rgba(255,215,0,0.1);border:2px solid #FFD700;border-radius:15px;padding:20px;text-align:center;margin:20px 0;">
                 <h3 style="color:#FFD700;">🏆 Game Finished!</h3>
-                <p style="color:rgba(255,255,255,0.8);">Next round starting automatically...</p>
+                <p style="color:rgba(255,255,255,0.8);">Check the winners above.</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -2136,11 +1992,35 @@ if st.session_state.current_role == "admin":
                     patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
                     cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
                     st.success(f"🎉 Winner {idx}: {winner.get('username')} - Card(s): {cards} - {patterns}")
+        
+        if st.button("🔄 Start New Game", use_container_width=True):
+            st.session_state.selected_card = None
+            st.session_state.clicked_numbers = set()
+            st.session_state.called_numbers = set()
+            st.session_state.last_called_number = None
+            st.session_state.auto_called_count = 0
+            st.session_state.game_started = False
+            st.session_state.auto_call_started = False
+            st.session_state.winner_declared = False
+            st.session_state.game_over = False
+            st.session_state.winners_list = []
+            st.session_state.prize_distributed = False
+            st.session_state.card_selection_time = 60
+            st.session_state.timer_start_time = time.time()
+            st.session_state.taken_cards = []
+            st.session_state.card_owner = {}
+            st.session_state.clicked_numbers = set()
+            
+            clear_global_winners()
+            save_global_cards([], {}, st.session_state.timer_start_time, 60)
+            
+            st.success("🔄 New game started! Select your cards for the next round.")
+            time.sleep(0.5)
+            st.rerun()
     else:
         st.info("⏳ Waiting for game to start... Players are selecting cards.")
         
-        file_taken, _, _, _ = load_global_cards()
-        total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
+        total_selected = len(st.session_state.taken_cards)
         st.markdown(f"""
         <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
             <h4 style="color:#FFD700;text-align:center;">📊 Card Selection Status</h4>
@@ -2353,12 +2233,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ===================================================================
-# AUTO-RERUN
-# ===================================================================
-if st.session_state.game_started and not st.session_state.winner_declared:
+# Auto-rerun
+if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
     time.sleep(0.5)
     st.rerun()
-elif not st.session_state.game_started:
-    time.sleep(1)
+elif st.session_state.selected_card is None and not st.session_state.game_started:
+    time.sleep(0.5)
     st.rerun()
