@@ -1696,13 +1696,9 @@ def render_card_selection():
     """, unsafe_allow_html=True)
 
     if not enough_cards:
-        st.warning(f"⚠️ Need {min_cards_required - total_selected} more card(s) to start! 🎯")
-    elif remaining <= 10:
-        st.warning(f"⚠️ Only {int(remaining)} seconds left! ⏰")
-    elif remaining <= 30:
-        st.info(f"⏱️ {int(remaining)} seconds remaining... 🎯")
+        st.warning(f"⚠️ Waiting for {min_cards_required - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
     else:
-        st.info(f"📝 Tap a card to SELECT or tap 🟢 green to DESELECT. {int(remaining)}s left ⏳")
+        st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
 
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
@@ -1799,11 +1795,11 @@ def render_card_selection():
     st.progress(progress)
 
     if enough_cards:
-        st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
+        st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
     else:
-        st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... 🃏")
+    st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
 
-        # ===================================================================
+# ===================================================================
 # ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
 # ===================================================================
 
@@ -1998,35 +1994,34 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# TIMER — auto-start game at 0:00 with 3+ cards
+# TIMER — auto-start game when 3+ cards selected AND time reaches 0
 # ===================================================================
 
 if not st.session_state.game_started:
-    remaining, game_started = get_global_remaining_time()
+        remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     
-    if game_started or remaining <= 0:
-        total_selected = len(st.session_state.taken_cards)
-        min_cards_required = 3
-        
-        if total_selected >= min_cards_required or game_started:
-            mark_game_started_globally()
-            st.session_state.game_started = True
-            st.session_state.auto_call_started = False
-            
-            if len(st.session_state.clicked_numbers) > 0 and st.session_state.selected_card is None:
-                st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-            else:
-                st.session_state.selected_card = -1
-            
-            save_global_cards(
-                st.session_state.taken_cards,
-                st.session_state.card_owner,
-                st.session_state.timer_start_time,
-                0
-            )
-            save_game_state()
-            st.rerun()
+    total_selected_now = len(st.session_state.taken_cards)
+    min_cards_required_now = 3
+    
+    # If timer hit 0 but not enough cards, reset the timer and stay here
+    if remaining <= 0 and total_selected_now < min_cards_required_now:
+        reset_global_timer(60)
+        st.session_state.card_selection_time = 60
+        remaining = 60
+    
+    # Only start when BOTH conditions are met
+    if remaining <= 0 and total_selected_now >= min_cards_required_now:
+        mark_game_started_globally()
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.session_state.selected_card = -1
+        save_game_state()
+        st.rerun()
+        return
 
 # ===================================================================
 # AUTO-CALL NUMBERS
