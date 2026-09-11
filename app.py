@@ -2199,7 +2199,14 @@ if st.session_state.game_started:
                 🏅 {winning_pattern}
             </div>
             <div style="font-size:1.1rem;color:#FFD700;margin:5px 0;">
-                🎊🎊🎊 ለቀጣዩ ዙር በራስ-ሰር ይመለሳል!!! 🎊🎊🎊
+                🎊🎊🎊ፈጥነው ካርቴላ ይምረጡ!!!🎊🎊🎊
+            </div>
+            <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:3px 0;">
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">🌟የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">✨</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">⭐</span>
+                <span style="font-size:1.5rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟👇</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2212,6 +2219,7 @@ if st.session_state.game_started:
         if st.session_state.winners_list:
             card_cols = st.columns(3)
             card_idx = 0
+            
             all_winner_cards = []
             winner_card_patterns = {}
             
@@ -2232,6 +2240,30 @@ if st.session_state.game_started:
                 patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
                 cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
+        
+        if st.button("🔄 New Game", use_container_width=True):
+            st.session_state.selected_card = None
+            st.session_state.clicked_numbers = set()
+            st.session_state.called_numbers = set()
+            st.session_state.last_called_number = None
+            st.session_state.auto_called_count = 0
+            st.session_state.game_started = False
+            st.session_state.auto_call_started = False
+            st.session_state.winner_declared = False
+            st.session_state.game_over = False
+            st.session_state.winners_list = []
+            st.session_state.prize_distributed = False
+            st.session_state.card_selection_time = 60
+            st.session_state.timer_start_time = time.time()
+            st.session_state.taken_cards = []
+            st.session_state.card_owner = {}
+            st.session_state.clicked_numbers = set()
+            
+            clear_global_winners()
+            save_global_cards([], {}, st.session_state.timer_start_time, 60)
+            st.success("🔄 New game started! Select your cards for the next round.")
+            time.sleep(0.5)
+            st.rerun()
     else:
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
@@ -2251,13 +2283,15 @@ if st.session_state.game_started:
         board_col, cards_col = st.columns([2, 1])
         
         with board_col:
-            display_master_board()
+            display_master_board() 
         
         with cards_col:
             if all_player_cards:
                 st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
                 for card_id in all_player_cards:
-                    display_selected_card(card_id, list(st.session_state.called_numbers), False)
+                    narrow_card_col = st.columns([1])[0]
+                    with narrow_card_col:
+                        display_selected_card(card_id, list(st.session_state.called_numbers), False)
             else:
                 st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
                 st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
@@ -2265,6 +2299,19 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
+    if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
+            st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+            st.session_state.selected_card = -1
+        
+        st.rerun()
+    
     if not st.session_state.game_started:
         st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         render_card_selection()
