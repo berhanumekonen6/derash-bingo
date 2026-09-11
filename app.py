@@ -1641,7 +1641,17 @@ def render_card_selection():
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
 
-    if game_started or remaining <= 0:
+    total_selected_now = len(st.session_state.taken_cards)
+    min_cards_required_now = 3
+
+    # If timer hit 0 but not enough cards, reset the timer and stay here
+    if remaining <= 0 and total_selected_now < min_cards_required_now:
+        reset_global_timer(60)
+        st.session_state.card_selection_time = 60
+        remaining = 60
+
+    # Only start when BOTH conditions are met
+    if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -1795,9 +1805,9 @@ def render_card_selection():
     st.progress(progress)
 
     if enough_cards:
-    st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
+        st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
     else:
-    st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
+        st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
 
 # ===================================================================
 # ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
@@ -1998,7 +2008,7 @@ sync_global_winners()
 # ===================================================================
 
 if not st.session_state.game_started:
-        remaining, game_started = get_global_remaining_time()
+    remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     
     total_selected_now = len(st.session_state.taken_cards)
