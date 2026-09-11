@@ -2031,8 +2031,7 @@ if not st.session_state.game_started:
             st.session_state.selected_card = -1
         save_game_state()
         st.rerun()
-        return
-
+        
 # ===================================================================
 # AUTO-CALL NUMBERS
 # ===================================================================
