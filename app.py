@@ -1641,7 +1641,7 @@ def render_card_selection():
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
 
-        total_selected_now = len(st.session_state.taken_cards)
+    total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
 
     # Timer NEVER pauses. It counts down to 0 and stays there until
@@ -1658,6 +1658,7 @@ def render_card_selection():
         save_game_state()
         st.rerun()
         return
+
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -1802,7 +1803,7 @@ def render_card_selection():
     if enough_cards:
         st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
     else:
-        st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
+        st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s) to start. Timer keeps running... 🃏")
 
 # ===================================================================
 # ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
@@ -2009,13 +2010,9 @@ if not st.session_state.game_started:
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
     
-    # If timer hit 0 but not enough cards, reset the timer and stay here
-    if remaining <= 0 and total_selected_now < min_cards_required_now:
-        reset_global_timer(60)
-        st.session_state.card_selection_time = 60
-        remaining = 60
-    
-    # Only start when BOTH conditions are met
+    # Timer NEVER pauses. It counts down to 0 and stays there until
+    # enough cards are selected. When the 3+ threshold is met AND the
+    # timer has expired, the game starts immediately.
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
@@ -2026,7 +2023,7 @@ if not st.session_state.game_started:
             st.session_state.selected_card = -1
         save_game_state()
         st.rerun()
-        
+
 # ===================================================================
 # AUTO-CALL NUMBERS
 # ===================================================================
