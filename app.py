@@ -2087,9 +2087,8 @@ if not st.session_state.game_started:
     total_selected_now = len(st.session_state.taken_cards)
     min_cards_required_now = 3
     
-    # Timer NEVER pauses. It counts down to 0 and stays there until
-    # enough cards are selected. When the 3+ threshold is met AND the
-    # timer has expired, the game starts immediately.
+    # Timer resets back to 1:00 whenever it hits 0:00. It only stops
+    # resetting when we have 3+ cards — then the game starts.
     if remaining <= 0 and total_selected_now >= min_cards_required_now:
         mark_game_started_globally()
         st.session_state.game_started = True
@@ -2326,10 +2325,14 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Auto-rerun
-if st.session_state.selected_card is not None and len(st.session_state.called_numbers) < 75 and not st.session_state.winner_declared:
+# ===================================================================
+# AUTO-RERUN — keeps the app ticking
+# ===================================================================
+if st.session_state.game_started and not st.session_state.winner_declared:
+    # Game is running — rerun fast so numbers are called promptly
     time.sleep(0.5)
     st.rerun()
-elif st.session_state.selected_card is None and not st.session_state.game_started:
-    time.sleep(0.5)
+elif not st.session_state.game_started:
+    # Card-selection screen — tick the timer once per second
+    time.sleep(1)
     st.rerun()
