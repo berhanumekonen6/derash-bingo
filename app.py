@@ -1751,7 +1751,7 @@ def render_card_selection():
         # Clickable link only if actionable
         if is_mine or not is_taken:
             cells_html += (
-                f'<a href="?select_card={i}" target="_self" '
+                f'<a href="?u={st.session_state.current_user}&select_card={i}" '
                 f'style="display:flex;align-items:center;justify-content:center;'
                 f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
                 f'background:{bg};color:{fg};border:{border_w} solid {border};'
@@ -1802,6 +1802,81 @@ def render_card_selection():
         st.caption(f"✅ {total_selected} cards ready! Game will start in {int(remaining)}s 🎯")
     else:
         st.caption(f"⏸️ Waiting for {min_cards_required - total_selected} more card(s)... 🃏")
+
+        # ===================================================================
+# ✅ QUERY PARAM HANDLER — processes card clicks from HTML links
+# ===================================================================
+
+if "select_card" in st.query_params:
+    try:
+        card_id = int(st.query_params["select_card"])
+        url_user = st.query_params.get("u", None)
+
+        # ── Restore login if session was lost during page reload ──
+        if (not st.session_state.logged_in) and url_user:
+            load_all_data()
+            if url_user in st.session_state.user_db:
+                st.session_state.logged_in = True
+                st.session_state.current_user = url_user
+                st.session_state.current_role = st.session_state.user_db[url_user].get("role", "player")
+
+        sync_global_cards()
+        load_all_data()
+
+        if st.session_state.current_user:
+            is_taken = card_id in st.session_state.taken_cards
+            is_mine = card_id in st.session_state.clicked_numbers
+            has_max = len(st.session_state.clicked_numbers) >= 2
+            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+
+            if is_mine:
+                st.session_state.clicked_numbers.discard(card_id)
+                if card_id in st.session_state.taken_cards:
+                    st.session_state.taken_cards.remove(card_id)
+                if str(card_id) in st.session_state.card_owner:
+                    del st.session_state.card_owner[str(card_id)]
+
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+                save_all_data()
+
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
+            elif is_taken:
+                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
+            elif has_max:
+                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+            elif user_balance < 10:
+                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+            else:
+                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+                save_all_data()
+
+                st.session_state.clicked_numbers.add(card_id)
+                if card_id not in st.session_state.taken_cards:
+                    st.session_state.taken_cards.append(card_id)
+                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
+
+                save_global_cards(
+                    st.session_state.taken_cards,
+                    st.session_state.card_owner,
+                    st.session_state.timer_start_time,
+                    st.session_state.card_selection_time
+                )
+                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
+
+        # Keep ?u= so subsequent clicks still work; drop only select_card
+        st.query_params.clear()
+        if url_user:
+            st.query_params["u"] = url_user
+        st.rerun()
+    except (ValueError, TypeError):
+        st.query_params.clear()
+        st.rerun()
 
 # ===================================================================
 # MAIN APP
