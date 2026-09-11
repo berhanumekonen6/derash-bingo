@@ -1795,7 +1795,7 @@ def render_card_selection():
     st.progress(progress)
 
     if enough_cards:
-        st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
+    st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
     else:
     st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s). Timer will reset to 60s until then... 🃏")
 
