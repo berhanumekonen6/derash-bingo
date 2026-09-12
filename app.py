@@ -1431,6 +1431,30 @@ BINGO_CARDS = [
     {"id": 203, "cells": [['8', '16', '41', '59', '67'], ['6', '26', '34', '58', '65'], ['14', '23', 'F', '57', '62'], ['4', '18', '31', '55', '72'], ['5', '25', '44', '52', '68']]},
     {"id": 204, "cells": [['12', '20', '39', '55', '64'], ['5', '26', '33', '58', '67'], ['6', '17', 'F', '54', '74'], ['3', '29', '40', '57', '71'], ['1', '19', '31', '49', '69']]},
 ]
+
+# ===================================================================
+# ✅ TEMPORARY DUPLICATE CHECK — remove after verifying
+# ===================================================================
+_seen_cells = {}
+_duplicate_ids = []
+for _c in BINGO_CARDS:
+    _key = str(_c["cells"])
+    if _key in _seen_cells:
+        _duplicate_ids.append(f"#{_seen_cells[_key]} = #{_c['id']}")
+    else:
+        _seen_cells[_key] = _c["id"]
+
+if _duplicate_ids:
+    st.error(f"⚠️ Duplicate cards: {', '.join(_duplicate_ids)}")
+else:
+    st.success(f"✅ All {len(BINGO_CARDS)} cards are unique!")
+
+def get_card(card_id):
+    for card in BINGO_CARDS:
+        if card["id"] == card_id:
+            return card
+    return None
+
 def get_card(card_id):
     for card in BINGO_CARDS:
         if card["id"] == card_id:
@@ -1824,7 +1848,7 @@ def render_card_selection():
     file_taken, _, _, _ = load_global_cards()
     total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
     your_cards = len(st.session_state.clicked_numbers)
-    available = 201 - total_selected
+    available = 204 - total_selected
     min_cards_required = 3
     enough_cards = total_selected >= min_cards_required
 
@@ -1844,7 +1868,7 @@ def render_card_selection():
         </div>
         <div style="font-size:0.9rem;color:#FFFFFF;line-height:1.9;">
             🟢 <b>Your Cards:</b> {your_cards}/2 &nbsp;|&nbsp;
-            📊 <b>Global:</b> {total_selected}/201 &nbsp;|&nbsp;
+            📊 <b>Global:</b> {total_selected}/204 &nbsp;|&nbsp;
             ⬜ <b>Available:</b> {available}
         </div>
         <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">
@@ -1885,13 +1909,12 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Real st.button grid — forced horizontal on mobile via CSS
-    for row_start in range(1, 202, cols_per_row):
-        cols = st.columns(cols_per_row)
-        for col_idx in range(cols_per_row):
-            card_num = row_start + col_idx
-            if card_num > 201:
-                break
+    for row_start in range(1, 205, cols_per_row):
+    cols = st.columns(cols_per_row)
+    for col_idx in range(cols_per_row):
+        card_num = row_start + col_idx
+        if card_num > 204:
+            break
 
             is_mine = card_num in clicked
             is_taken = card_num in taken and not is_mine
@@ -2183,7 +2206,7 @@ if st.session_state.current_role == "admin":
         <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
             <h4 style="color:#FFD700;text-align:center;">📊 Card Selection Status</h4>
             <p style="color:rgba(255,255,255,0.8);text-align:center;">
-                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/201</strong>
+                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/204</strong>
             </p>
             <p style="color:rgba(255,255,255,0.6);text-align:center;font-size:0.9rem;">
                 Need 3 cards to start the game. Currently: {total_selected}/3
@@ -2401,7 +2424,7 @@ else:
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;border-top:1px solid rgba(255,255,255,0.05);">
-    🎯 Derash BINGO | 201 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
+    🎯 Derash BINGO | 204 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
 </div>
 """, unsafe_allow_html=True)
 
