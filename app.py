@@ -24,7 +24,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
+# CUSTOM CSS
 # ===================================================================
 
 st.markdown("""
@@ -148,7 +148,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ MOBILE GRID FIX — forces columns to stay horizontal on phones
+# ✅ MOBILE GRID FIX
 # ===================================================================
 st.markdown("""
 <style>
@@ -390,9 +390,8 @@ def sync_global_winners():
             st.session_state.auto_called_count = auto_called_count
         st.session_state.game_over = game_over
         st.session_state.prize_distributed = prize_distributed
-        # ✅ Set celebration timer only once per player
-        if st.session_state.celebration_start_time is None and ts > 0:
-            st.session_state.celebration_start_time = ts
+        # ✅ Do NOT pull the shared timestamp — each player starts their own
+        # 3-second celebration from the moment they first see the winner.
         return True
     return False
 
@@ -535,9 +534,6 @@ def _get_shared_timer_store():
         "duration": 60,
         "game_started": False,
     }
-
-def get_global_timer_file():
-    return "bingo_global_timer.json"
 
 def load_global_timer():
     store = _get_shared_timer_store()
@@ -1601,8 +1597,6 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using real st.button widgets — no URL browsing."""
-
     if not st.session_state.game_started:
         _file_taken_check, _, _, _ = load_global_cards()
         _total_now_check = max(len(_file_taken_check), len(st.session_state.clicked_numbers))
@@ -1948,25 +1942,24 @@ sync_global_winners()
 maybe_start_game()
 
 # ===================================================================
-# ✅ WINNER CELEBRATION — 3 SECONDS — GLOBAL TO ALL PLAYERS
+# ✅ WINNER CELEBRATION — 3 SECONDS PER PLAYER (GLOBAL SYNC)
 # ===================================================================
-# This block ensures EVERY player's page (winner or not) displays the 
-# celebration for exactly 3 seconds once winner_declared is set globally.
+# Each player gets their OWN 3-second window starting from when
+# their session first sees winner_declared == True.
+# This guarantees ALL players see the full celebration.
 
 if st.session_state.winner_declared:
-    # ⚠️ Only rerun if we're within the celebration window
+    # ✅ Start this player's local 3-second countdown
     if st.session_state.celebration_start_time is None:
         st.session_state.celebration_start_time = time.time()
     
     elapsed = time.time() - st.session_state.celebration_start_time
     
-    if elapsed < CELEBRATION_DURATION:
-        # ✅ Show celebration to everyone
-        pass  # The main celebration block below handles the display
-    else:
-        # ✅ 3 seconds passed — reset for everyone
+    if elapsed >= CELEBRATION_DURATION:
+        # ✅ This player has now seen the celebration for 3 full seconds → reset
         reset_for_next_round()
         st.rerun()
+    # else: fall through and render the celebration below
 
 # ===================================================================
 # GAME LOOP - ADMIN CANNOT PLAY
@@ -2024,8 +2017,22 @@ if st.session_state.current_role == "admin":
 if st.session_state.game_started:
     all_player_cards = list(st.session_state.clicked_numbers)
     
+    # ✅ FALLBACK: Rebuild this user's own cards if the list is empty
+    if not all_player_cards and st.session_state.current_user:
+        _gt, _go, _, _ = load_global_cards()
+        _recovered = set()
+        for _cid_str, _owner in _go.items():
+            if _owner == st.session_state.current_user:
+                try:
+                    _recovered.add(int(_cid_str))
+                except (ValueError, TypeError):
+                    pass
+        if _recovered:
+            st.session_state.clicked_numbers = _recovered
+            all_player_cards = list(_recovered)
+    
     # ==============================================================
-    # ✅ WINNER DECLARED — SHOW CELEBRATION TO ALL PLAYERS GLOBALLY
+    # ✅ WINNER DECLARED — CELEBRATION ON EVERY PLAYER'S PAGE
     # ==============================================================
     if st.session_state.winner_declared:
         sync_global_winners()
@@ -2047,7 +2054,6 @@ if st.session_state.game_started:
         
         st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
         
-        # ✅ BIG CELEBRATION BANNER — same for every player
         st.markdown(f"""
         <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
                     border:4px solid #FFD700;
@@ -2089,7 +2095,6 @@ if st.session_state.game_started:
         st.balloons()
         st.snow()
         
-        # ✅ WINNER CARDS WITH PATTERN HIGHLIGHT
         st.markdown("""
         <div style="text-align:center;margin:20px 0 15px 0;">
             <h2 style="color:#FFD700;text-shadow:0 0 30px rgba(255,215,0,0.5);font-size:1.8rem;">
@@ -2104,7 +2109,6 @@ if st.session_state.game_started:
                 for card_id in winner.get("cards", []):
                     winner_card_patterns[card_id] = ", ".join(winner.get("patterns", ["BINGO!"]))
             
-            # Display 3 per row
             for i in range(0, len(all_winner_cards), 3):
                 chunk = all_winner_cards[i:i+3]
                 card_cols = st.columns(len(chunk))
@@ -2113,7 +2117,6 @@ if st.session_state.game_started:
                         winning_pattern_name = winner_card_patterns.get(card_id, "BINGO!")
                         display_selected_card(card_id, list(st.session_state.called_numbers), True, winning_pattern_name)
         
-        # ✅ WINNERS LIST
         if st.session_state.winners_list:
             st.markdown("### 🏆 አሸናፊዎች 🏆")
             for idx, winner in enumerate(st.session_state.winners_list, 1):
@@ -2121,7 +2124,6 @@ if st.session_state.game_started:
                 cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
         
-        # ✅ COUNTDOWN
         if st.session_state.celebration_start_time:
             elapsed = time.time() - st.session_state.celebration_start_time
             remaining_sec = max(0, CELEBRATION_DURATION - elapsed)
@@ -2165,9 +2167,6 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ==============================================================
-    # ✅ GAME NOT STARTED — SHOW CARD SELECTION ONLY
-    # ==============================================================
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2211,7 +2210,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
     st.rerun()
 
 # ===================================================================
-# AUTO-RERUN — while winner displayed, refresh countdown
+# AUTO-RERUN
 # ===================================================================
 
 if st.session_state.game_started and st.session_state.winner_declared:
