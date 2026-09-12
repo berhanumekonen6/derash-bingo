@@ -24,7 +24,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# CUSTOM CSS
+# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
 # ===================================================================
 
 st.markdown("""
@@ -80,6 +80,83 @@ st.markdown("""
         font-size: 0.8rem;
         margin-top: 3px;
     }
+    .cards-grid-wrapper {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 8px;
+        margin: 8px 0;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        width: 100%;
+    }
+    .cards-grid-wrapper::-webkit-scrollbar { width: 6px; }
+    .cards-grid-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+    .cards-grid-wrapper::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 10px; }
+    .card-btn {
+        width: 100% !important;
+        padding: 6px 4px !important;
+        font-size: 0.9rem !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 1.2 !important;
+        border-radius: 8px !important;
+        margin: 0 !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: bold !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #FFFFFF !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        position: relative !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        font-family: Arial, sans-serif !important;
+        box-sizing: border-box !important;
+    }
+    .card-btn:hover:not(.taken) {
+        transform: scale(1.05);
+        border-color: #FFD700 !important;
+        background: rgba(255, 215, 0, 0.2) !important;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
+        z-index: 10;
+    }
+    .card-btn:active { transform: scale(0.95); }
+    .card-btn.selected {
+        border-color: #4CAF50 !important;
+        background: rgba(76, 175, 80, 0.35) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
+        border-width: 3px !important;
+    }
+    .card-btn.selected:hover {
+        border-color: #FF6B6B !important;
+        background: rgba(255, 80, 80, 0.3) !important;
+        box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
+    }
+    .card-btn.taken {
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+        cursor: not-allowed !important;
+        opacity: 0.5 !important;
+    }
+    .card-btn.taken:hover {
+        transform: none !important;
+        border-color: rgba(255, 0, 0, 0.2) !important;
+        background: rgba(255, 0, 0, 0.15) !important;
+        box-shadow: none !important;
+    }
     .winner-card {
         animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
         border: 3px solid #FFD700 !important;
@@ -113,10 +190,63 @@ st.markdown("""
     .stSuccess { border-left: 4px solid #4CAF50 !important; }
     .stWarning { border-left: 4px solid #FF9800 !important; }
     .stError { border-left: 4px solid #F44336 !important; }
+    .winner-glow { animation: winnerPulse 1s ease-in-out infinite alternate; }
     @keyframes winnerPulse {
         0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
         100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
     }
+    .css-1d391kg, .css-1adrfps {
+        background: rgba(0, 0, 0, 0.3) !important;
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .header-timer-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid rgba(255, 215, 0, 0.2) !important;
+        border-radius: 15px;
+        padding: 10px 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .timer-display { color: #FFD700 !important; font-weight: bold; text-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+    .timer-label { color: rgba(255, 255, 255, 0.7) !important; }
+    @media (max-width: 768px) {
+        .main-header { flex-direction: column !important; align-items: center !important; text-align: center !important; }
+        .logo-text h1 { font-size: 1.5rem !important; color: #FFFFFF !important; }
+        .header-timer-container { width: 100% !important; max-width: 300px !important; }
+        .timer-display { font-size: 1.8rem !important; }
+    }
+    .card-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    .board-container {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 15px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    .board-title { color: #FFD700 !important; text-shadow: 0 0 20px rgba(255, 215, 0, 0.1); }
+    .board-number { color: #FFFFFF !important; background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
+    .board-number.called { background: rgba(255, 152, 0, 0.25) !important; color: #FFD700 !important; border-color: #FF9800 !important; box-shadow: 0 0 15px rgba(255, 152, 0, 0.15); }
+    .board-number.last-called { background: rgba(229, 57, 53, 0.2) !important; color: #FF6B6B !important; border-color: #E53935 !important; box-shadow: 0 0 20px rgba(229, 57, 53, 0.2); }
+    .board-stats { color: rgba(255, 255, 255, 0.7) !important; }
+    .board-stats strong { color: #FFD700 !important; }
+    .called-numbers-container { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 15px !important; padding: 15px !important; }
+    .called-numbers-header { color: #FFD700 !important; }
+    .called-number { background: rgba(255, 215, 0, 0.15) !important; color: #FFD700 !important; border: 1px solid rgba(255, 215, 0, 0.1); }
+    .called-number.latest { background: rgba(255, 215, 0, 0.3) !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+    .game-status { background: rgba(0, 0, 0, 0.2) !important; border-left: 4px solid #FFD700 !important; border-radius: 12px !important; padding: 15px !important; margin-top: 15px !important; }
+    .status-message { color: rgba(255, 255, 255, 0.9) !important; }
+    .game-state-indicator { background: rgba(0, 0, 0, 0.2) !important; border: 2px solid rgba(255, 255, 255, 0.1) !important; color: #FFFFFF !important; border-radius: 10px !important; padding: 10px 20px !important; text-align: center !important; font-weight: bold !important; }
+    .game-state-waiting { border-color: #FF9800 !important; color: #FFB74D !important; }
+    .game-state-running { border-color: #4CAF50 !important; color: #81C784 !important; }
+    .game-state-finished { border-color: #FFD700 !important; color: #FFD700 !important; }
+    .stat-box { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 12px !important; padding: 10px 20px !important; }
+    .stat-value { color: #FFD700 !important; font-weight: bold !important; text-shadow: 0 0 20px rgba(255, 215, 0, 0.1); }
+    .stat-label { color: rgba(255, 255, 255, 0.6) !important; }
     .stButton > button {
         background: linear-gradient(135deg, #FFD700, #FFA500) !important;
         color: #1a1a2e !important;
@@ -131,8 +261,71 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
     }
+    .user-info { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
+    .user-details h3 { color: #FFFFFF !important; }
+    .user-balance { color: #FFD700 !important; }
+    .winner-name { color: #FFFFFF !important; }
+    .winner-prize { color: #FFD700 !important; }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
+    .selected-cards-preview { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
+
+    @media (max-width: 768px) {
+        .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
+        .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
+        .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
+        .board-container { padding: 10px !important; margin: 5px 0 !important; }
+        .board-title { font-size: 1.3rem !important; }
+        .motivation-box { padding: 8px 12px !important; }
+        .motivation-box .quote { font-size: 0.85rem !important; }
+        h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
+    }
+
+    @media (max-width: 400px) {
+        .board-number { width: 22px; height: 22px; font-size: 0.62rem; }
+        .board-table td { padding: 2px 1px !important; }
+        .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ===================================================================
+# ✅ MOBILE GRID FIX — forces columns to stay horizontal on phones
+# ===================================================================
+st.markdown("""
+<style>
+    /* ✅ Force Streamlit columns to stay horizontal on mobile */
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            gap: 3px !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div {
+            min-width: 0 !important;
+            flex: 1 1 0 !important;
+            width: auto !important;
+        }
+        div[data-testid="stHorizontalBlock"] .stButton > button {
+            padding: 4px 1px !important;
+            font-size: 11px !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            line-height: 1.1 !important;
+            border-radius: 6px !important;
+        }
+    }
+    /* Compact buttons for the card grid (both mobile & desktop) */
+    .stButton > button {
+        padding: 6px 3px !important;
+        font-size: 13px !important;
+        min-height: 44px !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+    /* Keep card grid container tight */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
+        margin-bottom: 3px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -205,6 +398,7 @@ def get_winner_sound_js():
 # ===================================================================
 
 def init_session_state():
+    """Initialize all session state variables"""
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'current_user' not in st.session_state:
@@ -478,7 +672,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER
+# ✅ GLOBAL TIMER — shared across users in the same process
 # ===================================================================
 
 @st.cache_resource
@@ -521,6 +715,12 @@ def mark_game_started_globally():
 
 
 def get_global_remaining_time():
+    """Returns (remaining_seconds, game_started).
+
+    ✅ FIX: Counts cards from BOTH the shared file AND this user's own picks.
+    Whichever is larger wins. This makes it work even when the file isn't
+    shared across Streamlit Cloud containers.
+    """
     timer_start, duration, game_started = load_global_timer()
 
     if game_started:
@@ -699,6 +899,7 @@ def sync_global_cards():
     
     load_game_state()
     
+    # ✅ STALE-GAME RECOVERY — only reset on winner or all-called
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     all_called = called_count >= 75
@@ -722,16 +923,23 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
+        # ✅ Merge with existing session picks so we don't lose them
         st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
+    # If no current user, leave clicked_numbers alone
 
 # ===================================================================
 # ✅ START-THE-GAME CHECK
 # ===================================================================
 
 def maybe_start_game():
+    """Start the game when BOTH conditions are true:
+       1. 3+ cards selected (from file OR this user's own picks)
+       2. Shared timer reached 0:00
+    """
     if st.session_state.game_started:
         return
 
+    # ✅ Count from BOTH sources
     file_taken, _, _, _ = load_global_cards()
     total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
     min_required = 3
@@ -1552,7 +1760,7 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ CARD SELECTION FUNCTION — REAL st.button (NO URL BROWSING)
+# CARD SELECTION FUNCTION - REAL st.button (NO URL BROWSING)
 # ===================================================================
 
 def render_card_selection():
@@ -1653,7 +1861,7 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Real st.button grid — no URL browsing
+    # ✅ Real st.button grid — forced horizontal on mobile via CSS
     for row_start in range(1, 202, cols_per_row):
         cols = st.columns(cols_per_row)
         for col_idx in range(cols_per_row):
@@ -1668,7 +1876,7 @@ def render_card_selection():
                 if is_mine:
                     # Deselect button — green
                     if st.button(
-                        f"✅ {card_num}",
+                        f"✅{card_num}",
                         key=f"card_btn_{card_num}",
                         use_container_width=True,
                         type="primary",
@@ -1697,7 +1905,7 @@ def render_card_selection():
                 elif is_taken:
                     # Disabled button — taken by someone else
                     st.button(
-                        f"🔴 {card_num}",
+                        f"🔴{card_num}",
                         key=f"card_btn_{card_num}",
                         use_container_width=True,
                         disabled=True,
@@ -1706,7 +1914,7 @@ def render_card_selection():
                 else:
                     # Available — yellow/gold
                     if st.button(
-                        f"🟡 {card_num}",
+                        f"🟡{card_num}",
                         key=f"card_btn_{card_num}",
                         use_container_width=True,
                     ):
@@ -1948,10 +2156,16 @@ if st.session_state.current_role == "admin":
     st.stop()
 
 # ===================================================================
-# ✅ PLAYER GAME LOOP — ONCE GAME STARTS, CARD SELECTION NEVER SHOWN
+# ✅ PLAYER DISPLAY — BINARY SWITCH
+#    game_started == False → card selection
+#    game_started == True  → BINGO board + player's own cards ONLY
 # ===================================================================
 
 if st.session_state.game_started:
+    # ==============================================================
+    # ✅ GAME STARTED — BINGO BOARD + PLAYER'S OWN CARDS ONLY
+    #    Card selection list is PERMANENTLY REMOVED here.
+    # ==============================================================
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
@@ -2078,6 +2292,10 @@ if st.session_state.game_started:
             time.sleep(0.5)
             st.rerun()
     else:
+        # ==========================================================
+        # ✅ GAME RUNNING — BINGO BOARD + PLAYER'S OWN CARDS ONLY
+        #    NO CARD SELECTION GRID IS RENDERED HERE. EVER.
+        # ==========================================================
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -2096,7 +2314,7 @@ if st.session_state.game_started:
         board_col, cards_col = st.columns([2, 1])
         
         with board_col:
-            display_master_board() 
+            display_master_board()
         
         with cards_col:
             if all_player_cards:
@@ -2112,6 +2330,9 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
+    # ==============================================================
+    # ✅ GAME NOT STARTED — SHOW CARD SELECTION ONLY
+    # ==============================================================
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
