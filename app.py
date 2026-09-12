@@ -1940,7 +1940,7 @@ def render_card_selection():
                     # ✅ This is the specific card the player tried to select 3rd time.
                     # Show the warning message on the button itself.
                     if st.button(
-                        "ይቅርታ ከሁለት ካርቴላ በላይ መምረጥ አይችሉም",
+                        "🚫 2+ አይቻልም 🚫",
                         key=f"card_btn_{card_num}",
                         use_container_width=True,
                     ):
