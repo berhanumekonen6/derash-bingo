@@ -677,9 +677,8 @@ def mark_game_started_globally():
 def get_global_remaining_time():
     """Returns (remaining_seconds, game_started).
 
-    ✅ FIX: Counts cards from BOTH the shared file AND this user's own picks.
-    Whichever is larger wins. This makes it work even when the file isn't
-    shared across Streamlit Cloud containers.
+    ✅ Counts cards from BOTH the shared file AND this user's own picks.
+    Whichever is larger wins.
     """
     timer_start, duration, game_started = load_global_timer()
 
@@ -2162,10 +2161,12 @@ if st.session_state.current_role == "admin":
     st.stop()
 
 # ===================================================================
-# PLAYER GAME LOOP
+# ✅ PLAYER GAME LOOP — ONCE GAME STARTS, CARD SELECTION NEVER SHOWN
 # ===================================================================
 
 if st.session_state.game_started:
+    # ✅ CRITICAL: This block ONLY runs when game has started.
+    # Card selection is NEVER rendered here.
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
@@ -2326,6 +2327,7 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
+    # ✅ ONLY show card selection when game has NOT started
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2361,5 +2363,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
     time.sleep(0.5)
     st.rerun()
 elif not st.session_state.game_started:
+    # ✅ Check if game should start on every tick
+    maybe_start_game()
     time.sleep(1)
     st.rerun()
