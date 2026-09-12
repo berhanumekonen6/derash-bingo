@@ -1647,7 +1647,7 @@ if st.session_state.game_started:
                     display_selected_card(cid, list(st.session_state.called_numbers), False)
             else:
                 st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
-        
+                st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
