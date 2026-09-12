@@ -1809,7 +1809,7 @@ def render_card_selection():
 
     ✅ NEW: When the player tries to select a 3rd card, the clicked card button
     itself displays the warning message:
-    "🚫2+ አይቻልም🚫"
+    "🚫 2+ አይቻልም 🚫"
     """
 
     if st.session_state.current_role == "admin":
@@ -1820,13 +1820,12 @@ def render_card_selection():
         <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);border-radius:12px;padding:15px;margin:10px 0;">
             <h4 style="color:#FFD700;text-align:center;">📊 Game Status</h4>
             <p style="color:rgba(255,255,255,0.8);text-align:center;">
-                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/201</strong>
+                Total Cards Selected: <strong style="color:#FFD700;">{total_selected}/204</strong>
             </p>
         </div>
         """, unsafe_allow_html=True)
         return
 
-    # ✅ Only show global flash for non-max-card messages (balance, taken)
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -1909,12 +1908,13 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
 
+    # ✅ Real st.button grid — forced horizontal on mobile via CSS
     for row_start in range(1, 205, cols_per_row):
-    cols = st.columns(cols_per_row)
-    for col_idx in range(cols_per_row):
-        card_num = row_start + col_idx
-        if card_num > 204:
-            break
+        cols = st.columns(cols_per_row)
+        for col_idx in range(cols_per_row):
+            card_num = row_start + col_idx
+            if card_num > 204:
+                break
 
             is_mine = card_num in clicked
             is_taken = card_num in taken and not is_mine
