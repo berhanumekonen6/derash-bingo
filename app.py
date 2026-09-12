@@ -1783,7 +1783,7 @@ def render_card_selection():
 
     ✅ NEW: When the player tries to select a 3rd card, the clicked card button
     itself displays the warning message:
-    "ይቅርታ ከሁለት ካርቴላ በላይ መምረጥ አይችሉም"
+    "🚫2+ አይቻልም🚫"
     """
 
     if st.session_state.current_role == "admin":
