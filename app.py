@@ -1447,7 +1447,7 @@ for _c in BINGO_CARDS:
 if _duplicate_ids:
     st.error(f"⚠️ Duplicate cards: {', '.join(_duplicate_ids)}")
 else:
-    st.success(f"✅ All {len(BINGO_CARDS)} cards are unique!")
+    st.success(f"✅ All cards are unique!")
 
 def get_card(card_id):
     for card in BINGO_CARDS:
