@@ -1346,7 +1346,7 @@ def render_card_selection():
                         st.session_state.rejected_card_num = None
                         st.rerun()
                 elif is_insufficient:
-                    if st.button("⚠️💰 <10 ብር! ሂሳብዎን ይሙሉ 💰⚠️", key=f"card_{card_num}", use_container_width=True):
+                    if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
                         st.rerun()
                 else:
