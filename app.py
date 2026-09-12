@@ -326,6 +326,24 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
         margin-bottom: 3px !important;
     }
+    /* ✅ Rejected card button — shows the "max 2 cards" message */
+    .stButton > button[title="ማስጠንቀቂያ"] {
+        background: linear-gradient(135deg, #E53935, #B71C1C) !important;
+        color: #FFFFFF !important;
+        font-size: 9px !important;
+        font-weight: bold !important;
+        padding: 2px !important;
+        line-height: 1.05 !important;
+        white-space: normal !important;
+        text-align: center !important;
+        border: 2px solid #FF6B6B !important;
+        animation: shakeWarning 0.5s ease-in-out !important;
+    }
+    @keyframes shakeWarning {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-3px); }
+        75% { transform: translateX(3px); }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -473,6 +491,9 @@ def init_session_state():
         st.session_state.celebration_start_time = None
     if 'auto_return_done' not in st.session_state:
         st.session_state.auto_return_done = False
+    # ✅ NEW: Track which specific card was rejected (max 2 limit)
+    if 'rejected_card_num' not in st.session_state:
+        st.session_state.rejected_card_num = None
 
 init_session_state()
 
@@ -551,6 +572,7 @@ def sync_global_winners():
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
 CELEBRATION_DURATION = 3
+MAX_CARDS_PER_PLAYER = 2
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -715,12 +737,7 @@ def mark_game_started_globally():
 
 
 def get_global_remaining_time():
-    """Returns (remaining_seconds, game_started).
-
-    ✅ FIX: Counts cards from BOTH the shared file AND this user's own picks.
-    Whichever is larger wins. This makes it work even when the file isn't
-    shared across Streamlit Cloud containers.
-    """
+    """Returns (remaining_seconds, game_started)."""
     timer_start, duration, game_started = load_global_timer()
 
     if game_started:
@@ -879,6 +896,7 @@ def reset_for_next_round():
     st.session_state.card_owner = {}
     st.session_state.celebration_start_time = None
     st.session_state.auto_return_done = False
+    st.session_state.rejected_card_num = None
     
     save_game_state()
 
@@ -923,9 +941,7 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
-        # ✅ Merge with existing session picks so we don't lose them
         st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
-    # If no current user, leave clicked_numbers alone
 
 # ===================================================================
 # ✅ START-THE-GAME CHECK
@@ -939,7 +955,6 @@ def maybe_start_game():
     if st.session_state.game_started:
         return
 
-    # ✅ Count from BOTH sources
     file_taken, _, _, _ = load_global_cards()
     total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
     min_required = 3
@@ -1764,7 +1779,12 @@ def display_master_board():
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using real st.button widgets — no URL browsing."""
+    """Render card selection using real st.button widgets — no URL browsing.
+
+    ✅ NEW: When the player tries to select a 3rd card, the clicked card button
+    itself displays the warning message:
+    "ይቅርታ ከሁለት ካርቴላ በላይ መምረጥ አይችሉም"
+    """
 
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
@@ -1780,6 +1800,7 @@ def render_card_selection():
         """, unsafe_allow_html=True)
         return
 
+    # ✅ Only show global flash for non-max-card messages (balance, taken)
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -1852,6 +1873,7 @@ def render_card_selection():
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
+    rejected = st.session_state.rejected_card_num
 
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
@@ -1871,6 +1893,7 @@ def render_card_selection():
 
             is_mine = card_num in clicked
             is_taken = card_num in taken and not is_mine
+            is_rejected = (rejected == card_num) and not is_mine and not is_taken
 
             with cols[col_idx]:
                 if is_mine:
@@ -1899,6 +1922,8 @@ def render_card_selection():
                             st.session_state.timer_start_time,
                             st.session_state.card_selection_time
                         )
+                        # ✅ Clear any rejected-card highlight when a card is deselected
+                        st.session_state.rejected_card_num = None
                         st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
                         st.rerun()
 
@@ -1911,6 +1936,18 @@ def render_card_selection():
                         disabled=True,
                     )
 
+                elif is_rejected:
+                    # ✅ This is the specific card the player tried to select 3rd time.
+                    # Show the warning message on the button itself.
+                    if st.button(
+                        "ይቅርታ ከሁለት ካርቴላ በላይ መምረጥ አይችሉም",
+                        key=f"card_btn_{card_num}",
+                        use_container_width=True,
+                    ):
+                        # Clicking it again just dismisses the message
+                        st.session_state.rejected_card_num = None
+                        st.rerun()
+
                 else:
                     # Available — yellow/gold
                     if st.button(
@@ -1921,12 +1958,15 @@ def render_card_selection():
                         user_balance = st.session_state.user_db.get(
                             st.session_state.current_user, {}
                         ).get("balance", 0)
-                        has_max = len(st.session_state.clicked_numbers) >= 2
+                        has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
 
                         if has_max:
-                            st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                            # ✅ Store the rejected card number so we render the message on that card
+                            st.session_state.rejected_card_num = card_num
+                            st.session_state.flash_msg = ""
                         elif user_balance < 10:
                             st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                            st.session_state.rejected_card_num = None
                         else:
                             st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
                             save_all_data()
@@ -1942,6 +1982,7 @@ def render_card_selection():
                                 st.session_state.timer_start_time,
                                 st.session_state.card_selection_time
                             )
+                            st.session_state.rejected_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
                         st.rerun()
 
@@ -2285,6 +2326,7 @@ if st.session_state.game_started:
             st.session_state.taken_cards = []
             st.session_state.card_owner = {}
             st.session_state.clicked_numbers = set()
+            st.session_state.rejected_card_num = None
             
             clear_global_winners()
             save_global_cards([], {}, st.session_state.timer_start_time, 60)
