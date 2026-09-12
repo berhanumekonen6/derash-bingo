@@ -1556,11 +1556,11 @@ if st.session_state.game_started:
             <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
                 💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
             </div>
-            <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
+                        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
                 🏅 የድል መንገድ: {winning_pattern}
             </div>
             <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
-                🎉🎊🏆 የጨዋታዉን አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ 🏆🎊🎉
+                🎉🏆 የጨዋታዉን አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ 🏆🎉
             </div>
             <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
                 <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
