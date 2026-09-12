@@ -1299,7 +1299,7 @@ def render_card_selection():
         st.session_state.columns_per_row = selected_cols
         st.rerun()
 
-          cols_per_row = st.session_state.columns_per_row
+    cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     rejected = st.session_state.rejected_card_num
@@ -1366,10 +1366,10 @@ def render_card_selection():
                             save_all_data()
                             st.session_state.clicked_numbers.add(card_num)
                             if card_num not in st.session_state.taken_cards:
-                                st.session_state.taken_cards.append(card_num)
+                            st.session_state.taken_cards.append(card_num)
                             st.session_state.card_owner[str(card_num)] = st.session_state.current_user
                             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                              st.session_state.timer_start_time, st.session_state.card_selection_time)
+                            st.session_state.timer_start_time, st.session_state.card_selection_time)
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
