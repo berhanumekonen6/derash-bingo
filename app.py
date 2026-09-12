@@ -24,7 +24,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# CUSTOM CSS FOR GREEN BACKGROUND AND LARGER CARDS
+# CUSTOM CSS
 # ===================================================================
 
 st.markdown("""
@@ -80,83 +80,6 @@ st.markdown("""
         font-size: 0.8rem;
         margin-top: 3px;
     }
-    .cards-grid-wrapper {
-        max-height: 500px;
-        overflow-y: auto;
-        padding: 8px;
-        margin: 8px 0;
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        width: 100%;
-    }
-    .cards-grid-wrapper::-webkit-scrollbar { width: 6px; }
-    .cards-grid-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
-    .cards-grid-wrapper::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 10px; }
-    .card-btn {
-        width: 100% !important;
-        padding: 6px 4px !important;
-        font-size: 0.9rem !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        line-height: 1.2 !important;
-        border-radius: 8px !important;
-        margin: 0 !important;
-        text-align: center !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-weight: bold !important;
-        transition: all 0.2s ease !important;
-        cursor: pointer !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #FFFFFF !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-        text-overflow: ellipsis !important;
-        position: relative !important;
-        user-select: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        font-family: Arial, sans-serif !important;
-        box-sizing: border-box !important;
-    }
-    .card-btn:hover:not(.taken) {
-        transform: scale(1.05);
-        border-color: #FFD700 !important;
-        background: rgba(255, 215, 0, 0.2) !important;
-        box-shadow: 0 0 25px rgba(255, 215, 0, 0.2) !important;
-        z-index: 10;
-    }
-    .card-btn:active { transform: scale(0.95); }
-    .card-btn.selected {
-        border-color: #4CAF50 !important;
-        background: rgba(76, 175, 80, 0.35) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 0 35px rgba(76, 175, 80, 0.3) !important;
-        border-width: 3px !important;
-    }
-    .card-btn.selected:hover {
-        border-color: #FF6B6B !important;
-        background: rgba(255, 80, 80, 0.3) !important;
-        box-shadow: 0 0 35px rgba(255, 80, 80, 0.3) !important;
-    }
-    .card-btn.taken {
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        color: rgba(255, 255, 255, 0.3) !important;
-        cursor: not-allowed !important;
-        opacity: 0.5 !important;
-    }
-    .card-btn.taken:hover {
-        transform: none !important;
-        border-color: rgba(255, 0, 0, 0.2) !important;
-        background: rgba(255, 0, 0, 0.15) !important;
-        box-shadow: none !important;
-    }
     .winner-card {
         animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
         border: 3px solid #FFD700 !important;
@@ -190,63 +113,10 @@ st.markdown("""
     .stSuccess { border-left: 4px solid #4CAF50 !important; }
     .stWarning { border-left: 4px solid #FF9800 !important; }
     .stError { border-left: 4px solid #F44336 !important; }
-    .winner-glow { animation: winnerPulse 1s ease-in-out infinite alternate; }
     @keyframes winnerPulse {
         0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
         100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
     }
-    .css-1d391kg, .css-1adrfps {
-        background: rgba(0, 0, 0, 0.3) !important;
-        backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .header-timer-container {
-        background: rgba(0, 0, 0, 0.2) !important;
-        border: 2px solid rgba(255, 215, 0, 0.2) !important;
-        border-radius: 15px;
-        padding: 10px 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    .timer-display { color: #FFD700 !important; font-weight: bold; text-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
-    .timer-label { color: rgba(255, 255, 255, 0.7) !important; }
-    @media (max-width: 768px) {
-        .main-header { flex-direction: column !important; align-items: center !important; text-align: center !important; }
-        .logo-text h1 { font-size: 1.5rem !important; color: #FFFFFF !important; }
-        .header-timer-container { width: 100% !important; max-width: 300px !important; }
-        .timer-display { font-size: 1.8rem !important; }
-    }
-    .card-container {
-        background: rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 15px !important;
-        padding: 15px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    }
-    .board-container {
-        background: rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 15px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    }
-    .board-title { color: #FFD700 !important; text-shadow: 0 0 20px rgba(255, 215, 0, 0.1); }
-    .board-number { color: #FFFFFF !important; background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
-    .board-number.called { background: rgba(255, 152, 0, 0.25) !important; color: #FFD700 !important; border-color: #FF9800 !important; box-shadow: 0 0 15px rgba(255, 152, 0, 0.15); }
-    .board-number.last-called { background: rgba(229, 57, 53, 0.2) !important; color: #FF6B6B !important; border-color: #E53935 !important; box-shadow: 0 0 20px rgba(229, 57, 53, 0.2); }
-    .board-stats { color: rgba(255, 255, 255, 0.7) !important; }
-    .board-stats strong { color: #FFD700 !important; }
-    .called-numbers-container { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 15px !important; padding: 15px !important; }
-    .called-numbers-header { color: #FFD700 !important; }
-    .called-number { background: rgba(255, 215, 0, 0.15) !important; color: #FFD700 !important; border: 1px solid rgba(255, 215, 0, 0.1); }
-    .called-number.latest { background: rgba(255, 215, 0, 0.3) !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
-    .game-status { background: rgba(0, 0, 0, 0.2) !important; border-left: 4px solid #FFD700 !important; border-radius: 12px !important; padding: 15px !important; margin-top: 15px !important; }
-    .status-message { color: rgba(255, 255, 255, 0.9) !important; }
-    .game-state-indicator { background: rgba(0, 0, 0, 0.2) !important; border: 2px solid rgba(255, 255, 255, 0.1) !important; color: #FFFFFF !important; border-radius: 10px !important; padding: 10px 20px !important; text-align: center !important; font-weight: bold !important; }
-    .game-state-waiting { border-color: #FF9800 !important; color: #FFB74D !important; }
-    .game-state-running { border-color: #4CAF50 !important; color: #81C784 !important; }
-    .game-state-finished { border-color: #FFD700 !important; color: #FFD700 !important; }
-    .stat-box { background: rgba(0, 0, 0, 0.15) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 12px !important; padding: 10px 20px !important; }
-    .stat-value { color: #FFD700 !important; font-weight: bold !important; text-shadow: 0 0 20px rgba(255, 215, 0, 0.1); }
-    .stat-label { color: rgba(255, 255, 255, 0.6) !important; }
     .stButton > button {
         background: linear-gradient(135deg, #FFD700, #FFA500) !important;
         color: #1a1a2e !important;
@@ -261,31 +131,8 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
     }
-    .user-info { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
-    .user-details h3 { color: #FFFFFF !important; }
-    .user-balance { color: #FFD700 !important; }
-    .winner-name { color: #FFFFFF !important; }
-    .winner-prize { color: #FFD700 !important; }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
-    .selected-cards-preview { background: rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
-
-    @media (max-width: 768px) {
-        .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
-        .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
-        .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
-        .board-container { padding: 10px !important; margin: 5px 0 !important; }
-        .board-title { font-size: 1.3rem !important; }
-        .motivation-box { padding: 8px 12px !important; }
-        .motivation-box .quote { font-size: 0.85rem !important; }
-        h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
-    }
-
-    @media (max-width: 400px) {
-        .board-number { width: 22px; height: 22px; font-size: 0.62rem; }
-        .board-table td { padding: 2px 1px !important; }
-        .board-table .header-cell { font-size: 0.95rem !important; padding: 4px 1px !important; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -358,7 +205,6 @@ def get_winner_sound_js():
 # ===================================================================
 
 def init_session_state():
-    """Initialize all session state variables"""
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'current_user' not in st.session_state:
@@ -632,7 +478,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
         return False
 
 # ===================================================================
-# ✅ GLOBAL TIMER — shared across users in the same process
+# ✅ GLOBAL TIMER
 # ===================================================================
 
 @st.cache_resource
@@ -675,11 +521,6 @@ def mark_game_started_globally():
 
 
 def get_global_remaining_time():
-    """Returns (remaining_seconds, game_started).
-
-    ✅ Counts cards from BOTH the shared file AND this user's own picks.
-    Whichever is larger wins.
-    """
     timer_start, duration, game_started = load_global_timer()
 
     if game_started:
@@ -858,7 +699,6 @@ def sync_global_cards():
     
     load_game_state()
     
-    # ✅ STALE-GAME RECOVERY — only reset on winner or all-called
     called_count = len(st.session_state.called_numbers)
     winner_done = st.session_state.winner_declared
     all_called = called_count >= 75
@@ -882,23 +722,16 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
-        # ✅ Merge with existing session picks so we don't lose them
         st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
-    # If no current user, leave clicked_numbers alone
 
 # ===================================================================
 # ✅ START-THE-GAME CHECK
 # ===================================================================
 
 def maybe_start_game():
-    """Start the game when BOTH conditions are true:
-       1. 3+ cards selected (from file OR this user's own picks)
-       2. Shared timer reached 0:00
-    """
     if st.session_state.game_started:
         return
 
-    # ✅ Count from BOTH sources
     file_taken, _, _, _ = load_global_cards()
     total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
     min_required = 3
@@ -1719,12 +1552,12 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION FUNCTION - ANCHOR LINK VERSION (100% MOBILE)
+# ✅ CARD SELECTION FUNCTION — REAL st.button (NO URL BROWSING)
 # ===================================================================
 
 def render_card_selection():
-    """Render card selection using direct anchor links — 100% reliable."""
-    
+    """Render card selection using real st.button widgets — no URL browsing."""
+
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play the game. Please login as a player to select cards.")
         st.info("💡 Admin can only manage user balances and monitor the game.")
@@ -1809,53 +1642,8 @@ def render_card_selection():
         st.rerun()
 
     cols_per_row = st.session_state.columns_per_row
-
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
-
-    cells_html = ""
-    for i in range(1, 202):
-        is_mine = i in clicked
-        is_taken = i in taken and not is_mine
-
-        if is_mine:
-            bg = "rgba(76,175,80,0.7)"
-            fg = "#FFFFFF"
-            border = "#4CAF50"
-            border_w = "3px"
-            cursor = "pointer"
-        elif is_taken:
-            bg = "rgba(255,0,0,0.2)"
-            fg = "rgba(255,255,255,0.4)"
-            border = "rgba(255,0,0,0.3)"
-            border_w = "2px"
-            cursor = "not-allowed"
-        else:
-            bg = "linear-gradient(135deg, #FFD700, #FFA500)"
-            fg = "#1a1a2e"
-            border = "rgba(255,255,255,0.2)"
-            border_w = "2px"
-            cursor = "pointer"
-
-        if is_mine or not is_taken:
-            cells_html += (
-                f'<a href="?u={st.session_state.current_user}&select_card={i}" '
-                f'style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-decoration:none;'
-                f'text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;'
-                f'-webkit-tap-highlight-color:transparent;">{i}</a>'
-            )
-        else:
-            cells_html += (
-                f'<div style="display:flex;align-items:center;justify-content:center;'
-                f'height:52px;border-radius:8px;font-weight:bold;font-size:15px;'
-                f'background:{bg};color:{fg};border:{border_w} solid {border};'
-                f'cursor:{cursor};text-shadow:0 1px 2px rgba(0,0,0,0.3);'
-                f'user-select:none;-webkit-user-select:none;">{i}</div>'
-            )
 
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
@@ -1863,21 +1651,93 @@ def render_card_selection():
             🎯 Tap a card to SELECT (10 ETB) or 🟢 green to DESELECT
         </div>
     </div>
+    """, unsafe_allow_html=True)
 
-    <div style="
-        display:grid;
-        grid-template-columns:repeat({cols_per_row}, minmax(0, 1fr));
-        gap:6px;
-        padding:8px;
-        background:rgba(0,0,0,0.15);
-        border-radius:10px;
-        border:1px solid rgba(255,255,255,0.08);
-        max-height:70vh;
-        overflow-y:auto;
-    ">
-        {cells_html}
-    </div>
+    # ✅ Real st.button grid — no URL browsing
+    for row_start in range(1, 202, cols_per_row):
+        cols = st.columns(cols_per_row)
+        for col_idx in range(cols_per_row):
+            card_num = row_start + col_idx
+            if card_num > 201:
+                break
 
+            is_mine = card_num in clicked
+            is_taken = card_num in taken and not is_mine
+
+            with cols[col_idx]:
+                if is_mine:
+                    # Deselect button — green
+                    if st.button(
+                        f"✅ {card_num}",
+                        key=f"card_btn_{card_num}",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        user_balance = st.session_state.user_db.get(
+                            st.session_state.current_user, {}
+                        ).get("balance", 0)
+
+                        st.session_state.clicked_numbers.discard(card_num)
+                        if card_num in st.session_state.taken_cards:
+                            st.session_state.taken_cards.remove(card_num)
+                        if str(card_num) in st.session_state.card_owner:
+                            del st.session_state.card_owner[str(card_num)]
+
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+                        save_all_data()
+                        save_global_cards(
+                            st.session_state.taken_cards,
+                            st.session_state.card_owner,
+                            st.session_state.timer_start_time,
+                            st.session_state.card_selection_time
+                        )
+                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+                        st.rerun()
+
+                elif is_taken:
+                    # Disabled button — taken by someone else
+                    st.button(
+                        f"🔴 {card_num}",
+                        key=f"card_btn_{card_num}",
+                        use_container_width=True,
+                        disabled=True,
+                    )
+
+                else:
+                    # Available — yellow/gold
+                    if st.button(
+                        f"🟡 {card_num}",
+                        key=f"card_btn_{card_num}",
+                        use_container_width=True,
+                    ):
+                        user_balance = st.session_state.user_db.get(
+                            st.session_state.current_user, {}
+                        ).get("balance", 0)
+                        has_max = len(st.session_state.clicked_numbers) >= 2
+
+                        if has_max:
+                            st.session_state.flash_msg = "⚠️ Max card selection is 2!"
+                        elif user_balance < 10:
+                            st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                        else:
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+                            save_all_data()
+
+                            st.session_state.clicked_numbers.add(card_num)
+                            if card_num not in st.session_state.taken_cards:
+                                st.session_state.taken_cards.append(card_num)
+                            st.session_state.card_owner[str(card_num)] = st.session_state.current_user
+
+                            save_global_cards(
+                                st.session_state.taken_cards,
+                                st.session_state.card_owner,
+                                st.session_state.timer_start_time,
+                                st.session_state.card_selection_time
+                            )
+                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+                        st.rerun()
+
+    st.markdown(f"""
     <div style="text-align:center;font-size:0.8rem;color:rgba(255,255,255,0.6);margin:8px 0;">
         🟡 Gold = Available &nbsp;|&nbsp; 🟢 Green = Yours &nbsp;|&nbsp; 🔴 Red = Taken by others
     </div>
@@ -1890,79 +1750,6 @@ def render_card_selection():
         st.caption(f"✅ {total_selected} cards selected globally. Starting in {int(remaining)}s... 🎯")
     else:
         st.caption(f"⏸️ Need {min_cards_required - total_selected} more card(s) to start. Timer keeps running... 🃏")
-
-# ===================================================================
-# ✅ QUERY PARAM HANDLER
-# ===================================================================
-
-if "select_card" in st.query_params:
-    try:
-        card_id = int(st.query_params["select_card"])
-        url_user = st.query_params.get("u", None)
-
-        if (not st.session_state.logged_in) and url_user:
-            load_all_data()
-            if url_user in st.session_state.user_db:
-                st.session_state.logged_in = True
-                st.session_state.current_user = url_user
-                st.session_state.current_role = st.session_state.user_db[url_user].get("role", "player")
-
-        sync_global_cards()
-        load_all_data()
-
-        if st.session_state.current_user:
-            is_taken = card_id in st.session_state.taken_cards
-            is_mine = card_id in st.session_state.clicked_numbers
-            has_max = len(st.session_state.clicked_numbers) >= 2
-            user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-
-            if is_mine:
-                st.session_state.clicked_numbers.discard(card_id)
-                if card_id in st.session_state.taken_cards:
-                    st.session_state.taken_cards.remove(card_id)
-                if str(card_id) in st.session_state.card_owner:
-                    del st.session_state.card_owner[str(card_id)]
-
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                save_all_data()
-
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} refunded. +10 ETB"
-            elif is_taken:
-                st.session_state.flash_msg = f"⚠️ Card #{card_id} is already taken!"
-            elif has_max:
-                st.session_state.flash_msg = "⚠️ Max card selection is 2!"
-            elif user_balance < 10:
-                st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
-            else:
-                st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                save_all_data()
-
-                st.session_state.clicked_numbers.add(card_id)
-                if card_id not in st.session_state.taken_cards:
-                    st.session_state.taken_cards.append(card_id)
-                st.session_state.card_owner[str(card_id)] = st.session_state.current_user
-
-                save_global_cards(
-                    st.session_state.taken_cards,
-                    st.session_state.card_owner,
-                    st.session_state.timer_start_time,
-                    st.session_state.card_selection_time
-                )
-                st.session_state.flash_msg = f"✅ Card #{card_id} selected! -10 ETB"
-
-        st.query_params.clear()
-        if url_user:
-            st.query_params["u"] = url_user
-        st.rerun()
-    except (ValueError, TypeError):
-        st.query_params.clear()
-        st.rerun()
 
 # ===================================================================
 # MAIN APP
@@ -2165,8 +1952,6 @@ if st.session_state.current_role == "admin":
 # ===================================================================
 
 if st.session_state.game_started:
-    # ✅ CRITICAL: This block ONLY runs when game has started.
-    # Card selection is NEVER rendered here.
     all_player_cards = list(st.session_state.clicked_numbers)
     
     if st.session_state.winner_declared:
@@ -2327,7 +2112,6 @@ if st.session_state.game_started:
         st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ✅ ONLY show card selection when game has NOT started
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -2363,7 +2147,6 @@ if st.session_state.game_started and not st.session_state.winner_declared:
     time.sleep(0.5)
     st.rerun()
 elif not st.session_state.game_started:
-    # ✅ Check if game should start on every tick
     maybe_start_game()
     time.sleep(1)
     st.rerun()
