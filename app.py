@@ -1559,6 +1559,16 @@ if st.session_state.game_started:
             <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
                 🏅 የድል መንገድ: {winning_pattern}
             </div>
+            <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
+                🎉🎊🏆 የጨዋታዉን አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ 🏆🎊🎉
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
+                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.3s;">👇🌟</span>
+                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.5s;">👇✨</span>
+                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">👇⭐</span>
+                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">👇🌟</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
