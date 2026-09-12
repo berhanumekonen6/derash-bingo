@@ -253,8 +253,9 @@ def init_session_state():
         'show_deposit_msg': False,
         'deposit_msg_text': "",
         'flash_msg': "",
-        'celebration_start_time': None,
+                'celebration_start_time': None,
         'rejected_card_num': None,
+        'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
     }
     for k, v in defaults.items():
@@ -620,6 +621,7 @@ def reset_for_next_round():
     st.session_state.card_owner = {}
     st.session_state.celebration_start_time = None
     st.session_state.rejected_card_num = None
+    st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
     save_game_state()
 
@@ -1297,10 +1299,11 @@ def render_card_selection():
         st.session_state.columns_per_row = selected_cols
         st.rerun()
 
-    cols_per_row = st.session_state.columns_per_row
+          cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     rejected = st.session_state.rejected_card_num
+    insufficient = st.session_state.insufficient_balance_card_num
 
     st.markdown("""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
@@ -1317,6 +1320,7 @@ def render_card_selection():
             is_mine = card_num in clicked
             is_taken = card_num in taken and not is_mine
             is_rejected = (rejected == card_num) and not is_mine and not is_taken
+            is_insufficient = (insufficient == card_num) and not is_mine and not is_taken
 
             with cols[col_idx]:
                 if is_mine:
@@ -1332,6 +1336,7 @@ def render_card_selection():
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
                                           st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.session_state.rejected_card_num = None
+                        st.session_state.insufficient_balance_card_num = None
                         st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
                         st.rerun()
                 elif is_taken:
@@ -1340,16 +1345,22 @@ def render_card_selection():
                     if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
                         st.rerun()
+                elif is_insufficient:
+                    if st.button("⚠️💰 <10 ብር! ሂሳብዎን ይሙሉ 💰⚠️", key=f"card_{card_num}", use_container_width=True):
+                        st.session_state.insufficient_balance_card_num = None
+                        st.rerun()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
                         has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
                         if has_max:
                             st.session_state.rejected_card_num = card_num
+                            st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = ""
                         elif user_balance < 10:
-                            st.session_state.flash_msg = "💰 ሂሳብዎን ይሙሉ! 💰"
+                            st.session_state.insufficient_balance_card_num = card_num
                             st.session_state.rejected_card_num = None
+                            st.session_state.flash_msg = ""
                         else:
                             st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
                             save_all_data()
@@ -1360,6 +1371,7 @@ def render_card_selection():
                             save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
                                               st.session_state.timer_start_time, st.session_state.card_selection_time)
                             st.session_state.rejected_card_num = None
+                            st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
                         st.rerun()
 
