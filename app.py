@@ -224,6 +224,30 @@ def get_winner_sound_js():
     """
 
 # ===================================================================
+# ✅ PERSISTENT DATA DIRECTORY
+# ===================================================================
+DATA_DIR = os.environ.get("BINGO_DATA_DIR", ".")
+try:
+    os.makedirs(DATA_DIR, exist_ok=True)
+except:
+    DATA_DIR = "."
+
+def get_local_users_file():
+    return os.path.join(DATA_DIR, "bingo_users_local.json")
+
+def get_global_cards_file():
+    return os.path.join(DATA_DIR, "bingo_global_cards.json")
+
+def get_global_winners_file():
+    return os.path.join(DATA_DIR, "bingo_global_winners.json")
+
+def get_game_state_file():
+    return os.path.join(DATA_DIR, "bingo_game_state.json")
+
+def get_caller_lock_file():
+    return os.path.join(DATA_DIR, "bingo_caller_lock.json")
+
+# ===================================================================
 # SESSION STATE INITIALIZATION
 # ===================================================================
 def init_session_state():
@@ -253,7 +277,7 @@ def init_session_state():
         'show_deposit_msg': False,
         'deposit_msg_text': "",
         'flash_msg': "",
-                'celebration_start_time': None,
+        'celebration_start_time': None,
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
@@ -265,11 +289,28 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
+# ✅ AUTO-LOGIN FROM URL (?u=username)
+# ===================================================================
+if not st.session_state.logged_in:
+    _url_user = st.query_params.get("u", None)
+    if _url_user:
+        load_local_users_data = None
+        # Load users DB directly here so we can check
+        try:
+            if os.path.exists(get_local_users_file()):
+                with open(get_local_users_file(), "r") as f:
+                    _db = json.load(f)
+                if _url_user in _db:
+                    st.session_state.user_db = _db
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = _url_user
+                    st.session_state.current_role = _db[_url_user].get("role", "player")
+        except:
+            pass
+
+# ===================================================================
 # GLOBAL WINNER TRACKING
 # ===================================================================
-def get_global_winners_file():
-    return "bingo_global_winners.json"
-
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     try:
         data = {
@@ -314,10 +355,8 @@ def clear_global_winners():
         return False
 
 def sync_global_winners():
-    """✅ Sync winner state — skip if this player already acknowledged."""
     if st.session_state.get("winner_acknowledged", False):
         return False
-    
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
@@ -383,9 +422,6 @@ def get_letter_for_number(num):
 # ===================================================================
 # LOCAL FILE STORAGE
 # ===================================================================
-def get_local_users_file():
-    return "bingo_users_local.json"
-
 def load_local_users():
     try:
         if os.path.exists(get_local_users_file()):
@@ -412,11 +448,37 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
+# ✅ PERSIST ALL STATE — call this often
+# ===================================================================
+def persist_all_state():
+    """Force-save ALL in-memory state to disk. Safe to call anytime."""
+    try:
+        save_all_data()
+        save_game_state()
+        save_global_cards(
+            st.session_state.taken_cards,
+            st.session_state.card_owner,
+            st.session_state.timer_start_time,
+            st.session_state.card_selection_time
+        )
+        if st.session_state.winner_declared:
+            save_global_winners(
+                st.session_state.winners_list,
+                True,
+                st.session_state.called_numbers,
+                st.session_state.last_called_number,
+                st.session_state.auto_called_count,
+                True,
+                st.session_state.prize_distributed
+            )
+        return True
+    except Exception as e:
+        print(f"[persist_all_state] {e}")
+        return False
+
+# ===================================================================
 # GLOBAL CARD TRACKING
 # ===================================================================
-def get_global_cards_file():
-    return "bingo_global_cards.json"
-
 def load_global_cards():
     try:
         if os.path.exists(get_global_cards_file()):
@@ -491,9 +553,6 @@ def get_global_remaining_time():
 # ===================================================================
 # GLOBAL CALLER LOCK
 # ===================================================================
-def get_caller_lock_file():
-    return "bingo_caller_lock.json"
-
 def load_caller_lock():
     try:
         if os.path.exists(get_caller_lock_file()):
@@ -512,7 +571,6 @@ def save_caller_lock(last_called_at, last_called_by):
         return False
 
 def try_global_call():
-    # ✅ STOP calling the moment a winner exists (global or local)
     _, global_winner_done, _, _, _, _, _, _ = load_global_winners()
     if global_winner_done or st.session_state.winner_declared:
         return None
@@ -543,9 +601,6 @@ def try_global_call():
 # ===================================================================
 # GAME STATE
 # ===================================================================
-def get_game_state_file():
-    return "bingo_game_state.json"
-
 def save_game_state():
     try:
         data = {
@@ -574,7 +629,6 @@ def load_game_state():
                 st.session_state.auto_called_count = data.get("auto_called_count", 0)
                 st.session_state.auto_call_started = data.get("auto_call_started", False)
                 st.session_state.last_call_time = data.get("last_call_time", time.time())
-                # ✅ Do NOT overwrite winner_declared here (keep session state clean)
                 if not st.session_state.winner_declared:
                     st.session_state.winner_declared = data.get("winner_declared", False)
                 st.session_state.game_over = data.get("game_over", False)
@@ -626,7 +680,7 @@ def reset_for_next_round():
     save_game_state()
 
 # ===================================================================
-# SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
+# SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
     global_taken, global_owner, _, _ = load_global_cards()
@@ -640,9 +694,6 @@ def sync_global_cards():
         st.session_state.game_started = True
     
     load_game_state()
-    
-    # ✅ NO AUTO-RESET HERE — reset happens only when a player clicks
-    # the Resume button, or when a fresh round begins.
     
     current_user = st.session_state.current_user
     if current_user:
@@ -754,9 +805,13 @@ def logout_user():
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
+    try:
+        st.query_params.clear()
+    except:
+        pass
 
 # ===================================================================
-# ADMIN PANEL (unchanged)
+# ADMIN PANEL
 # ===================================================================
 def admin_panel():
     st.markdown("""
@@ -1346,7 +1401,7 @@ def render_card_selection():
                         st.session_state.rejected_card_num = None
                         st.rerun()
                 elif is_insufficient:
-                    if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
+                    if st.button("⚠️💰 <10 ብር! ሂሳብዎን ይሙሉ 💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
                         st.rerun()
                 else:
@@ -1411,6 +1466,11 @@ if not st.session_state.logged_in:
                 load_all_data()
                 success, message = login_user(username, password)
                 if success:
+                    # ✅ Persist username in URL so reopening the app restores the session
+                    try:
+                        st.query_params["u"] = username
+                    except:
+                        pass
                     st.success(message)
                     st.balloons()
                     st.rerun()
@@ -1510,7 +1570,6 @@ if st.session_state.current_role == "admin":
 if st.session_state.game_started:
     all_player_cards = list(st.session_state.clicked_numbers)
     
-    # ✅ Always rebuild this player's cards from the shared file
     if st.session_state.current_user:
         _gt, _go, _, _ = load_global_cards()
         _my = []
@@ -1568,7 +1627,7 @@ if st.session_state.game_started:
             <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
                 💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
             </div>
-                        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
+            <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
                 🏅 የድል መንገድ: {winning_pattern}
             </div>
             <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
@@ -1610,7 +1669,6 @@ if st.session_state.game_started:
                 cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
         
-        # ✅ RESUME BUTTON
         st.markdown("""
         <div style="text-align:center;margin:25px 0 10px 0;">
             <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
@@ -1630,7 +1688,6 @@ if st.session_state.game_started:
     # ✅ GAME RUNNING — board + player's own cards
     # ==============================================================
     else:
-        # Rebuild from shared file every tick
         if st.session_state.current_user:
             _gt, _go, _, _ = load_global_cards()
             _my = []
@@ -1688,6 +1745,11 @@ st.markdown(f"""
     🎯 Derash BINGO | 204 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
 </div>
 """, unsafe_allow_html=True)
+
+# ===================================================================
+# ✅ AUTO-PERSIST — save everything on every rerun tick
+# ===================================================================
+persist_all_state()
 
 # ===================================================================
 # ✅ AUTO-CALL — stops the moment a winner exists
