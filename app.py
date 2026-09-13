@@ -291,21 +291,6 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
-# ✅ AUTO-LOGIN FROM URL (?u=username)
-# ===================================================================
-if not st.session_state.logged_in:
-    _url_user = st.query_params.get("u", None)
-    if _url_user:
-        try:
-            load_all_data()
-            if _url_user in st.session_state.user_db:
-                st.session_state.logged_in = True
-                st.session_state.current_user = _url_user
-                st.session_state.current_role = st.session_state.user_db[_url_user].get("role", "player")
-        except Exception as _e:
-            print(f"[auto-login] {_e}")
-
-# ===================================================================
 # ✅ SUPABASE USER STORAGE (persistent, never lost)
 # ===================================================================
 def get_supabase_client():
@@ -397,12 +382,26 @@ def save_local_users(users):
     """Kept for backward compatibility — calls Supabase save."""
     st.session_state.user_db = users
     return save_all_data()
+
+# ===================================================================
+# ✅ AUTO-LOGIN FROM URL (?u=username)
+# ✅ MOVED HERE — after load_all_data() is defined above
+# ===================================================================
+if not st.session_state.logged_in:
+    _url_user = st.query_params.get("u", None)
+    if _url_user:
+        try:
+            load_all_data()
+            if _url_user in st.session_state.user_db:
+                st.session_state.logged_in = True
+                st.session_state.current_user = _url_user
+                st.session_state.current_role = st.session_state.user_db[_url_user].get("role", "player")
+        except Exception as _e:
+            print(f"[auto-login] {_e}")
+
 # ===================================================================
 # GLOBAL WINNER TRACKING
 # ===================================================================
-def get_global_winners_file():
-    return os.path.join(DATA_DIR, "bingo_global_winners.json")
-
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     try:
         data = {
@@ -516,9 +515,6 @@ def get_letter_for_number(num):
 # ===================================================================
 # GLOBAL CARD TRACKING
 # ===================================================================
-def get_global_cards_file():
-    return os.path.join(DATA_DIR, "bingo_global_cards.json")
-
 def load_global_cards():
     try:
         if os.path.exists(get_global_cards_file()):
@@ -593,9 +589,6 @@ def get_global_remaining_time():
 # ===================================================================
 # GLOBAL CALLER LOCK
 # ===================================================================
-def get_caller_lock_file():
-    return os.path.join(DATA_DIR, "bingo_caller_lock.json")
-
 def load_caller_lock():
     try:
         if os.path.exists(get_caller_lock_file()):
@@ -644,9 +637,6 @@ def try_global_call():
 # ===================================================================
 # GAME STATE
 # ===================================================================
-def get_game_state_file():
-    return os.path.join(DATA_DIR, "bingo_game_state.json")
-
 def save_game_state():
     try:
         data = {
@@ -865,7 +855,6 @@ def logout_user():
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
-    # ⚠️ Do NOT clear session_users — keep for later logins in the same browser session
     try:
         st.query_params.clear()
     except:
@@ -877,11 +866,6 @@ def logout_user():
 def persist_all_state():
     """Force-save ALL in-memory state to disk. Safe to call anytime."""
     try:
-        # Merge session cache into user_db before saving
-        if 'session_users' in st.session_state:
-            for u, d in st.session_state.session_users.items():
-                st.session_state.user_db[u] = d
-        
         save_all_data()
         save_game_state()
         save_global_cards(
@@ -1481,13 +1465,13 @@ def render_card_selection():
                             st.session_state.taken_cards.remove(card_num)
                         if str(card_num) in st.session_state.card_owner:
                             del st.session_state.card_owner[str(card_num)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + CARD_PRICE
                         save_all_data()
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
                                           st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.session_state.rejected_card_num = None
                         st.session_state.insufficient_balance_card_num = None
-                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +{CARD_PRICE} ETB"
                         st.rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
@@ -1507,12 +1491,12 @@ def render_card_selection():
                             st.session_state.rejected_card_num = card_num
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = ""
-                        elif user_balance < 10:
+                        elif user_balance < CARD_PRICE:
                             st.session_state.insufficient_balance_card_num = card_num
                             st.session_state.rejected_card_num = None
                             st.session_state.flash_msg = ""
                         else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - CARD_PRICE
                             save_all_data()
                             st.session_state.clicked_numbers.add(card_num)
                             if card_num not in st.session_state.taken_cards:
@@ -1522,7 +1506,7 @@ def render_card_selection():
                                               st.session_state.timer_start_time, st.session_state.card_selection_time)
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -{CARD_PRICE} ETB"
                         st.rerun()
 
     st.progress(1 - (remaining / 60) if remaining > 0 else 0)
