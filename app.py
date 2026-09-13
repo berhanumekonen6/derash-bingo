@@ -136,35 +136,46 @@ st.markdown("""
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
-    /* ✅ Smaller circles ONLY on display cards (player's own + winner cards) */
+    /* ✅ Smaller circles ONLY on display cards (player + winner cards) */
     .display-card-circle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 26px;
-        height: 26px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         font-weight: bold;
-        font-size: 0.68rem;
+        font-size: 0.52rem;
         box-sizing: border-box;
         line-height: 1;
     }
     @media (max-width: 768px) {
-        .display-card-circle { width: 22px; height: 22px; font-size: 0.6rem; }
+        .display-card-circle { width: 16px; height: 16px; font-size: 0.46rem; }
     }
     @media (max-width: 480px) {
-        .display-card-circle { width: 20px; height: 20px; font-size: 0.55rem; }
+        .display-card-circle { width: 14px; height: 14px; font-size: 0.42rem; }
+    }
+
+    /* ✅ Smaller BINGO master board numbers */
+    .board-number {
+        width: 22px;
+        height: 22px;
+        font-size: 0.6rem;
     }
 
     @media (max-width: 768px) {
-        .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
-        .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
-        .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
-        .board-container { padding: 10px !important; margin: 5px 0 !important; }
-        .board-title { font-size: 1.3rem !important; }
+        .board-table td { padding: 2px 1px; font-size: 0.65rem; min-width: 18px; }
+        .board-number { width: 18px; height: 18px; font-size: 0.52rem; }
+        .board-table .header-cell { font-size: 0.95rem; padding: 4px 1px; }
+        .board-container { padding: 8px !important; margin: 4px 0 !important; }
+        .board-title { font-size: 1.1rem !important; }
         .motivation-box { padding: 8px 12px !important; }
         .motivation-box .quote { font-size: 0.85rem !important; }
         h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
+    }
+    @media (max-width: 480px) {
+        .board-number { width: 16px; height: 16px; font-size: 0.46rem; }
+        .board-table td { padding: 1px 0.5px; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -531,10 +542,7 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    """
-    ✅ Returns the WHOLE remaining seconds as an integer in clean 1-second steps.
-    Uses ceil(duration - elapsed) so it goes 60 → 59 → 58 → ... → 0.
-    """
+    """✅ Clean 1-second countdown: 60 → 59 → 58 → … → 0"""
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -1188,17 +1196,17 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     title_color = '#FFD700' if is_winner else '#FFFFFF'
     card_class = 'winner-card' if is_winner else ''
     html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:10px;margin:6px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:280px;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:0.9rem;font-weight:bold;margin-bottom:6px;">
             {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
         </div>
         <table style="width:100%;border-collapse:collapse;">
             <tr>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">N</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">G</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">O</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">O</td>
             </tr>
     """
     for row_idx in range(5):
@@ -1206,26 +1214,26 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         for col_idx in range(5):
             value = cells[row_idx][col_idx]
             if value == 'F':
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div class="display-card-circle" style="background:rgba(255,215,0,0.15);color:#FFD700;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="background:rgba(255,215,0,0.15);color:#FFD700;font-size:0.85rem;border:2px solid #FFD700;">★</div></td>'
             else:
                 num = int(value)
                 is_called = num in called_numbers
                 style = ''
                 if is_called and is_winner:
-                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
+                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;'
                 elif is_called:
                     style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;'
                 else:
                     style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div class="display-card-circle" style="{style}border-width:2px;border-style:solid;">{value}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="{style}border-width:2px;border-style:solid;">{value}</div></td>'
         html += '</tr>'
     html += '</table>'
     total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.9rem;margin-top:6px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:5px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.65rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -1240,15 +1248,15 @@ def display_master_board():
     called_numbers = list(st.session_state.called_numbers)
     html = '''
     <style>
-        .board-container { max-width: 950px; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
-        .board-title { text-align: center; font-size: 1.8rem; font-weight: bold; color: #FFD700; margin-bottom: 12px; }
+        .board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }
+        .board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }
         .board-table { width: 100%; border-collapse: collapse; }
-        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 6px 4px; text-align: center; font-size: 0.85rem; font-weight: bold; min-width: 30px; }
-        .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.5rem; font-weight: 900; padding: 10px 4px; letter-spacing: 3px; }
-        .board-number { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.06); }
+        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }
+        .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }
+        .board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }
         .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
         .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
-        .board-stats { text-align: center; margin-top: 12px; font-size: 0.9rem; color: rgba(255,255,255,0.5); padding: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; }
+        .board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
         .board-stats strong { color: #FFD700; }
     </style>
     <div class="board-container">
@@ -1257,7 +1265,7 @@ def display_master_board():
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
+        html += f'<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += f'<td class="header-cell">{letter}</td>'
@@ -1310,7 +1318,7 @@ def render_card_selection():
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
 
-    # ✅ 1-second-step countdown (integer)
+    # ✅ 1-second-step countdown
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
         st.rerun()
@@ -1567,7 +1575,6 @@ if st.session_state.current_role == "admin":
 
 # ===================================================================
 # ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
-#    (even those who did NOT pick a card)
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
