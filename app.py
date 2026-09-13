@@ -367,21 +367,12 @@ def save_all_data():
         print(f"[save_all_data] SUCCESS: {response}")
         print("=== [save_all_data] END OK ===")
         return True
-        except Exception as e:
+    except Exception as e:
         import traceback
         print(f"[save_all_data] EXCEPTION: {type(e).__name__}: {e}")
         print(f"[save_all_data] TRACEBACK: {traceback.format_exc()}")
         print("=== [save_all_data] END FAIL ===")
-        raise   # ← TEMPORARY — lets the error crash the app so it's visible
-
-def load_local_users():
-    """Kept for backward compatibility — returns session user_db."""
-    return dict(st.session_state.get("user_db", {}))
-
-def save_local_users(users):
-    """Kept for backward compatibility — calls Supabase save."""
-    st.session_state.user_db = users
-    return save_all_data()
+        return False
 
 # ===================================================================
 # ✅ AUTO-LOGIN FROM URL (?u=username)
