@@ -113,12 +113,16 @@ st.markdown("""
         border: none !important;
         border-radius: 12px !important;
         padding: 10px 20px !important;
-        transition: all 0.3s ease !important;
+        transition: transform 0.1s ease, box-shadow 0.15s ease !important;
         box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
     }
     .stButton > button:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
+    }
+    .stButton > button:active {
+        transform: translateY(0px) scale(0.97) !important;
+        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
     }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
@@ -1097,7 +1101,6 @@ def check_for_winners():
 
 def distribute_prizes(winners):
     """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
-    # Step 1: check shared flag first so multiple clients don't double-pay
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
     if global_paid:
         st.session_state.prize_distributed = True
@@ -1110,7 +1113,6 @@ def distribute_prizes(winners):
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
 
-    # Step 2: credit every winner's balance equally
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
@@ -1121,7 +1123,6 @@ def distribute_prizes(winners):
             st.session_state.user_db[username]["game_played"] = \
                 st.session_state.user_db[username].get("game_played", 0) + 1
 
-    # Step 3: persist balances AND the paid flag together
     save_all_data()
     st.session_state.prize_distributed = True
     save_global_winners(
@@ -1520,11 +1521,113 @@ if st.session_state.current_role == "admin":
     st.stop()
 
 # ===================================================================
+# ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
+#    (even those who did NOT pick a card)
+# ===================================================================
+if st.session_state.winner_declared and st.session_state.game_started:
+    sync_global_winners()
+    total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+    prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+
+    winning_patterns = []
+    winner_names = []
+    all_winner_cards = []
+    for winner in st.session_state.winners_list:
+        winning_patterns.extend(winner.get("patterns", []))
+        winner_names.append(winner.get("username", "Unknown"))
+        all_winner_cards.extend(winner.get("cards", []))
+    winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
+    winner_names_str = ", ".join(winner_names)
+
+    st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
+                border:4px solid #FFD700;border-radius:20px;padding:20px 12px;margin:15px 0;
+                text-align:center;box-shadow: 0 0 60px rgba(255,215,0,0.4);
+                animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
+        <div style="font-size:3rem;color:#FFD700;letter-spacing:8px;">🎉🎊🏆👑🎊🎉</div>
+        <div style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉</div>
+        <div style="font-size:1.3rem;color:#FFD700;margin:6px 0;">🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊</div>
+        <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:12px 0;">
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">🏆</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">👑</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">🥳</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 1s;">🎉</span>
+        </div>
+        <div style="font-size:1.4rem;color:#FFFFFF;margin:10px 0;padding:10px;background:rgba(0,0,0,0.25);border-radius:12px;">
+            🏆 አሸናፊ: <span style="color:#FFD700;font-weight:900;">{winner_names_str}</span> 🏆
+        </div>
+        <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
+            💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
+        </div>
+        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
+            🏅 የድል መንገድ: {winning_pattern}
+        </div>
+        <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
+            🎉🏆ያለዉ ካርቴላ ዉስን ስለሆን ፈጥንው ይምረጡ🏆🎉
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ!</span>
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟👇</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.balloons()
+    st.snow()
+
+    st.markdown("""
+    <div style="text-align:center;margin:20px 0 15px 0;">
+        <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.winners_list:
+        wcp = {}
+        for winner in st.session_state.winners_list:
+            for cid in winner.get("cards", []):
+                wcp[cid] = ", ".join(winner.get("patterns", ["BINGO!"]))
+        for i in range(0, len(all_winner_cards), 3):
+            chunk = all_winner_cards[i:i+3]
+            card_cols = st.columns(len(chunk))
+            for idx, cid in enumerate(chunk):
+                with card_cols[idx]:
+                    display_selected_card(cid, list(st.session_state.called_numbers), True, wcp.get(cid, "BINGO!"))
+
+    if st.session_state.winners_list:
+        st.markdown("### 🏆 አሸናፊዎች 🏆")
+        for idx, winner in enumerate(st.session_state.winners_list, 1):
+            patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
+            cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
+            st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
+
+    # ✅ RESUME BUTTON — visible to EVERY logged-in player
+    st.markdown("""
+    <div style="text-align:center;margin:25px 0 10px 0;">
+        <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
+            ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
+            st.session_state.winner_acknowledged = True
+            reset_for_next_round()
+            st.rerun()
+    st.stop()
+
+# ===================================================================
 # ✅ PLAYER DISPLAY
 # ===================================================================
 if st.session_state.game_started:
     all_player_cards = list(st.session_state.clicked_numbers)
-    
+
     # ✅ Always rebuild this player's cards from the shared file
     if st.session_state.current_user:
         _gt, _go, _, _ = load_global_cards()
@@ -1539,151 +1642,46 @@ if st.session_state.game_started:
             _my = sorted(set(_my))
             st.session_state.clicked_numbers = set(_my)
             all_player_cards = _my
-    
-    # ==============================================================
-    # ✅ WINNER DECLARED — celebration for EVERY player
-    # ==============================================================
-    if st.session_state.winner_declared:
-        sync_global_winners()
-        
-        total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
-        prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
-        
-        winning_patterns = []
-        winner_names = []
-        all_winner_cards = []
-        for winner in st.session_state.winners_list:
-            winning_patterns.extend(winner.get("patterns", []))
-            winner_names.append(winner.get("username", "Unknown"))
-            all_winner_cards.extend(winner.get("cards", []))
-        winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
-        winner_names_str = ", ".join(winner_names)
-        
-        st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
-                    border:4px solid #FFD700;border-radius:20px;padding:20px 12px;margin:15px 0;
-                    text-align:center;box-shadow: 0 0 60px rgba(255,215,0,0.4);
-                    animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
-            <div style="font-size:3rem;color:#FFD700;letter-spacing:8px;">🎉🎊🏆👑🎊🎉</div>
-            <div style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉</div>
-            <div style="font-size:1.3rem;color:#FFD700;margin:6px 0;">🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊</div>
-            <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:12px 0;">
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">🏆</span>
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">👑</span>
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">🥳</span>
-                <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 1s;">🎉</span>
-            </div>
-            <div style="font-size:1.4rem;color:#FFFFFF;margin:10px 0;padding:10px;background:rgba(0,0,0,0.25);border-radius:12px;">
-                🏆 አሸናፊ: <span style="color:#FFD700;font-weight:900;">{winner_names_str}</span> 🏆
-            </div>
-            <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
-                💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
-            </div>
-                        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
-                🏅 የድል መንገድ: {winning_pattern}
-            </div>
-            <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
-                🎉🏆ያለዉ ካርቴላ ዉስን ስለሆን ፈጥንው ይምረጡ🏆🎉
-            </div>
-            <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
-                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
-                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ!</span>
-                <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟👇</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.balloons()
-        st.snow()
-        
-        st.markdown("""
-        <div style="text-align:center;margin:20px 0 15px 0;">
-            <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.session_state.winners_list:
-            wcp = {}
-            for winner in st.session_state.winners_list:
-                for cid in winner.get("cards", []):
-                    wcp[cid] = ", ".join(winner.get("patterns", ["BINGO!"]))
-            for i in range(0, len(all_winner_cards), 3):
-                chunk = all_winner_cards[i:i+3]
-                card_cols = st.columns(len(chunk))
-                for idx, cid in enumerate(chunk):
-                    with card_cols[idx]:
-                        display_selected_card(cid, list(st.session_state.called_numbers), True, wcp.get(cid, "BINGO!"))
-        
-        if st.session_state.winners_list:
-            st.markdown("### 🏆 አሸናፊዎች 🏆")
-            for idx, winner in enumerate(st.session_state.winners_list, 1):
-                patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
-                cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
-                st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
-        
-        # ✅ RESUME BUTTON
-        st.markdown("""
-        <div style="text-align:center;margin:25px 0 10px 0;">
-            <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
-                ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col_a, col_b, col_c = st.columns([1, 2, 1])
-        with col_b:
-            if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="resume_btn"):
-                st.session_state.winner_acknowledged = True
-                reset_for_next_round()
-                st.rerun()
-    
-    # ==============================================================
+
     # ✅ GAME RUNNING — board + player's own cards
-    # ==============================================================
-    else:
-        # Rebuild from shared file every tick
-        if st.session_state.current_user:
-            _gt, _go, _, _ = load_global_cards()
-            _my = []
-            for _cid_str, _owner in _go.items():
-                if _owner == st.session_state.current_user:
-                    try:
-                        _my.append(int(_cid_str))
-                    except (ValueError, TypeError):
-                        pass
-            if _my:
-                _my = sorted(set(_my))
-                st.session_state.clicked_numbers = set(_my)
-                all_player_cards = _my
-        
-        st.markdown(f"""
-        <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
-            🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
-            <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;">
-                {len(st.session_state.called_numbers)}/75 Called
-            </span>
-            <span style="margin-left:8px;background:rgba(76,175,80,0.15);padding:2px 10px;border-radius:12px;color:#4CAF50;">
-                ✅ Your Cards: {len(all_player_cards)}/2
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        board_col, cards_col = st.columns([2, 1], gap="large")
-        with board_col:
-            display_master_board()
-        with cards_col:
-            st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
-            if all_player_cards:
-                for cid in all_player_cards:
-                    display_selected_card(cid, list(st.session_state.called_numbers), False)
-            else:
-                st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
-                st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
-        st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
+    if st.session_state.current_user:
+        _gt, _go, _, _ = load_global_cards()
+        _my = []
+        for _cid_str, _owner in _go.items():
+            if _owner == st.session_state.current_user:
+                try:
+                    _my.append(int(_cid_str))
+                except (ValueError, TypeError):
+                    pass
+        if _my:
+            _my = sorted(set(_my))
+            st.session_state.clicked_numbers = set(_my)
+            all_player_cards = _my
+
+    st.markdown(f"""
+    <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
+        🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
+        <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;">
+            {len(st.session_state.called_numbers)}/75 Called
+        </span>
+        <span style="margin-left:8px;background:rgba(76,175,80,0.15);padding:2px 10px;border-radius:12px;color:#4CAF50;">
+            ✅ Your Cards: {len(all_player_cards)}/2
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    board_col, cards_col = st.columns([2, 1], gap="large")
+    with board_col:
+        display_master_board()
+    with cards_col:
+        st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
+        if all_player_cards:
+            for cid in all_player_cards:
+                display_selected_card(cid, list(st.session_state.called_numbers), False)
+        else:
+            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
+            st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+    st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
     if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
@@ -1693,6 +1691,9 @@ else:
     if not st.session_state.game_started:
         st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         render_card_selection()
+        # ✅ Tick the countdown every second
+        time.sleep(1)
+        st.rerun()
 
 # ===================================================================
 # FOOTER
@@ -1717,7 +1718,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
         load_game_state()
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-        time.sleep(0.5)
+        time.sleep(0.3)
         st.rerun()
 
 # ===================================================================
@@ -1727,5 +1728,9 @@ if st.session_state.game_started and st.session_state.winner_declared:
     pass  # Wait for Resume button
 elif not st.session_state.game_started:
     maybe_start_game()
-    time.sleep(1)
+    time.sleep(0.5)
+    st.rerun()
+else:
+    # Game is running (no winner yet) — keep board fresh
+    time.sleep(0.5)
     st.rerun()
