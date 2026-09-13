@@ -306,12 +306,13 @@ def get_supabase_client():
         print("[get_supabase_client] client created OK")
         print("=== [get_supabase_client] END OK ===")
         return client
-    except Exception as e:
+        except Exception as e:
         import traceback
-        print(f"[get_supabase_client] EXCEPTION: {type(e).__name__}: {e}")
-        print(f"[get_supabase_client] TRACEBACK: {traceback.format_exc()}")
-        print("=== [get_supabase_client] END FAIL ===")
-        return None
+        print(f"[save_all_data] EXCEPTION: {type(e).__name__}: {e}")
+        print(f"[save_all_data] TRACEBACK: {traceback.format_exc()}")
+        print("=== [save_all_data] END FAIL ===")
+        st.error(f"🔴 Supabase error: {type(e).__name__}: {e}")   # ← ADD THIS LINE
+        return False
 
 def load_all_data():
     """Load all users from Supabase into session state."""
