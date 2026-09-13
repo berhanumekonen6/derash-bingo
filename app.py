@@ -363,7 +363,7 @@ def save_all_data():
             })
         print(f"[save_all_data] Attempting upsert of {len(rows)} row(s)")
         print(f"[save_all_data] First row: {rows[0] if rows else 'N/A'}")
-        response = client.table("users").upsert(rows).execute()
+        response = client.table("users").upsert(rows, on_conflict="username").execute()
         print(f"[save_all_data] SUCCESS: {response}")
         print("=== [save_all_data] END OK ===")
         return True
