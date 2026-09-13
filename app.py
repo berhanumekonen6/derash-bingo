@@ -1399,7 +1399,8 @@ def render_card_selection():
         st.session_state.columns_per_row = selected_cols
         st.rerun()
 
-    cols_per_row = st.session_state.columns_per_row    clicked = st.session_state.clicked_numbers
+    cols_per_row = st.session_state.columns_per_row
+    clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     rejected = st.session_state.rejected_card_num
     insufficient = st.session_state.insufficient_balance_card_num
