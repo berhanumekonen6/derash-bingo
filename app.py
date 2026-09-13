@@ -355,12 +355,14 @@ def clear_global_winners():
     return True
 
 def sync_global_winners():
-    """✅ Sync winner state — skip if this player already acknowledged."""
+    """✅ Sync winner state from DB. Only skip if this session already acknowledged THIS winner."""
     if st.session_state.get("winner_acknowledged", False):
         return False
-    
+
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
+        # Detect if the winner state actually changed vs what this session has
+        changed = (st.session_state.winners_list != winners_list) or (not st.session_state.winner_declared)
         st.session_state.winners_list = winners_list
         st.session_state.winner_declared = winner_declared
         if called_numbers:
@@ -371,7 +373,7 @@ def sync_global_winners():
             st.session_state.auto_called_count = auto_called_count
         st.session_state.game_over = game_over
         st.session_state.prize_distributed = prize_distributed
-        return True
+        return changed
     return False
 
 # ===================================================================
@@ -1076,42 +1078,72 @@ def check_winning_pattern(card_data, called_numbers):
 # GAME FUNCTIONS
 # ===================================================================
 def check_for_winners():
+    """
+    ✅ FIXED: Reads the authoritative state from Supabase instead of local session.
+    This guarantees that the winner is detected no matter which session triggers
+    the call — because it always sees the freshest called_numbers / taken_cards /
+    card_owner from the shared DB row.
+    """
     if st.session_state.winner_declared:
         return
-    called_numbers = list(st.session_state.called_numbers)
+
+    # 🔑 Pull FRESH authoritative state from the DB
+    row = load_state_row()
+
+    called_numbers = list(row.get("called_numbers") or [])
+    taken_cards = list(row.get("taken_cards") or [])
+    card_owner = dict(row.get("card_owner") or {})
+
+    if not called_numbers or not taken_cards:
+        return
+
     winners_found = []
-    for card_id in st.session_state.taken_cards:
+    for card_id in taken_cards:
         card_data = get_card_data(card_id)
-        if card_data:
-            pattern = check_winning_pattern(card_data, called_numbers)
-            if pattern:
-                owner = st.session_state.card_owner.get(str(card_id), "Unknown")
-                existing = next((w for w in winners_found if w["username"] == owner), None)
-                if existing:
-                    existing["cards"].append(card_id)
-                    existing["patterns"].append(pattern['type'])
-                else:
-                    winners_found.append({
-                        "username": owner,
-                        "cards": [card_id],
-                        "patterns": [pattern['type']],
-                        "card_data": card_data
-                    })
+        if not card_data:
+            continue
+        pattern = check_winning_pattern(card_data, called_numbers)
+        if pattern:
+            owner = card_owner.get(str(card_id), "Unknown")
+            existing = next((w for w in winners_found if w["username"] == owner), None)
+            if existing:
+                existing["cards"].append(card_id)
+                existing["patterns"].append(pattern['type'])
+            else:
+                winners_found.append({
+                    "username": owner,
+                    "cards": [card_id],
+                    "patterns": [pattern['type']],
+                    "card_data": card_data
+                })
+
     if winners_found:
+        # Mirror locally so this session sees the win immediately
+        st.session_state.called_numbers = set(called_numbers)
+        st.session_state.taken_cards = taken_cards
+        st.session_state.card_owner = card_owner
+
         st.session_state.winners_list = winners_found
         st.session_state.winner_declared = True
         st.session_state.game_over = True
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
+
+        # Distribute prizes first (guarded by global flag)
         distribute_prizes(winners_found)
-        save_game_state()
-        save_global_winners(
-            winners_found, True,
-            st.session_state.called_numbers,
-            st.session_state.last_called_number,
-            st.session_state.auto_called_count,
-            True, st.session_state.prize_distributed
-        )
+
+        # ⚠️ CRITICAL: Persist the FULL final state in ONE write, including
+        # called_numbers, so all other sessions catch up on the next rerun.
+        update_state({
+            "winners_list": winners_found,
+            "winner_declared": True,
+            "game_over": True,
+            "auto_call_started": False,
+            "called_numbers": called_numbers,
+            "last_called_number": row.get("last_called_number"),
+            "auto_called_count": len(called_numbers),
+            "prize_distributed": st.session_state.prize_distributed,
+        })
 
 def distribute_prizes(winners):
     """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
@@ -1126,6 +1158,9 @@ def distribute_prizes(winners):
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
+
+    # Reload fresh users so we don't lose any concurrent balance changes
+    load_all_data()
 
     for winner in winners:
         username = winner.get("username")
