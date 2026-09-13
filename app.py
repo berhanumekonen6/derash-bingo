@@ -1544,7 +1544,8 @@ if st.session_state.game_started:
         winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
         winner_names_str = ", ".join(winner_names)
         
-        st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
+        # ✅ CHANGED: use components.html for the winner sound (avoids frontend parse error)
+        components.html(get_winner_sound_js(), height=0, width=0)
         
         st.markdown(f"""
         <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
@@ -1701,7 +1702,8 @@ if st.session_state.game_started and not st.session_state.winner_declared:
         just_called = try_global_call()
         load_game_state()
         if just_called is not None:
-            st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+            # ✅ CHANGED: use components.html for the number sound (avoids frontend parse error)
+            components.html(get_number_sound_js(just_called), height=0, width=0)
         time.sleep(0.5)
         st.rerun()
 
