@@ -4,25 +4,14 @@ import random
 import time
 import hashlib
 import json
-from datetime import datetime, timedelta
-from supabase import create_client
+import os
+from datetime import datetime, timedelta 
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ🍀",
     page_icon="🎯🍀",
     layout="wide"
 )
-
-# ===================================================================
-# SUPABASE CLIENT
-# ===================================================================
-@st.cache_resource
-def get_supabase():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_SECRET_KEY"]
-    return create_client(url, key)
-
-supabase = get_supabase()
 
 # ===================================================================
 # VIEWPORT META
@@ -264,7 +253,7 @@ def init_session_state():
         'show_deposit_msg': False,
         'deposit_msg_text': "",
         'flash_msg': "",
-        'celebration_start_time': None,
+                'celebration_start_time': None,
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
@@ -274,6 +263,75 @@ def init_session_state():
             st.session_state[k] = v
 
 init_session_state()
+
+# ===================================================================
+# GLOBAL WINNER TRACKING
+# ===================================================================
+def get_global_winners_file():
+    return "bingo_global_winners.json"
+
+def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
+    try:
+        data = {
+            "winners_list": winners_list,
+            "winner_declared": winner_declared,
+            "called_numbers": list(called_numbers) if called_numbers else [],
+            "last_called_number": last_called_number,
+            "auto_called_count": auto_called_count,
+            "game_over": game_over,
+            "prize_distributed": prize_distributed,
+            "timestamp": time.time()
+        }
+        with open(get_global_winners_file(), "w") as f:
+            json.dump(data, f)
+        return True
+    except:
+        return False
+
+def load_global_winners():
+    try:
+        if os.path.exists(get_global_winners_file()):
+            with open(get_global_winners_file(), "r") as f:
+                data = json.load(f)
+                return (data.get("winners_list", []),
+                        data.get("winner_declared", False),
+                        set(data.get("called_numbers", [])),
+                        data.get("last_called_number", None),
+                        data.get("auto_called_count", 0),
+                        data.get("game_over", False),
+                        data.get("prize_distributed", False),
+                        data.get("timestamp", 0))
+    except:
+        pass
+    return [], False, set(), None, 0, False, False, 0
+
+def clear_global_winners():
+    try:
+        if os.path.exists(get_global_winners_file()):
+            os.remove(get_global_winners_file())
+        return True
+    except:
+        return False
+
+def sync_global_winners():
+    """✅ Sync winner state — skip if this player already acknowledged."""
+    if st.session_state.get("winner_acknowledged", False):
+        return False
+    
+    winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
+    if winner_declared:
+        st.session_state.winners_list = winners_list
+        st.session_state.winner_declared = winner_declared
+        if called_numbers:
+            st.session_state.called_numbers = called_numbers
+        if last_called_number:
+            st.session_state.last_called_number = last_called_number
+        if auto_called_count > 0:
+            st.session_state.auto_called_count = auto_called_count
+        st.session_state.game_over = game_over
+        st.session_state.prize_distributed = prize_distributed
+        return True
+    return False
 
 # ===================================================================
 # GAME CONSTANTS
@@ -323,155 +381,87 @@ def get_letter_for_number(num):
     else: return "ኦ"
 
 # ===================================================================
-# SUPABASE — USERS
+# LOCAL FILE STORAGE
 # ===================================================================
+def get_local_users_file():
+    return "bingo_users_local.json"
+
 def load_local_users():
     try:
-        res = supabase.table("users").select("*").execute()
-        return {r["username"]: r for r in (res.data or [])}
-    except Exception as e:
-        st.error(f"⚠️ Database read error: {e}")
-        return {}
+        if os.path.exists(get_local_users_file()):
+            with open(get_local_users_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
 
 def save_local_users(users):
     try:
-        for u, d in users.items():
-            supabase.table("users").upsert({
-                "username": u,
-                "password": d.get("password", ""),
-                "balance": float(d.get("balance", 0)),
-                "role": d.get("role", "player"),
-                "name": d.get("name", ""),
-                "phone": d.get("phone", ""),
-                "game_played": int(d.get("game_played", 0)),
-                "wins": int(d.get("wins", 0)),
-            }).execute()
+        with open(get_local_users_file(), "w") as f:
+            json.dump(users, f, indent=2)
         return True
-    except Exception as e:
-        st.error(f"⚠️ Database write error: {e}")
+    except:
         return False
 
 def load_all_data():
-    st.session_state.user_db = load_local_users()
+    local_users = load_local_users()
+    st.session_state.user_db = local_users if local_users else {}
 
 def save_all_data():
     if "user_db" in st.session_state and st.session_state.user_db:
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
-# SUPABASE — GAME STATE (single row, id=1)
+# GLOBAL CARD TRACKING
 # ===================================================================
-def _default_state():
-    return {
-        "id": 1,
-        "called_numbers": [],
-        "last_called_number": None,
-        "auto_called_count": 0,
-        "game_started": False,
-        "auto_call_started": False,
-        "last_call_time": time.time(),
-        "winner_declared": False,
-        "game_over": False,
-        "prize_distributed": False,
-        "winners_list": [],
-        "taken_cards": [],
-        "card_owner": {},
-        "timer_start_time": time.time(),
-        "card_selection_time": 60,
-        "last_called_at": 0,
-        "last_called_by": None,
-    }
+def get_global_cards_file():
+    return "bingo_global_cards.json"
 
-def load_state_row():
-    try:
-        res = supabase.table("game_state").select("*").eq("id", 1).execute()
-        if res.data and len(res.data) > 0:
-            return res.data[0]
-    except Exception as e:
-        st.error(f"⚠️ State read error: {e}")
-    default = _default_state()
-    try:
-        supabase.table("game_state").upsert(default).execute()
-    except Exception:
-        pass
-    return default
-
-def update_state(patch: dict):
-    try:
-        supabase.table("game_state").update(patch).eq("id", 1).execute()
-        return True
-    except Exception as e:
-        st.error(f"⚠️ State write error: {e}")
-        return False
-
-# ===================================================================
-# STATE → SESSION BRIDGE
-# ===================================================================
-def save_game_state():
-    update_state({
-        "called_numbers": list(st.session_state.called_numbers),
-        "last_called_number": st.session_state.last_called_number,
-        "auto_called_count": st.session_state.auto_called_count,
-        "game_started": st.session_state.game_started,
-        "auto_call_started": st.session_state.auto_call_started,
-        "last_call_time": st.session_state.last_call_time,
-        "winner_declared": st.session_state.winner_declared,
-        "game_over": st.session_state.game_over,
-        "prize_distributed": st.session_state.prize_distributed,
-    })
-
-def load_game_state():
-    row = load_state_row()
-    st.session_state.called_numbers = set(row.get("called_numbers") or [])
-    st.session_state.last_called_number = row.get("last_called_number")
-    st.session_state.auto_called_count = row.get("auto_called_count", 0)
-    st.session_state.auto_call_started = row.get("auto_call_started", False)
-    st.session_state.last_call_time = row.get("last_call_time", time.time())
-    if not st.session_state.winner_declared:
-        st.session_state.winner_declared = row.get("winner_declared", False)
-    st.session_state.game_over = row.get("game_over", False)
-    st.session_state.prize_distributed = row.get("prize_distributed", False)
-
-# ===================================================================
-# GLOBAL CARDS
-# ===================================================================
 def load_global_cards():
-    row = load_state_row()
-    return (
-        row.get("taken_cards") or [],
-        row.get("card_owner") or {},
-        row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", 60),
-    )
+    try:
+        if os.path.exists(get_global_cards_file()):
+            with open(get_global_cards_file(), "r") as f:
+                data = json.load(f)
+                return (data.get("taken_cards", []), 
+                        data.get("card_owner", {}), 
+                        data.get("timer_start_time", time.time()),
+                        data.get("card_selection_time", 60))
+    except:
+        pass
+    return [], {}, time.time(), 60
 
 def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selection_time=None):
-    patch = {
-        "taken_cards": list(taken_cards),
-        "card_owner": dict(card_owner),
-    }
-    if timer_start_time is not None:
-        patch["timer_start_time"] = timer_start_time
-    if card_selection_time is not None:
-        patch["card_selection_time"] = card_selection_time
-    update_state(patch)
+    try:
+        data = {"taken_cards": taken_cards, "card_owner": card_owner}
+        if timer_start_time is not None:
+            data["timer_start_time"] = timer_start_time
+        if card_selection_time is not None:
+            data["card_selection_time"] = card_selection_time
+        with open(get_global_cards_file(), "w") as f:
+            json.dump(data, f)
+        return True
+    except:
+        return False
 
 # ===================================================================
 # GLOBAL TIMER
 # ===================================================================
+@st.cache_resource
+def _get_shared_timer_store():
+    return {"timer_start": time.time(), "duration": 60, "game_started": False}
+
 def load_global_timer():
-    row = load_state_row()
-    return (
-        row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", 60),
-        row.get("game_started", False),
-    )
+    store = _get_shared_timer_store()
+    return (store.get("timer_start", time.time()),
+            store.get("duration", 60),
+            store.get("game_started", False))
 
 def save_global_timer(timer_start, duration=60, game_started=False):
-    update_state({
-        "timer_start_time": timer_start,
-        "card_selection_time": duration,
-        "game_started": game_started,
-    })
+    store = _get_shared_timer_store()
+    store["timer_start"] = timer_start
+    store["duration"] = duration
+    store["game_started"] = game_started
+    return True
 
 def reset_global_timer(duration=60):
     new_start = time.time()
@@ -501,19 +491,41 @@ def get_global_remaining_time():
 # ===================================================================
 # GLOBAL CALLER LOCK
 # ===================================================================
+def get_caller_lock_file():
+    return "bingo_caller_lock.json"
+
+def load_caller_lock():
+    try:
+        if os.path.exists(get_caller_lock_file()):
+            with open(get_caller_lock_file(), "r") as f:
+                return json.load(f)
+    except:
+        pass
+    return {"last_called_at": 0, "last_called_by": None}
+
+def save_caller_lock(last_called_at, last_called_by):
+    try:
+        with open(get_caller_lock_file(), "w") as f:
+            json.dump({"last_called_at": last_called_at, "last_called_by": last_called_by}, f)
+        return True
+    except:
+        return False
+
 def try_global_call():
-    row = load_state_row()
-    if row.get("winner_declared"):
+    # ✅ STOP calling the moment a winner exists (global or local)
+    _, global_winner_done, _, _, _, _, _, _ = load_global_winners()
+    if global_winner_done or st.session_state.winner_declared:
         return None
 
+    lock = load_caller_lock()
     now = time.time()
-    last_at = row.get("last_called_at", 0) or 0
+    last_at = lock.get("last_called_at", 0)
     if now - last_at < 2.0:
         return None
+    save_caller_lock(now, st.session_state.current_user)
 
-    update_state({"last_called_at": now, "last_called_by": st.session_state.current_user})
-
-    current_called = set(row.get("called_numbers") or [])
+    load_game_state()
+    current_called = set(st.session_state.called_numbers)
     if len(current_called) >= 75:
         return None
     available = [i for i in range(1, 76) if i not in current_called]
@@ -521,95 +533,77 @@ def try_global_call():
         return None
 
     called_num = random.choice(available)
-    current_called.add(called_num)
-
-    update_state({
-        "called_numbers": list(current_called),
-        "last_called_number": called_num,
-        "auto_called_count": len(current_called),
-    })
-
-    st.session_state.called_numbers = current_called
+    st.session_state.called_numbers.add(called_num)
     st.session_state.last_called_number = called_num
-    st.session_state.auto_called_count = len(current_called)
-
+    st.session_state.auto_called_count = len(st.session_state.called_numbers)
+    save_game_state()
     check_for_winners()
     return called_num
 
 # ===================================================================
-# GLOBAL WINNERS
+# GAME STATE
 # ===================================================================
-def save_global_winners(winners_list, winner_declared, called_numbers,
-                        last_called_number, auto_called_count, game_over, prize_distributed):
-    update_state({
-        "winners_list": winners_list,
-        "winner_declared": winner_declared,
-        "called_numbers": list(called_numbers) if called_numbers else [],
-        "last_called_number": last_called_number,
-        "auto_called_count": auto_called_count,
-        "game_over": game_over,
-        "prize_distributed": prize_distributed,
-    })
+def get_game_state_file():
+    return "bingo_game_state.json"
 
-def load_global_winners():
-    row = load_state_row()
-    return (
-        row.get("winners_list") or [],
-        row.get("winner_declared", False),
-        set(row.get("called_numbers") or []),
-        row.get("last_called_number"),
-        row.get("auto_called_count", 0),
-        row.get("game_over", False),
-        row.get("prize_distributed", False),
-        row.get("last_call_time", 0),
-    )
+def save_game_state():
+    try:
+        data = {
+            "called_numbers": list(st.session_state.called_numbers),
+            "last_called_number": st.session_state.last_called_number,
+            "auto_called_count": st.session_state.auto_called_count,
+            "game_started": st.session_state.game_started,
+            "auto_call_started": st.session_state.auto_call_started,
+            "last_call_time": st.session_state.last_call_time,
+            "winner_declared": st.session_state.winner_declared,
+            "game_over": st.session_state.game_over,
+            "prize_distributed": st.session_state.prize_distributed,
+        }
+        with open(get_game_state_file(), "w") as f:
+            json.dump(data, f)
+    except:
+        pass
 
-def clear_global_winners():
-    update_state({
-        "winners_list": [],
-        "winner_declared": False,
-    })
+def load_game_state():
+    try:
+        if os.path.exists(get_game_state_file()):
+            with open(get_game_state_file(), "r") as f:
+                data = json.load(f)
+                st.session_state.called_numbers = set(data.get("called_numbers", []))
+                st.session_state.last_called_number = data.get("last_called_number")
+                st.session_state.auto_called_count = data.get("auto_called_count", 0)
+                st.session_state.auto_call_started = data.get("auto_call_started", False)
+                st.session_state.last_call_time = data.get("last_call_time", time.time())
+                # ✅ Do NOT overwrite winner_declared here (keep session state clean)
+                if not st.session_state.winner_declared:
+                    st.session_state.winner_declared = data.get("winner_declared", False)
+                st.session_state.game_over = data.get("game_over", False)
+                st.session_state.prize_distributed = data.get("prize_distributed", False)
+    except:
+        pass
 
-def sync_global_winners():
-    if st.session_state.get("winner_acknowledged", False):
-        return False
-    winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
-    if winner_declared:
-        st.session_state.winners_list = winners_list
-        st.session_state.winner_declared = winner_declared
-        if called_numbers:
-            st.session_state.called_numbers = called_numbers
-        if last_called_number:
-            st.session_state.last_called_number = last_called_number
-        if auto_called_count > 0:
-            st.session_state.auto_called_count = auto_called_count
-        st.session_state.game_over = game_over
-        st.session_state.prize_distributed = prize_distributed
+def clear_game_state():
+    try:
+        if os.path.exists(get_game_state_file()):
+            os.remove(get_game_state_file())
         return True
-    return False
+    except:
+        return False
 
 # ===================================================================
 # RESET FOR NEXT ROUND
 # ===================================================================
 def reset_for_next_round():
-    update_state({
-        "winners_list": [],
-        "winner_declared": False,
-        "game_over": False,
-        "prize_distributed": False,
-        "called_numbers": [],
-        "last_called_number": None,
-        "auto_called_count": 0,
-        "game_started": False,
-        "auto_call_started": False,
-        "last_called_at": 0,
-        "last_called_by": None,
-        "taken_cards": [],
-        "card_owner": {},
-        "timer_start_time": time.time(),
-        "card_selection_time": 60,
-    })
-
+    clear_global_winners()
+    clear_game_state()
+    reset_global_timer(60)
+    save_global_cards([], {}, time.time(), 60)
+    try:
+        if os.path.exists(get_caller_lock_file()):
+            os.remove(get_caller_lock_file())
+    except:
+        pass
+    
     st.session_state.selected_card = None
     st.session_state.clicked_numbers = set()
     st.session_state.called_numbers = set()
@@ -629,22 +623,27 @@ def reset_for_next_round():
     st.session_state.rejected_card_num = None
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
+    save_game_state()
 
 # ===================================================================
-# SYNC GLOBAL CARDS
+# SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
 # ===================================================================
 def sync_global_cards():
     global_taken, global_owner, _, _ = load_global_cards()
+    
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-
+    
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     if game_started:
         st.session_state.game_started = True
-
+    
     load_game_state()
-
+    
+    # ✅ NO AUTO-RESET HERE — reset happens only when a player clicks
+    # the Resume button, or when a fresh round begins.
+    
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
@@ -692,7 +691,7 @@ def login_user(username, password):
     username = username.strip()
     password = password.strip()
     load_all_data()
-
+    
     if username == "admin" and password == "admin123":
         if username not in st.session_state.user_db:
             st.session_state.user_db[username] = {
@@ -706,17 +705,17 @@ def login_user(username, password):
         else:
             st.session_state.user_db["admin"]["balance"] = 0.0
             save_local_users(st.session_state.user_db)
-
+        
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
         return True, "✅ Admin login successful!"
-
+    
     if username not in st.session_state.user_db:
         return False, "❌ Username not found"
-
+    
     if verify_password(password, st.session_state.user_db[username]["password"]):
         st.session_state.logged_in = True
         st.session_state.current_user = username
@@ -757,7 +756,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL
+# ADMIN PANEL (unchanged)
 # ===================================================================
 def admin_panel():
     st.markdown("""
@@ -1510,7 +1509,8 @@ if st.session_state.current_role == "admin":
 # ===================================================================
 if st.session_state.game_started:
     all_player_cards = list(st.session_state.clicked_numbers)
-
+    
+    # ✅ Always rebuild this player's cards from the shared file
     if st.session_state.current_user:
         _gt, _go, _, _ = load_global_cards()
         _my = []
@@ -1524,13 +1524,16 @@ if st.session_state.game_started:
             _my = sorted(set(_my))
             st.session_state.clicked_numbers = set(_my)
             all_player_cards = _my
-
+    
+    # ==============================================================
+    # ✅ WINNER DECLARED — celebration for EVERY player
+    # ==============================================================
     if st.session_state.winner_declared:
         sync_global_winners()
-
+        
         total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
         prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
-
+        
         winning_patterns = []
         winner_names = []
         all_winner_cards = []
@@ -1540,9 +1543,9 @@ if st.session_state.game_started:
             all_winner_cards.extend(winner.get("cards", []))
         winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
         winner_names_str = ", ".join(winner_names)
-
+        
         st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
-
+        
         st.markdown(f"""
         <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
                     border:4px solid #FFD700;border-radius:20px;padding:20px 12px;margin:15px 0;
@@ -1578,16 +1581,16 @@ if st.session_state.game_started:
             </div>
         </div>
         """, unsafe_allow_html=True)
-
+        
         st.balloons()
         st.snow()
-
+        
         st.markdown("""
         <div style="text-align:center;margin:20px 0 15px 0;">
             <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
         </div>
         """, unsafe_allow_html=True)
-
+        
         if st.session_state.winners_list:
             wcp = {}
             for winner in st.session_state.winners_list:
@@ -1599,14 +1602,15 @@ if st.session_state.game_started:
                 for idx, cid in enumerate(chunk):
                     with card_cols[idx]:
                         display_selected_card(cid, list(st.session_state.called_numbers), True, wcp.get(cid, "BINGO!"))
-
+        
         if st.session_state.winners_list:
             st.markdown("### 🏆 አሸናፊዎች 🏆")
             for idx, winner in enumerate(st.session_state.winners_list, 1):
                 patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
                 cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
                 st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
-
+        
+        # ✅ RESUME BUTTON
         st.markdown("""
         <div style="text-align:center;margin:25px 0 10px 0;">
             <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
@@ -1614,15 +1618,19 @@ if st.session_state.game_started:
             </p>
         </div>
         """, unsafe_allow_html=True)
-
+        
         col_a, col_b, col_c = st.columns([1, 2, 1])
         with col_b:
             if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="resume_btn"):
                 st.session_state.winner_acknowledged = True
                 reset_for_next_round()
                 st.rerun()
-
+    
+    # ==============================================================
+    # ✅ GAME RUNNING — board + player's own cards
+    # ==============================================================
     else:
+        # Rebuild from shared file every tick
         if st.session_state.current_user:
             _gt, _go, _, _ = load_global_cards()
             _my = []
@@ -1636,7 +1644,7 @@ if st.session_state.game_started:
                 _my = sorted(set(_my))
                 st.session_state.clicked_numbers = set(_my)
                 all_player_cards = _my
-
+        
         st.markdown(f"""
         <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
             🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -1648,7 +1656,7 @@ if st.session_state.game_started:
             </span>
         </div>
         """, unsafe_allow_html=True)
-
+        
         board_col, cards_col = st.columns([2, 1], gap="large")
         with board_col:
             display_master_board()
@@ -1682,7 +1690,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL
+# ✅ AUTO-CALL — stops the moment a winner exists
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
@@ -1701,7 +1709,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
 # ✅ AUTO-RERUN
 # ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
-    pass
+    pass  # Wait for Resume button
 elif not st.session_state.game_started:
     maybe_start_game()
     time.sleep(1)
