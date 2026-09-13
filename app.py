@@ -564,20 +564,22 @@ def try_global_call():
     return called_num
 
 # ===================================================================
-# GAME STATE (Supabase-backed)
+# GAME STATE (Supabase-backed) — FIXED: never overwrites winner flag with False
 # ===================================================================
 def save_game_state():
-    update_state({
+    patch = {
         "called_numbers": list(st.session_state.called_numbers),
         "last_called_number": st.session_state.last_called_number,
         "auto_called_count": st.session_state.auto_called_count,
         "game_started": st.session_state.game_started,
         "auto_call_started": st.session_state.auto_call_started,
         "last_call_time": st.session_state.last_call_time,
-        "winner_declared": st.session_state.winner_declared,
         "game_over": st.session_state.game_over,
         "prize_distributed": st.session_state.prize_distributed,
-    })
+    }
+    if st.session_state.winner_declared:
+        patch["winner_declared"] = True
+    update_state(patch)
 
 def load_game_state():
     row = load_state_row()
@@ -1204,15 +1206,15 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
-def display_master_board():
-    if not st.session_state.winner_declared:
-        sync_global_winners()
+# ✅ Cached board HTML — no re-render blink when nothing changed
+@st.cache_data(show_spinner=False, ttl=300)
+def _render_board_html(called_tuple, last_num, amharic_last, letter_last):
     master_board = {
         'B': list(range(1, 16)), 'I': list(range(16, 31)),
         'N': list(range(31, 46)), 'G': list(range(46, 61)),
         'O': list(range(61, 76))
     }
-    called_numbers = list(st.session_state.called_numbers)
+    called_numbers = list(called_tuple)
     html = '''
     <style>
         .board-container { max-width: 950px; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
@@ -1229,10 +1231,8 @@ def display_master_board():
     <div class="board-container">
         <div class="board-title">🎯 BINGO Board</div>
     '''
-    if st.session_state.last_called_number:
-        letter = get_letter_for_number(st.session_state.last_called_number)
-        amharic = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
+    if last_num:
+        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{last_num} ({letter_last}) - {amharic_last}</span></div>'
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += f'<td class="header-cell">{letter}</td>'
@@ -1242,7 +1242,7 @@ def display_master_board():
         for letter in ['B', 'I', 'N', 'G', 'O']:
             num = master_board[letter][row]
             is_called = num in called_numbers
-            is_last = num == st.session_state.last_called_number
+            is_last = num == last_num
             if is_last:
                 html += f'<td><div class="board-number last-called">{num}</div></td>'
             elif is_called:
@@ -1253,6 +1253,21 @@ def display_master_board():
     html += '</table>'
     html += f'<div class="board-stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
     html += '</div>'
+    return html
+
+
+def display_master_board():
+    if not st.session_state.winner_declared:
+        sync_global_winners()
+    called_tuple = tuple(sorted(st.session_state.called_numbers))
+    last_num = st.session_state.last_called_number
+    if last_num:
+        letter_last = get_letter_for_number(last_num)
+        amharic_last = get_amharic_number(last_num)
+    else:
+        letter_last = ""
+        amharic_last = ""
+    html = _render_board_html(called_tuple, last_num, amharic_last, letter_last)
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
@@ -1541,7 +1556,6 @@ if st.session_state.current_role == "admin":
 
 # ===================================================================
 # ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
-#    (even those who did NOT pick a card)
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
@@ -1624,7 +1638,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
             cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
             st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
 
-    # ✅ RESUME BUTTON — visible to EVERY logged-in player
     st.markdown("""
     <div style="text-align:center;margin:25px 0 10px 0;">
         <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
@@ -1721,13 +1734,23 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists
+# ✅ AUTO-CALL — stops the moment a winner exists (checks DB every tick)
 # ===================================================================
-if st.session_state.game_started and not st.session_state.winner_declared:
-    _, _gd, _, _, _, _, _, _ = load_global_winners()
-    if _gd:
-        sync_global_winners()
-        st.rerun()
+if st.session_state.game_started:
+    _wl, _wdec, _cn, _lcn, _acc, _go, _pd, _ts = load_global_winners()
+
+    if _wdec:
+        # Winner exists — stop calling, sync local state, let celebration render
+        if not st.session_state.winner_declared:
+            st.session_state.winner_declared = True
+            st.session_state.winners_list = _wl
+            st.session_state.game_over = _go
+            st.session_state.prize_distributed = _pd
+            st.session_state.called_numbers = _cn
+            st.session_state.last_called_number = _lcn
+            st.session_state.auto_called_count = _acc
+            st.rerun()
+        # Do NOT call save_game_state here — it could overwrite the DB flag
     else:
         just_called = try_global_call()
         load_game_state()
@@ -1740,11 +1763,12 @@ if st.session_state.game_started and not st.session_state.winner_declared:
 # ✅ AUTO-RERUN
 # ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
-    pass
+    pass  # Wait for Resume button
 elif not st.session_state.game_started:
     maybe_start_game()
     time.sleep(0.5)
     st.rerun()
 else:
-    time.sleep(0.5)
+    # Game running, no winner — slower rerun to reduce flicker
+    time.sleep(1.0)
     st.rerun()
