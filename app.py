@@ -229,7 +229,13 @@ def get_winner_sound_js():
 DATA_DIR = os.environ.get("BINGO_DATA_DIR", ".")
 try:
     os.makedirs(DATA_DIR, exist_ok=True)
-except:
+    # Test write permission
+    _test_file = os.path.join(DATA_DIR, ".write_test")
+    with open(_test_file, "w") as f:
+        f.write("ok")
+    os.remove(_test_file)
+except Exception as _e:
+    print(f"[DATA_DIR] {DATA_DIR} not writable ({_e}), falling back to '.'")
     DATA_DIR = "."
 
 def get_local_users_file():
@@ -269,6 +275,7 @@ def init_session_state():
         'winners_list': [],
         'winner_declared': False,
         'user_db': {},
+        'session_users': {},
         'taken_cards': [],
         'prize_distributed': False,
         'card_owner': {},
@@ -289,8 +296,30 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
-# LOCAL FILE STORAGE
+# ✅ AUTO-LOGIN FROM URL (?u=username)
 # ===================================================================
+if not st.session_state.logged_in:
+    _url_user = st.query_params.get("u", None)
+    if _url_user:
+        try:
+            if os.path.exists(get_local_users_file()):
+                with open(get_local_users_file(), "r") as f:
+                    _db = json.load(f)
+                if _url_user in _db:
+                    st.session_state.user_db = _db
+                    st.session_state.session_users = dict(_db)
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = _url_user
+                    st.session_state.current_role = _db[_url_user].get("role", "player")
+        except Exception as _e:
+            print(f"[auto-login] {_e}")
+
+# ===================================================================
+# LOCAL FILE STORAGE — SAFE VERSIONS
+# ===================================================================
+def get_local_users_file():
+    return os.path.join(DATA_DIR, "bingo_users_local.json")
+
 def load_local_users():
     try:
         if os.path.exists(get_local_users_file()):
@@ -312,34 +341,33 @@ def save_local_users(users):
         return False
 
 def load_all_data():
-    local_users = load_local_users()
-    st.session_state.user_db = local_users if local_users else {}
+    """Load from disk, and merge any session-only users on top."""
+    disk_users = load_local_users()
+    merged = dict(disk_users)
+    # Session cache takes priority (has freshest entries)
+    if 'session_users' in st.session_state:
+        merged.update(st.session_state.session_users)
+    st.session_state.user_db = merged
 
 def save_all_data():
-    if "user_db" in st.session_state and st.session_state.user_db:
-        save_local_users(st.session_state.user_db)
-
-# ===================================================================
-# ✅ AUTO-LOGIN FROM URL (?u=username)
-# ===================================================================
-if not st.session_state.logged_in:
-    _url_user = st.query_params.get("u", None)
-    if _url_user:
-        try:
-            if os.path.exists(get_local_users_file()):
-                with open(get_local_users_file(), "r") as f:
-                    _db = json.load(f)
-                if _url_user in _db:
-                    st.session_state.user_db = _db
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = _url_user
-                    st.session_state.current_role = _db[_url_user].get("role", "player")
-        except:
-            pass
+    """Save the merged DB to disk. Never wipe the file."""
+    if "user_db" not in st.session_state:
+        return False
+    db = st.session_state.user_db
+    # Merge session cache into what we save
+    if 'session_users' in st.session_state:
+        for u, d in st.session_state.session_users.items():
+            db[u] = d
+    if not db:
+        return False
+    return save_local_users(db)
 
 # ===================================================================
 # GLOBAL WINNER TRACKING
 # ===================================================================
+def get_global_winners_file():
+    return os.path.join(DATA_DIR, "bingo_global_winners.json")
+
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     try:
         data = {
@@ -355,7 +383,8 @@ def save_global_winners(winners_list, winner_declared, called_numbers, last_call
         with open(get_global_winners_file(), "w") as f:
             json.dump(data, f)
         return True
-    except:
+    except Exception as e:
+        print(f"[save_global_winners] {e}")
         return False
 
 def load_global_winners():
@@ -386,6 +415,7 @@ def clear_global_winners():
 def sync_global_winners():
     if st.session_state.get("winner_acknowledged", False):
         return False
+    
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
@@ -451,6 +481,9 @@ def get_letter_for_number(num):
 # ===================================================================
 # GLOBAL CARD TRACKING
 # ===================================================================
+def get_global_cards_file():
+    return os.path.join(DATA_DIR, "bingo_global_cards.json")
+
 def load_global_cards():
     try:
         if os.path.exists(get_global_cards_file()):
@@ -525,6 +558,9 @@ def get_global_remaining_time():
 # ===================================================================
 # GLOBAL CALLER LOCK
 # ===================================================================
+def get_caller_lock_file():
+    return os.path.join(DATA_DIR, "bingo_caller_lock.json")
+
 def load_caller_lock():
     try:
         if os.path.exists(get_caller_lock_file()):
@@ -573,6 +609,9 @@ def try_global_call():
 # ===================================================================
 # GAME STATE
 # ===================================================================
+def get_game_state_file():
+    return os.path.join(DATA_DIR, "bingo_game_state.json")
+
 def save_game_state():
     try:
         data = {
@@ -702,7 +741,7 @@ def maybe_start_game():
         st.rerun()
 
 # ===================================================================
-# AUTHENTICATION
+# AUTHENTICATION — ✅ FIXED
 # ===================================================================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -713,20 +752,25 @@ def verify_password(password, hashed):
 def login_user(username, password):
     username = username.strip()
     password = password.strip()
-    # ✅ ALWAYS read fresh from disk before checking
-    st.session_state.user_db = {}
-    load_all_data()
+    
+    # ✅ Merge disk + session cache so BOTH are checked
+    disk_users = load_local_users()
+    all_users = dict(disk_users)
+    if 'session_users' in st.session_state:
+        all_users.update(st.session_state.session_users)
+    st.session_state.user_db = all_users
     
     if username == "admin" and password == "admin123":
-        if username not in st.session_state.user_db:
-            st.session_state.user_db[username] = {
+        if username not in all_users:
+            admin_data = {
                 "password": hash_password("admin123"),
                 "balance": 0.0, "role": "admin",
                 "name": "Admin", "phone": "",
                 "game_played": 0, "wins": 0
             }
+            st.session_state.user_db[username] = admin_data
+            st.session_state.session_users[username] = admin_data
             save_local_users(st.session_state.user_db)
-            load_all_data()
         else:
             st.session_state.user_db["admin"]["balance"] = 0.0
             save_local_users(st.session_state.user_db)
@@ -738,13 +782,15 @@ def login_user(username, password):
         sync_global_cards()
         return True, "✅ Admin login successful!"
     
-    if username not in st.session_state.user_db:
+    if username not in all_users:
         return False, "❌ Username not found"
     
-    if verify_password(password, st.session_state.user_db[username]["password"]):
+    if verify_password(password, all_users[username]["password"]):
+        # ✅ Cache this user in session for future checks
+        st.session_state.session_users[username] = all_users[username]
         st.session_state.logged_in = True
         st.session_state.current_user = username
-        st.session_state.current_role = st.session_state.user_db[username]["role"]
+        st.session_state.current_role = all_users[username].get("role", "player")
         load_all_data()
         sync_global_cards()
         return True, "✅ Login successful!"
@@ -759,31 +805,35 @@ def register_user(username, password, name, phone=""):
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
     
-    # ✅ Always read fresh from disk before checking duplicates
-    st.session_state.user_db = {}
-    load_all_data()
+    # ✅ Merge disk + session cache for duplicate check
+    disk_users = load_local_users()
+    all_users = dict(disk_users)
+    if 'session_users' in st.session_state:
+        all_users.update(st.session_state.session_users)
     
-    if username in st.session_state.user_db:
+    if username in all_users:
         return False, "❌ Username already exists"
     
-    st.session_state.user_db[username] = {
+    user_data = {
         "password": hash_password(password),
         "balance": 0.0, "role": "player",
         "name": name, "phone": phone,
         "game_played": 0, "wins": 0
     }
+    
+    # ✅ Store in BOTH session cache AND user_db
+    st.session_state.session_users[username] = user_data
+    st.session_state.user_db[username] = user_data
+    
+    # ✅ Try to save to disk (best effort) — even if it fails, session keeps it
     saved_ok = save_local_users(st.session_state.user_db)
     if not saved_ok:
-        # Roll back the in-memory change so we don't lie to the user
-        del st.session_state.user_db[username]
-        return False, "❌ Failed to save account. Please contact admin."
-    load_all_data()
-    # Verify the user actually exists on disk
-    if username not in st.session_state.user_db:
-        return False, "❌ Registration saved but couldn't be verified. Try again."
+        print(f"[register] Disk save failed for {username}, but cached in session")
+    
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
+    # ✅ Save before clearing
     save_all_data()
     save_game_state()
     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
@@ -791,17 +841,23 @@ def logout_user():
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
+    # ⚠️ Do NOT clear session_users — keep for later logins in the same browser session
     try:
         st.query_params.clear()
     except:
         pass
 
 # ===================================================================
-# ✅ PERSIST ALL STATE — call this often
+# ✅ PERSIST ALL STATE
 # ===================================================================
 def persist_all_state():
     """Force-save ALL in-memory state to disk. Safe to call anytime."""
     try:
+        # Merge session cache into user_db before saving
+        if 'session_users' in st.session_state:
+            for u, d in st.session_state.session_users.items():
+                st.session_state.user_db[u] = d
+        
         save_all_data()
         save_game_state()
         save_global_cards(
@@ -1416,7 +1472,7 @@ def render_card_selection():
                         st.session_state.rejected_card_num = None
                         st.rerun()
                 elif is_insufficient:
-                    if st.button("⚠️💰 <10 ብር! ሂሳብዎን ይሙሉ 💰⚠️", key=f"card_{card_num}", use_container_width=True):
+                    if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
                         st.rerun()
                 else:
@@ -1468,7 +1524,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# LOGIN / REGISTER
+# LOGIN / REGISTER — ✅ FIXED
 # ===================================================================
 if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
@@ -1478,12 +1534,9 @@ if not st.session_state.logged_in:
             password = st.text_input("🔑 Password", type="password")
             submitted = st.form_submit_button("🎰 Login")
             if submitted and username and password:
-                # ✅ Force a completely fresh read from disk
-                st.session_state.user_db = {}
-                load_all_data()
                 success, message = login_user(username, password)
                 if success:
-                    # ✅ Persist username in URL so reopening the app restores the session
+                    # ✅ Save username in URL for auto-login
                     try:
                         st.query_params["u"] = username
                     except:
@@ -1513,7 +1566,6 @@ if not st.session_state.logged_in:
                     if success:
                         st.success("🎉🎊🥳 በትክክል ተመዝግበዋል! 🥳🎊🎉")
                         st.balloons()
-                        load_all_data()
                         time.sleep(2)
                         st.rerun()
                     else:
