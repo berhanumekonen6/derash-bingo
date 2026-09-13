@@ -14,7 +14,7 @@ python-dotenv>=1.0.0
 python-telegram-bot>=20.0
 
 # === ለውሂብ ማከማቻ (አማራጭ) ===
-supabase>=2.0.0
+supabase>=2.10.0
 
 # === ለደህንነት ===
 cryptography>=39.0.0
