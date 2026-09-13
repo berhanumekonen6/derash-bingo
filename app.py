@@ -135,6 +135,29 @@ st.markdown("""
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
+    /* ---- CARD GRID BUTTONS (native HTML, instant, no blink) ---- */
+    .card-btn {
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #1a1a2e;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 2px;
+        min-height: 44px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: transform 0.08s ease, box-shadow 0.12s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        width: 100%;
+        font-family: inherit;
+    }
+    .card-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3); }
+    .card-btn:active { transform: scale(0.96); }
+    .card-btn-mine { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: #ffffff; }
+    .card-btn-taken { background: #B71C1C; color: #ffffff; cursor: not-allowed; opacity: 0.55; }
+    .card-btn-rejected { background: #FFC107; color: #1a1a2e; }
+    .card-btn-insufficient { background: #FF9800; color: #1a1a2e; }
+
     @media (max-width: 768px) {
         .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
         .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
@@ -144,6 +167,7 @@ st.markdown("""
         .motivation-box { padding: 8px 12px !important; }
         .motivation-box .quote { font-size: 0.85rem !important; }
         h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
+        .card-btn { padding: 4px 1px; font-size: 11px; min-height: 42px; border-radius: 6px; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -355,7 +379,6 @@ def clear_global_winners():
     return True
 
 def sync_global_winners():
-    """✅ Sync winner state — skip if this player already acknowledged."""
     if st.session_state.get("winner_acknowledged", False):
         return False
     
@@ -564,7 +587,7 @@ def try_global_call():
     return called_num
 
 # ===================================================================
-# GAME STATE (Supabase-backed) — FIXED: never overwrites winner flag with False
+# GAME STATE (Supabase-backed)
 # ===================================================================
 def save_game_state():
     patch = {
@@ -649,7 +672,7 @@ def reset_for_next_round():
     st.session_state.winner_acknowledged = False
 
 # ===================================================================
-# SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
+# SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
     global_taken, global_owner, _, _ = load_global_cards()
@@ -776,7 +799,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL (unchanged)
+# ADMIN PANEL
 # ===================================================================
 def admin_panel():
     st.markdown("""
@@ -1116,7 +1139,6 @@ def check_for_winners():
         )
 
 def distribute_prizes(winners):
-    """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
     if global_paid:
         st.session_state.prize_distributed = True
@@ -1271,10 +1293,119 @@ def display_master_board():
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# CARD SELECTION
+# CARD GRID HTML (no blink, instant buttons)
 # ===================================================================
+def _build_card_grid_html(clicked_list, taken_list, rejected_num, insufficient_num,
+                          cols_per_row, your_cards, total_selected, available, enough_cards):
+    clicked_set = set(clicked_list)
+    taken_set = set(taken_list)
+
+    html = '<div class="card-grid-wrapper" style="margin-top:8px;">'
+
+    if not enough_cards:
+        warn_count = 3 - total_selected
+        html += f'<div style="background:rgba(0,0,0,0.25);color:#FFFFFF;border-left:4px solid #FF9800;border-radius:12px;padding:12px;margin-bottom:8px;">⚠️ Waiting for {warn_count} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯</div>'
+    else:
+        html += '<div style="background:rgba(0,0,0,0.25);color:#FFFFFF;border-left:4px solid #4CAF50;border-radius:12px;padding:12px;margin-bottom:8px;">✅ 3+ cards ready! Game will start when the timer hits 0:00</div>'
+
+    html += '<div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">'
+    html += '<div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">🎯 Tap a card to SELECT (10 ETB)</div>'
+    html += '</div>'
+
+    html += '<div style="display:grid;grid-template-columns:repeat(' + str(cols_per_row) + ',minmax(0,1fr));gap:4px;">'
+
+    for n in range(1, 205):
+        is_mine = n in clicked_set
+        is_taken = (n in taken_set) and not is_mine
+        is_rejected = (rejected_num == n) and not is_mine and not is_taken
+        is_insufficient = (insufficient_num == n) and not is_mine and not is_taken
+
+        if is_mine:
+            cls = "card-btn card-btn-mine"
+            label = f"✅{n}"
+            disabled = ""
+        elif is_taken:
+            cls = "card-btn card-btn-taken"
+            label = f"🔴{n}"
+            disabled = "disabled"
+        elif is_rejected:
+            cls = "card-btn card-btn-rejected"
+            label = "🚫 2+ አይቻልም 🚫"
+            disabled = ""
+        elif is_insufficient:
+            cls = "card-btn card-btn-insufficient"
+            label = "⚠️💰ሂሳብዎን ይሙሉ💰⚠️"
+            disabled = ""
+        else:
+            cls = "card-btn card-btn-free"
+            label = f"🟡{n}"
+            disabled = ""
+
+        html += f'<button class="{cls}" data-card="{n}" {disabled}>{label}</button>'
+
+    html += '</div>'
+    html += '</div>'
+    return html
+
+
+@st.cache_data(show_spinner=False)
+def _cached_card_grid(clicked_key, taken_key, rejected_num, insufficient_num,
+                      cols_per_row, your_cards, total_selected, available, enough_cards):
+    return _build_card_grid_html(clicked_key, taken_key, rejected_num, insufficient_num,
+                                 cols_per_row, your_cards, total_selected, available, enough_cards)
+
+
+def _handle_card_click(card_num):
+    clicked = st.session_state.clicked_numbers
+    taken = st.session_state.taken_cards
+    user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
+
+    if card_num in clicked:
+        st.session_state.clicked_numbers.discard(card_num)
+        if card_num in st.session_state.taken_cards:
+            st.session_state.taken_cards.remove(card_num)
+        if str(card_num) in st.session_state.card_owner:
+            del st.session_state.card_owner[str(card_num)]
+        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
+        save_all_data()
+        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
+                          st.session_state.timer_start_time, st.session_state.card_selection_time)
+        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+        st.session_state.rejected_card_num = None
+        st.session_state.insufficient_balance_card_num = None
+        return
+
+    if card_num in taken:
+        return
+
+    has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
+    if has_max:
+        st.session_state.rejected_card_num = card_num
+        st.session_state.insufficient_balance_card_num = None
+        st.session_state.flash_msg = ""
+        return
+
+    if user_balance < 10:
+        st.session_state.insufficient_balance_card_num = card_num
+        st.session_state.rejected_card_num = None
+        st.session_state.flash_msg = ""
+        return
+
+    st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
+    save_all_data()
+    st.session_state.clicked_numbers.add(card_num)
+    if card_num not in st.session_state.taken_cards:
+        st.session_state.taken_cards.append(card_num)
+    st.session_state.card_owner[str(card_num)] = st.session_state.current_user
+    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
+                      st.session_state.timer_start_time, st.session_state.card_selection_time)
+    st.session_state.rejected_card_num = None
+    st.session_state.insufficient_balance_card_num = None
+    st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+
+
 def render_card_selection():
-    # 🛡️ Absolute guard: never render the grid once the game is running
+    # Guard
     if st.session_state.game_started or st.session_state.winner_declared:
         st.rerun()
         return
@@ -1320,8 +1451,9 @@ def render_card_selection():
 
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
 
+    # Timer header (updates every second — small block, no grid)
     st.markdown(f"""
-    <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
+    <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">⌚ {time_str}</div>
         <div style="font-size:0.9rem;color:#FFFFFF;line-height:1.9;">
             🟢 <b>Your Cards:</b> {your_cards}/2 &nbsp;|&nbsp;
@@ -1332,17 +1464,13 @@ def render_card_selection():
     </div>
     """, unsafe_allow_html=True)
 
-    if not enough_cards:
-        st.warning(f"⚠️ Waiting for {3 - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
-    else:
-        st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
-
-    col_options = [4, 5, 6, 7, 8]
-    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
+    # Columns selector
+    cols_options = [4, 5, 6, 7, 8]
+    current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in cols_options else 6
     selected_cols = st.selectbox(
         f"📊 Cards per row (current: {current_value})",
-        options=col_options,
-        index=col_options.index(current_value),
+        options=cols_options,
+        index=cols_options.index(current_value),
         key=f"cards_per_row_{st.session_state.current_user}"
     )
     if selected_cols != st.session_state.columns_per_row:
@@ -1350,82 +1478,61 @@ def render_card_selection():
         st.rerun()
 
     cols_per_row = st.session_state.columns_per_row
-    clicked = st.session_state.clicked_numbers
-    taken = st.session_state.taken_cards
-    rejected = st.session_state.rejected_card_num
-    insufficient = st.session_state.insufficient_balance_card_num
 
-    st.markdown("""
-    <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
-        <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">🎯 Tap a card to SELECT (10 ETB)</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Cached grid — the timer is NOT part of the cache key
+    clicked_key = tuple(sorted(st.session_state.clicked_numbers))
+    taken_key = tuple(sorted(st.session_state.taken_cards))
+    rejected_num = st.session_state.rejected_card_num or 0
+    insufficient_num = st.session_state.insufficient_balance_card_num or 0
 
-    for row_start in range(1, 205, cols_per_row):
-        cols = st.columns(cols_per_row)
-        for col_idx in range(cols_per_row):
-            card_num = row_start + col_idx
-            if card_num > 204:
-                break
-            is_mine = card_num in clicked
-            is_taken = card_num in taken and not is_mine
-            is_rejected = (rejected == card_num) and not is_mine and not is_taken
-            is_insufficient = (insufficient == card_num) and not is_mine and not is_taken
+    grid_html = _cached_card_grid(
+        clicked_key, taken_key, rejected_num, insufficient_num,
+        cols_per_row, your_cards, total_selected, available, enough_cards
+    )
 
-            with cols[col_idx]:
-                if is_mine:
-                    if st.button(f"✅{card_num}", key=f"card_{card_num}", use_container_width=True, type="primary"):
-                        user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        st.session_state.clicked_numbers.discard(card_num)
-                        if card_num in st.session_state.taken_cards:
-                            st.session_state.taken_cards.remove(card_num)
-                        if str(card_num) in st.session_state.card_owner:
-                            del st.session_state.card_owner[str(card_num)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                        save_all_data()
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                          st.session_state.timer_start_time, st.session_state.card_selection_time)
-                        st.session_state.rejected_card_num = None
-                        st.session_state.insufficient_balance_card_num = None
-                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
-                        st.rerun()
-                elif is_taken:
-                    st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
-                elif is_rejected:
-                    if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
-                        st.session_state.rejected_card_num = None
-                        st.rerun()
-                elif is_insufficient:
-                    if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
-                        st.session_state.insufficient_balance_card_num = None
-                        st.rerun()
-                else:
-                    if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
-                        user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
-                        if has_max:
-                            st.session_state.rejected_card_num = card_num
-                            st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = ""
-                        elif user_balance < 10:
-                            st.session_state.insufficient_balance_card_num = card_num
-                            st.session_state.rejected_card_num = None
-                            st.session_state.flash_msg = ""
-                        else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                            save_all_data()
-                            st.session_state.clicked_numbers.add(card_num)
-                            if card_num not in st.session_state.taken_cards:
-                                st.session_state.taken_cards.append(card_num)
-                            st.session_state.card_owner[str(card_num)] = st.session_state.current_user
-                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                              st.session_state.timer_start_time, st.session_state.card_selection_time)
-                            st.session_state.rejected_card_num = None
-                            st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
-                        st.rerun()
+    # JS bridge — wires native buttons to Streamlit query params
+    components.html(
+        """
+        <script>
+        (function() {
+            function wire() {
+                const doc = window.parent.document;
+                const buttons = doc.querySelectorAll('.card-btn');
+                buttons.forEach((btn) => {
+                    if (btn.dataset.wired === '1') return;
+                    btn.dataset.wired = '1';
+                    btn.addEventListener('click', function(e) {
+                        if (this.disabled) return;
+                        e.preventDefault();
+                        const n = this.getAttribute('data-card');
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('pick_card', n);
+                        window.parent.location.href = url.toString();
+                    });
+                });
+            }
+            wire();
+            setTimeout(wire, 200);
+            setTimeout(wire, 600);
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
-    st.progress(1 - (remaining / 60) if remaining > 0 else 0)
+    st.markdown(grid_html, unsafe_allow_html=True)
+
+    # Handle click
+    qp = st.query_params
+    if "pick_card" in qp:
+        try:
+            card_num = int(qp["pick_card"])
+        except (ValueError, TypeError):
+            card_num = None
+        if card_num is not None:
+            _handle_card_click(card_num)
+            st.query_params.clear()
+            st.rerun()
 
 # ===================================================================
 # MAIN APP
@@ -1555,7 +1662,7 @@ if st.session_state.current_role == "admin":
     st.stop()
 
 # ===================================================================
-# ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
+# ✅ GLOBAL WINNER OVERLAY
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
@@ -1734,13 +1841,12 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists (checks DB every tick)
+# ✅ AUTO-CALL
 # ===================================================================
 if st.session_state.game_started:
     _wl, _wdec, _cn, _lcn, _acc, _go, _pd, _ts = load_global_winners()
 
     if _wdec:
-        # Winner exists — stop calling, sync local state, let celebration render
         if not st.session_state.winner_declared:
             st.session_state.winner_declared = True
             st.session_state.winners_list = _wl
@@ -1750,7 +1856,6 @@ if st.session_state.game_started:
             st.session_state.last_called_number = _lcn
             st.session_state.auto_called_count = _acc
             st.rerun()
-        # Do NOT call save_game_state here — it could overwrite the DB flag
     else:
         just_called = try_global_call()
         load_game_state()
@@ -1763,12 +1868,11 @@ if st.session_state.game_started:
 # ✅ AUTO-RERUN
 # ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
-    pass  # Wait for Resume button
+    pass
 elif not st.session_state.game_started:
     maybe_start_game()
     time.sleep(0.5)
     st.rerun()
 else:
-    # Game running, no winner — slower rerun to reduce flicker
     time.sleep(1.0)
     st.rerun()
