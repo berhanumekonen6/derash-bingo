@@ -361,7 +361,6 @@ def sync_global_winners():
 
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
-        # Detect if the winner state actually changed vs what this session has
         changed = (st.session_state.winners_list != winners_list) or (not st.session_state.winner_declared)
         st.session_state.winners_list = winners_list
         st.session_state.winner_declared = winner_declared
@@ -1079,15 +1078,13 @@ def check_winning_pattern(card_data, called_numbers):
 # ===================================================================
 def check_for_winners():
     """
-    ✅ FIXED: Reads the authoritative state from Supabase instead of local session.
-    This guarantees that the winner is detected no matter which session triggers
-    the call — because it always sees the freshest called_numbers / taken_cards /
-    card_owner from the shared DB row.
+    ✅ Reads authoritative state from Supabase, detects ALL winning cards,
+    groups them by owner (a player with 2 winning cards still counts once),
+    then persists the result and distributes prizes.
     """
     if st.session_state.winner_declared:
         return
 
-    # 🔑 Pull FRESH authoritative state from the DB
     row = load_state_row()
 
     called_numbers = list(row.get("called_numbers") or [])
@@ -1118,7 +1115,6 @@ def check_for_winners():
                 })
 
     if winners_found:
-        # Mirror locally so this session sees the win immediately
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
         st.session_state.card_owner = card_owner
@@ -1129,11 +1125,12 @@ def check_for_winners():
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
 
-        # Distribute prizes first (guarded by global flag)
+        # ✅ Split prize equally across ALL winning cards (not just winners).
+        # Each winning CARD counts as a share — that's the fair rule:
+        # total prize = (taken_cards * PRIZE_PER_CARD); each winner gets
+        # (their_winning_card_count / total_winning_cards) of that pool.
         distribute_prizes(winners_found)
 
-        # ⚠️ CRITICAL: Persist the FULL final state in ONE write, including
-        # called_numbers, so all other sessions catch up on the next rerun.
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1146,7 +1143,13 @@ def check_for_winners():
         })
 
 def distribute_prizes(winners):
-    """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
+    """
+    ✅ Multiple winners are paid EQUALLY by winning-CARD count.
+    Example: 5 total cards sold * 8 ETB = 40 ETB pool.
+             Player A has 1 winning card, Player B has 2 winning cards.
+             Total winning cards = 3. So A gets 40/3 ≈ 13.33, B gets 40/3*2 ≈ 26.66.
+    Guarded by the global `prize_distributed` flag so it pays exactly once.
+    """
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
     if global_paid:
         st.session_state.prize_distributed = True
@@ -1157,20 +1160,29 @@ def distribute_prizes(winners):
 
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
-    prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
 
-    # Reload fresh users so we don't lose any concurrent balance changes
+    # Total winning cards across all winners (used to split proportionally)
+    total_winning_cards = sum(len(w.get("cards", [])) for w in winners)
+    if total_winning_cards <= 0:
+        total_winning_cards = 1
+
+    prize_per_card = total_prize / total_winning_cards
+
+    # Reload fresh users to avoid overwriting concurrent balance changes
     load_all_data()
 
     for winner in winners:
         username = winner.get("username")
+        win_card_count = len(winner.get("cards", []))
+        payout = prize_per_card * win_card_count
+
         if username in st.session_state.user_db:
             st.session_state.user_db[username]["balance"] = \
-                st.session_state.user_db[username].get("balance", 0) + prize_per_winner
+                float(st.session_state.user_db[username].get("balance", 0)) + payout
             st.session_state.user_db[username]["wins"] = \
-                st.session_state.user_db[username].get("wins", 0) + 1
+                int(st.session_state.user_db[username].get("wins", 0)) + 1
             st.session_state.user_db[username]["game_played"] = \
-                st.session_state.user_db[username].get("game_played", 0) + 1
+                int(st.session_state.user_db[username].get("game_played", 0)) + 1
 
     save_all_data()
     st.session_state.prize_distributed = True
@@ -1294,7 +1306,6 @@ def display_master_board():
 # CARD SELECTION
 # ===================================================================
 def render_card_selection():
-    # 🛡️ Absolute guard: never render the grid once the game is running
     if st.session_state.game_started or st.session_state.winner_declared:
         st.rerun()
         return
@@ -1576,20 +1587,33 @@ if st.session_state.current_role == "admin":
 
 # ===================================================================
 # ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
-#    (even those who did NOT pick a card)
+#    Displays ALL winning cards from ALL winners, prize split equally.
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
+
+    # ✅ Prize math: pool = total_cards * PRIZE_PER_CARD
+    #    Split by winning-CARD count across all winners.
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
-    prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+    total_winning_cards = sum(len(w.get("cards", [])) for w in st.session_state.winners_list) or 1
+    prize_per_card = total_prize / total_winning_cards
 
     winning_patterns = []
     winner_names = []
     all_winner_cards = []
+    per_winner_info = []  # for the winners list below
     for winner in st.session_state.winners_list:
         winning_patterns.extend(winner.get("patterns", []))
         winner_names.append(winner.get("username", "Unknown"))
-        all_winner_cards.extend(winner.get("cards", []))
+        cards = winner.get("cards", [])
+        all_winner_cards.extend(cards)
+        per_winner_info.append({
+            "username": winner.get("username", "Unknown"),
+            "cards": cards,
+            "patterns": winner.get("patterns", ["BINGO!"]),
+            "payout": prize_per_card * len(cards),
+        })
+
     winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
     winner_names_str = ", ".join(winner_names)
 
@@ -1601,7 +1625,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
                 text-align:center;box-shadow: 0 0 60px rgba(255,215,0,0.4);
                 animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
         <div style="font-size:3rem;color:#FFD700;letter-spacing:8px;">🎉🎊🏆👑🎊🎉</div>
-        <div style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉</div>
+        <div style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዎች ታዉቋል!!! 🎉</div>
         <div style="font-size:1.3rem;color:#FFD700;margin:6px 0;">🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊</div>
         <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:12px 0;">
             <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
@@ -1612,10 +1636,11 @@ if st.session_state.winner_declared and st.session_state.game_started:
             <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 1s;">🎉</span>
         </div>
         <div style="font-size:1.4rem;color:#FFFFFF;margin:10px 0;padding:10px;background:rgba(0,0,0,0.25);border-radius:12px;">
-            🏆 አሸናፊ: <span style="color:#FFD700;font-weight:900;">{winner_names_str}</span> 🏆
+            🏆 አሸናፊዎች: <span style="color:#FFD700;font-weight:900;">{winner_names_str}</span> 🏆
         </div>
         <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
-            💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
+            💰 ጠቅላላ ሽልማት: <strong style="color:#FFD700;">{total_prize:.2f} ETB</strong>
+            &nbsp;|&nbsp; 🃏 አሸናፊ ካርቴላዎች: <strong style="color:#FFD700;">{total_winning_cards}</strong>
         </div>
         <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
             🏅 የድል መንገድ: {winning_pattern}
@@ -1625,7 +1650,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
         </div>
         <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
             <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
-            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ!</span>
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">የዚህን ጨዋታ አሸናፊ ካርቴላዎች ለማየት ከታች ይመልከቱ!</span>
             <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟👇</span>
         </div>
     </div>
@@ -1634,17 +1659,34 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.balloons()
     st.snow()
 
+    # ✅ Per-winner payout summary (visible to everyone)
     st.markdown("""
-    <div style="text-align:center;margin:20px 0 15px 0;">
-        <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
+    <div style="text-align:center;margin:20px 0 10px 0;">
+        <h2 style="color:#FFD700;font-size:1.6rem;">💰 የአሸናፊዎች ሽልማት 💰</h2>
     </div>
     """, unsafe_allow_html=True)
 
+    for info in per_winner_info:
+        cards_str = ", ".join([f"#{c}" for c in info["cards"]])
+        patterns_str = ", ".join(info["patterns"])
+        st.success(
+            f"🎉 **{info['username']}** — Cards: {cards_str} — {patterns_str} — "
+            f"💰 **{info['payout']:.2f} ETB**"
+        )
+
+    st.markdown("""
+    <div style="text-align:center;margin:20px 0 15px 0;">
+        <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላዎች 🏆🎉</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ✅ Display ALL winning cards from ALL winners
     if st.session_state.winners_list:
         wcp = {}
         for winner in st.session_state.winners_list:
             for cid in winner.get("cards", []):
                 wcp[cid] = ", ".join(winner.get("patterns", ["BINGO!"]))
+        # Show in rows of up to 3
         for i in range(0, len(all_winner_cards), 3):
             chunk = all_winner_cards[i:i+3]
             card_cols = st.columns(len(chunk))
