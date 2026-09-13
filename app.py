@@ -1701,7 +1701,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
         just_called = try_global_call()
         load_game_state()
         if just_called is not None:
-            st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+            st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True) 
         time.sleep(0.5)
         st.rerun()
 
