@@ -1737,7 +1737,7 @@ if st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
-       board_col, cards_col = st.columns([2, 1], gap="large")
+    board_col, cards_col = st.columns([2, 1], gap="large")
     with board_col:
         display_master_board()
     with cards_col:
