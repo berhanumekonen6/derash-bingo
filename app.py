@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from datetime import datetime, timedelta 
+from supabase import create_client
 
 st.set_page_config(
     page_title="ደራሽ ቢንጎ🍀",
@@ -302,66 +303,84 @@ if not st.session_state.logged_in:
     _url_user = st.query_params.get("u", None)
     if _url_user:
         try:
-            if os.path.exists(get_local_users_file()):
-                with open(get_local_users_file(), "r") as f:
-                    _db = json.load(f)
-                if _url_user in _db:
-                    st.session_state.user_db = _db
-                    st.session_state.session_users = dict(_db)
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = _url_user
-                    st.session_state.current_role = _db[_url_user].get("role", "player")
+            load_all_data()
+            if _url_user in st.session_state.user_db:
+                st.session_state.logged_in = True
+                st.session_state.current_user = _url_user
+                st.session_state.current_role = st.session_state.user_db[_url_user].get("role", "player")
         except Exception as _e:
             print(f"[auto-login] {_e}")
 
 # ===================================================================
-# LOCAL FILE STORAGE — SAFE VERSIONS
+# ✅ SUPABASE USER STORAGE (persistent, never lost)
 # ===================================================================
-def get_local_users_file():
-    return os.path.join(DATA_DIR, "bingo_users_local.json")
-
-def load_local_users():
+def get_supabase_client():
     try:
-        if os.path.exists(get_local_users_file()):
-            with open(get_local_users_file(), "r") as f:
-                return json.load(f)
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
     except Exception as e:
-        print(f"[load_local_users] {e}")
-    return {}
-
-def save_local_users(users):
-    try:
-        path = get_local_users_file()
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(users, f, indent=2)
-        return True
-    except Exception as e:
-        print(f"[save_local_users] FAILED: {e}")
-        return False
+        print(f"[supabase] {e}")
+        return None
 
 def load_all_data():
-    """Load from disk, and merge any session-only users on top."""
-    disk_users = load_local_users()
-    merged = dict(disk_users)
-    # Session cache takes priority (has freshest entries)
-    if 'session_users' in st.session_state:
-        merged.update(st.session_state.session_users)
-    st.session_state.user_db = merged
+    """Load all users from Supabase into session state."""
+    client = get_supabase_client()
+    if client is None:
+        st.session_state.user_db = {}
+        return
+    try:
+        response = client.table("users").select("*").execute()
+        users = {}
+        for row in response.data:
+            users[row["username"]] = {
+                "password": row.get("password", ""),
+                "balance": float(row.get("balance", 0.0)),
+                "role": row.get("role", "player"),
+                "name": row.get("name", ""),
+                "phone": row.get("phone", ""),
+                "game_played": int(row.get("game_played", 0)),
+                "wins": int(row.get("wins", 0)),
+            }
+        st.session_state.user_db = users
+    except Exception as e:
+        print(f"[load_all_data] {e}")
+        st.session_state.user_db = {}
 
 def save_all_data():
-    """Save the merged DB to disk. Never wipe the file."""
-    if "user_db" not in st.session_state:
+    """Upsert all users from session state into Supabase."""
+    client = get_supabase_client()
+    if client is None:
         return False
-    db = st.session_state.user_db
-    # Merge session cache into what we save
-    if 'session_users' in st.session_state:
-        for u, d in st.session_state.session_users.items():
-            db[u] = d
-    if not db:
+    try:
+        if not st.session_state.user_db:
+            return False
+        rows = []
+        for username, data in st.session_state.user_db.items():
+            rows.append({
+                "username": username,
+                "password": data.get("password", ""),
+                "balance": float(data.get("balance", 0.0)),
+                "role": data.get("role", "player"),
+                "name": data.get("name", ""),
+                "phone": data.get("phone", ""),
+                "game_played": int(data.get("game_played", 0)),
+                "wins": int(data.get("wins", 0)),
+            })
+        client.table("users").upsert(rows).execute()
+        return True
+    except Exception as e:
+        print(f"[save_all_data] {e}")
         return False
-    return save_local_users(db)
 
+def load_local_users():
+    """Kept for backward compatibility — returns session user_db."""
+    return dict(st.session_state.get("user_db", {}))
+
+def save_local_users(users):
+    """Kept for backward compatibility — calls Supabase save."""
+    st.session_state.user_db = users
+    return save_all_data()
 # ===================================================================
 # GLOBAL WINNER TRACKING
 # ===================================================================
@@ -752,46 +771,35 @@ def verify_password(password, hashed):
 def login_user(username, password):
     username = username.strip()
     password = password.strip()
-    
-    # ✅ Merge disk + session cache so BOTH are checked
-    disk_users = load_local_users()
-    all_users = dict(disk_users)
-    if 'session_users' in st.session_state:
-        all_users.update(st.session_state.session_users)
-    st.session_state.user_db = all_users
-    
+
+    # ✅ Always fetch fresh from Supabase
+    load_all_data()
+
     if username == "admin" and password == "admin123":
-        if username not in all_users:
-            admin_data = {
+        if username not in st.session_state.user_db:
+            st.session_state.user_db[username] = {
                 "password": hash_password("admin123"),
                 "balance": 0.0, "role": "admin",
                 "name": "Admin", "phone": "",
                 "game_played": 0, "wins": 0
             }
-            st.session_state.user_db[username] = admin_data
-            st.session_state.session_users[username] = admin_data
-            save_local_users(st.session_state.user_db)
+            save_all_data()
         else:
             st.session_state.user_db["admin"]["balance"] = 0.0
-            save_local_users(st.session_state.user_db)
-        
+            save_all_data()
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
-        load_all_data()
         sync_global_cards()
         return True, "✅ Admin login successful!"
-    
-    if username not in all_users:
+
+    if username not in st.session_state.user_db:
         return False, "❌ Username not found"
-    
-    if verify_password(password, all_users[username]["password"]):
-        # ✅ Cache this user in session for future checks
-        st.session_state.session_users[username] = all_users[username]
+
+    if verify_password(password, st.session_state.user_db[username]["password"]):
         st.session_state.logged_in = True
         st.session_state.current_user = username
-        st.session_state.current_role = all_users[username].get("role", "player")
-        load_all_data()
+        st.session_state.current_role = st.session_state.user_db[username].get("role", "player")
         sync_global_cards()
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
@@ -800,36 +808,36 @@ def register_user(username, password, name, phone=""):
     username = username.strip()
     password = password.strip()
     name = name.strip()
+
     if len(username) < 2:
         return False, "❌ Username must be at least 2 characters"
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
-    
-    # ✅ Merge disk + session cache for duplicate check
-    disk_users = load_local_users()
-    all_users = dict(disk_users)
-    if 'session_users' in st.session_state:
-        all_users.update(st.session_state.session_users)
-    
-    if username in all_users:
+
+    # ✅ Fetch fresh from Supabase to check duplicates
+    load_all_data()
+
+    if username in st.session_state.user_db:
         return False, "❌ Username already exists"
-    
-    user_data = {
+
+    st.session_state.user_db[username] = {
         "password": hash_password(password),
         "balance": 0.0, "role": "player",
         "name": name, "phone": phone,
         "game_played": 0, "wins": 0
     }
-    
-    # ✅ Store in BOTH session cache AND user_db
-    st.session_state.session_users[username] = user_data
-    st.session_state.user_db[username] = user_data
-    
-    # ✅ Try to save to disk (best effort) — even if it fails, session keeps it
-    saved_ok = save_local_users(st.session_state.user_db)
+
+    # ✅ Save to Supabase immediately
+    saved_ok = save_all_data()
     if not saved_ok:
-        print(f"[register] Disk save failed for {username}, but cached in session")
-    
+        del st.session_state.user_db[username]
+        return False, "❌ Failed to save account. Please try again."
+
+    # ✅ Verify it was actually saved
+    load_all_data()
+    if username not in st.session_state.user_db:
+        return False, "❌ Registration could not be verified. Please try again."
+
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
