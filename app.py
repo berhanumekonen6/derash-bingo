@@ -230,13 +230,7 @@ def get_winner_sound_js():
 DATA_DIR = os.environ.get("BINGO_DATA_DIR", ".")
 try:
     os.makedirs(DATA_DIR, exist_ok=True)
-    # Test write permission
-    _test_file = os.path.join(DATA_DIR, ".write_test")
-    with open(_test_file, "w") as f:
-        f.write("ok")
-    os.remove(_test_file)
-except Exception as _e:
-    print(f"[DATA_DIR] {DATA_DIR} not writable ({_e}), falling back to '.'")
+except Exception:
     DATA_DIR = "."
 
 def get_local_users_file():
@@ -315,12 +309,23 @@ if not st.session_state.logged_in:
 # ✅ SUPABASE USER STORAGE (persistent, never lost)
 # ===================================================================
 def get_supabase_client():
+    print("=== [get_supabase_client] START ===")
     try:
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
-        return create_client(url, key)
+        print(f"[get_supabase_client] URL: {url}")
+        print(f"[get_supabase_client] KEY length: {len(key)}")
+        print(f"[get_supabase_client] KEY prefix: {key[:25]}...")
+        print(f"[get_supabase_client] KEY suffix: ...{key[-15:]}")
+        client = create_client(url, key)
+        print("[get_supabase_client] client created OK")
+        print("=== [get_supabase_client] END OK ===")
+        return client
     except Exception as e:
-        print(f"[supabase] {e}")
+        import traceback
+        print(f"[get_supabase_client] EXCEPTION: {type(e).__name__}: {e}")
+        print(f"[get_supabase_client] TRACEBACK: {traceback.format_exc()}")
+        print("=== [get_supabase_client] END FAIL ===")
         return None
 
 def load_all_data():
@@ -349,11 +354,15 @@ def load_all_data():
 
 def save_all_data():
     """Upsert all users from session state into Supabase."""
+    print("=== [save_all_data] START ===")
     client = get_supabase_client()
     if client is None:
-        return False
+        print("[save_all_data] FAIL: client is None")
+        return False  
+    print("[save_all_data] client OK")
     try:
         if not st.session_state.user_db:
+            print("[save_all_data] FAIL: user_db is empty")
             return False
         rows = []
         for username, data in st.session_state.user_db.items():
@@ -367,10 +376,17 @@ def save_all_data():
                 "game_played": int(data.get("game_played", 0)),
                 "wins": int(data.get("wins", 0)),
             })
-        client.table("users").upsert(rows).execute()
+        print(f"[save_all_data] Attempting upsert of {len(rows)} row(s)")
+        print(f"[save_all_data] First row: {rows[0] if rows else 'N/A'}")
+        response = client.table("users").upsert(rows).execute()
+        print(f"[save_all_data] SUCCESS: {response}")
+        print("=== [save_all_data] END OK ===")
         return True
     except Exception as e:
-        print(f"[save_all_data] {e}")
+        import traceback
+        print(f"[save_all_data] EXCEPTION: {type(e).__name__}: {e}")
+        print(f"[save_all_data] TRACEBACK: {traceback.format_exc()}")
+        print("=== [save_all_data] END FAIL ===")
         return False
 
 def load_local_users():
