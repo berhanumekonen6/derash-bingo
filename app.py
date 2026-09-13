@@ -3,17 +3,9 @@ import streamlit.components.v1 as components
 import random
 import time
 import hashlib
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta 
 from supabase import create_client
-
-# ===================================================================
-# CONFIG
-# ===================================================================
-st.set_page_config(
-    page_title="ደራሽ ቢንጎ🍀",
-    page_icon="🎯🍀",
-    layout="wide"
-)
 
 @st.cache_resource
 def get_supabase():
@@ -23,15 +15,24 @@ def get_supabase():
 
 supabase = get_supabase()
 
+st.set_page_config(
+    page_title="ደራሽ ቢንጎ🍀",
+    page_icon="🎯🍀",
+    layout="wide"
+)
+
 # ===================================================================
-# VIEWPORT
+# VIEWPORT META
 # ===================================================================
 st.markdown("""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# CSS
+# CUSTOM CSS
 # ===================================================================
 st.markdown("""
 <style>
@@ -45,29 +46,46 @@ st.markdown("""
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
+    .glass-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
     .motivation-box {
-        background: rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 215, 0, 0.1);
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.06));
         border-left: 4px solid #FFD700;
         padding: 12px 18px;
         border-radius: 10px;
         margin: 10px 0;
+        background: rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 215, 0, 0.1);
     }
     .motivation-box .quote {
-        font-size: 1rem; color: #FFD700; font-style: italic;
+        font-size: 1rem;
+        color: #FFD700;
+        font-style: italic;
         font-family: 'Noto Sans Ethiopic', Arial, sans-serif;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
     }
-    .motivation-box .author { color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-top: 3px; }
-
+    .motivation-box .author {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        margin-top: 3px;
+    }
     .winner-card {
         animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
         border: 3px solid #FFD700 !important;
-        background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,165,0,0.15)) !important;
-        box-shadow: 0 0 50px rgba(255,215,0,0.5) !important;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 165, 0, 0.15)) !important;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5) !important;
     }
     @keyframes winnerCardPulse {
-        0% { transform: scale(1); box-shadow: 0 0 20px rgba(255,215,0,0.3); }
-        100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255,215,0,0.7); }
+        0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255, 215, 0, 0.7); }
     }
     @keyframes emojiFloat {
         0% { transform: translateY(0) rotate(0deg); }
@@ -78,84 +96,94 @@ st.markdown("""
         0% { transform: scale(1); box-shadow: 0 0 30px rgba(255,215,0,0.2); }
         100% { transform: scale(1.01); box-shadow: 0 0 60px rgba(255,215,0,0.4); }
     }
-    @keyframes winnerPulse {
-        0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
-        100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); }
-    }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#FFD700,#FFA500); border-radius: 10px; }
-    h1,h2,h3,h4,p,label,.stMarkdown { color: #FFFFFF !important; }
-    .stInfo,.stSuccess,.stWarning,.stError {
-        background: rgba(0,0,0,0.25) !important; color: #FFFFFF !important;
-        border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important;
+    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #FFD700, #FFA500); border-radius: 10px; }
+    h1, h2, h3, h4, p, label, .stMarkdown { color: #FFFFFF !important; }
+    .stInfo, .stSuccess, .stWarning, .stError {
+        background: rgba(0, 0, 0, 0.25) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
     }
     .stInfo { border-left: 4px solid #2196F3 !important; }
     .stSuccess { border-left: 4px solid #4CAF50 !important; }
     .stWarning { border-left: 4px solid #FF9800 !important; }
     .stError { border-left: 4px solid #F44336 !important; }
-    .stButton > button {
-        background: linear-gradient(135deg,#FFD700,#FFA500) !important;
-        color: #1a1a2e !important; font-weight: bold !important;
-        border: none !important; border-radius: 12px !important;
-        padding: 10px 20px !important;
-        transition: transform 0.08s ease, box-shadow 0.12s ease !important;
-        box-shadow: 0 4px 15px rgba(255,215,0,0.2) !important;
+    @keyframes winnerPulse {
+        0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
     }
-    .stButton > button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 25px rgba(255,215,0,0.3) !important; }
-    .stButton > button:active { transform: translateY(0) scale(0.96) !important; box-shadow: 0 2px 8px rgba(255,215,0,0.4) !important; }
+    .stButton > button {
+        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+        color: #1a1a2e !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        transition: transform 0.1s ease, box-shadow 0.15s ease !important;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
+    }
+    .stButton > button:active {
+        transform: translateY(0px) scale(0.97) !important;
+        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
+    }
+    .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
+    .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
-    /* Master board */
-    .board-container { max-width: 950px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
-    .board-title { text-align: center; font-size: 1.8rem; font-weight: bold; color: #FFD700; margin-bottom: 12px; }
-    .board-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 6px 4px; text-align: center; font-size: 0.85rem; font-weight: bold; }
-    .board-table .header-cell { background: linear-gradient(135deg,rgba(46,125,50,0.2),rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.5rem; font-weight: 900; padding: 10px 4px; letter-spacing: 3px; }
-    .board-number { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.06); }
-    .board-number.called { background: rgba(255,152,0,0.2); color: #FFD700; border-color: #FF9800; }
-    .board-number.last-called { background: rgba(229,57,53,0.2); color: #FF6B6B; border-color: #E53935; }
-    .board-stats { text-align: center; margin-top: 12px; font-size: 0.9rem; color: rgba(255,255,255,0.5); padding: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; }
-    .board-stats strong { color: #FFD700; }
-
-    /* Mobile */
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap !important; gap: 4px !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div {
-            min-width: 0 !important; flex: 1 1 100% !important; width: 100% !important;
-        }
-        div[data-testid="stHorizontalBlock"] .stButton > button {
-            padding: 6px 2px !important; font-size: 12px !important;
-            min-height: 40px !important; height: 40px !important;
-            line-height: 1.1 !important; border-radius: 6px !important;
-        }
-        .board-container { max-width: 100% !important; padding: 6px !important; margin: 6px 0 !important; }
-        .board-title { font-size: 1.1rem !important; margin-bottom: 6px !important; }
-        .board-table td { padding: 2px 1px !important; font-size: 0.65rem !important; }
-        .board-table .header-cell { font-size: 1rem !important; padding: 5px 1px !important; letter-spacing: 1px !important; }
-        .board-number { width: 22px !important; height: 22px !important; font-size: 0.62rem !important; }
-        .board-stats { font-size: 0.75rem !important; padding: 5px !important; }
-        .bingo-card-wrap { max-width: 100% !important; padding: 6px !important; margin: 6px auto !important; }
-        .bingo-card-wrap table { table-layout: fixed !important; width: 100% !important; }
-        .bingo-card-wrap td { padding: 2px 1px !important; }
-        .bingo-card-wrap .cell-circle { width: 26px !important; height: 26px !important; font-size: 0.65rem !important; }
-        .bingo-card-wrap .free-cell { width: 26px !important; height: 26px !important; font-size: 0.85rem !important; }
-        .winner-overlay-title { font-size: 1.4rem !important; letter-spacing: 3px !important; }
-        .winner-overlay-emoji { font-size: 1.4rem !important; }
-        .motivation-box { padding: 8px 10px !important; }
-        .motivation-box .quote { font-size: 0.8rem !important; }
+        .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
+        .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
+        .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
+        .board-container { padding: 10px !important; margin: 5px 0 !important; }
+        .board-title { font-size: 1.3rem !important; }
+        .motivation-box { padding: 8px 12px !important; }
+        .motivation-box .quote { font-size: 0.85rem !important; }
         h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
     }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            gap: 3px !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div {
+            min-width: 0 !important;
+            flex: 1 1 0 !important;
+            width: auto !important;
+        }
+        div[data-testid="stHorizontalBlock"] .stButton > button {
+            padding: 4px 1px !important;
+            font-size: 11px !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            line-height: 1.1 !important;
+            border-radius: 6px !important;
+        }
+    }
     .stButton > button {
-        padding: 6px 3px !important; font-size: 13px !important;
-        min-height: 44px !important; border-radius: 8px !important; font-weight: bold !important;
+        padding: 6px 3px !important;
+        font-size: 13px !important;
+        min-height: 44px !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
+        margin-bottom: 3px !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# AUDIO (played only when number changes)
+# AUDIO FUNCTIONS
 # ===================================================================
 def get_number_sound_js(number):
     if 1 <= number <= 15: freq = 440
@@ -167,14 +195,18 @@ def get_number_sound_js(number):
     <script>
         (function() {{
             try {{
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(); const g = ctx.createGain();
-                o.type = 'sine'; o.frequency.value = {freq};
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                o.connect(g); g.connect(ctx.destination);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.3);
-            }} catch(e) {{}}
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.value = {freq};
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            }} catch(e) {{ console.log('Audio play failed:', e); }}
         }})();
     </script>
     """
@@ -184,23 +216,27 @@ def get_winner_sound_js():
     <script>
         (function() {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const notes = [523, 659, 784, 1047, 1175, 1319];
-                notes.forEach((f, i) => {
-                    const o = ctx.createOscillator(); const g = ctx.createGain();
-                    o.type = 'sine'; o.frequency.value = f;
-                    g.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.12);
-                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.12 + 0.25);
-                    o.connect(g); g.connect(ctx.destination);
-                    o.start(ctx.currentTime + i * 0.12); o.stop(ctx.currentTime + i * 0.12 + 0.25);
+                notes.forEach((freq, index) => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime + index * 0.12);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + index * 0.12 + 0.25);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.start(audioCtx.currentTime + index * 0.12);
+                    oscillator.stop(audioCtx.currentTime + index * 0.12 + 0.25);
                 });
-            } catch(e) {}
+            } catch(e) { console.log('Audio play failed:', e); }
         })();
     </script>
     """
 
 # ===================================================================
-# SESSION STATE
+# SESSION STATE INITIALIZATION
 # ===================================================================
 def init_session_state():
     defaults = {
@@ -233,8 +269,6 @@ def init_session_state():
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
-        '_winner_sound_played': False,
-        '_last_played_number': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -243,7 +277,7 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
-# SUPABASE STATE
+# SUPABASE — GAME STATE (single row, id=1)
 # ===================================================================
 def _default_state():
     return {
@@ -266,43 +300,32 @@ def _default_state():
         "last_called_by": None,
     }
 
-@st.cache_data(ttl=0.5)
-def _cached_state_row():
-    """Short cache to avoid hammering Supabase on every fragment rerun.
-    TTL 0.5s gives near-instant reads while keeping write pressure low."""
+def load_state_row():
     try:
         res = supabase.table("game_state").select("*").eq("id", 1).execute()
         if res.data and len(res.data) > 0:
             return res.data[0]
-    except Exception:
-        pass
-    d = _default_state()
+    except Exception as e:
+        st.error(f"⚠️ State read error: {e}")
+    default = _default_state()
     try:
-        supabase.table("game_state").upsert(d).execute()
+        supabase.table("game_state").upsert(default).execute()
     except Exception:
         pass
-    return d
-
-def load_state_row(force=False):
-    if force:
-        _cached_state_row.clear()
-    return _cached_state_row()
+    return default
 
 def update_state(patch: dict):
     try:
         supabase.table("game_state").update(patch).eq("id", 1).execute()
-        _cached_state_row.clear()   # force fresh read next time
         return True
     except Exception as e:
         st.error(f"⚠️ State write error: {e}")
         return False
 
 # ===================================================================
-# WINNER HELPERS
+# GLOBAL WINNER TRACKING (Supabase-backed)
 # ===================================================================
-def save_global_winners(winners_list, winner_declared, called_numbers,
-                        last_called_number, auto_called_count,
-                        game_over, prize_distributed):
+def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     update_state({
         "winners_list": winners_list,
         "winner_declared": winner_declared,
@@ -327,11 +350,16 @@ def load_global_winners():
         row.get("last_call_time", 0),
     )
 
+def clear_global_winners():
+    update_state({"winners_list": [], "winner_declared": False})
+    return True
+
 def sync_global_winners():
+    """✅ Sync winner state — skip if this player already acknowledged."""
     if st.session_state.get("winner_acknowledged", False):
         return False
-    winners_list, winner_declared, called_numbers, last_called_number, \
-        auto_called_count, game_over, prize_distributed, ts = load_global_winners()
+    
+    winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
         st.session_state.winner_declared = winner_declared
@@ -347,17 +375,15 @@ def sync_global_winners():
     return False
 
 # ===================================================================
-# CONSTANTS
+# GAME CONSTANTS
 # ===================================================================
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
+CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
-MIN_CARDS_TO_START = 3
-CARD_SELECTION_SECONDS = 60
-AUTO_CALL_INTERVAL = 2.0
 
 # ===================================================================
-# QUOTES / NUMBERS
+# MOTIVATIONAL QUOTES
 # ===================================================================
 MOTIVATIONAL_QUOTES = [
     {"am": "በቢንጎ ጨዋታ እየተዝናኑ ያሸንፉ! 🎯⚡⚡", "en": "Have fun and win at BINGO!", "author": "ደራሽ ቢንጎ"},
@@ -367,7 +393,9 @@ MOTIVATIONAL_QUOTES = [
     {"am": "መልካም ዕድል ይሁንልዎ! 🍀🎖️🚀", "en": "Good luck to you!", "author": "ደራሽ ቢንጎ"},
     {"am": "ማን ያዉቃል አንድ ቁጥር ሕይወትን ይለውጣል! ✨🎖️🚀", "en": "Who knows, one number can change your life!", "author": "ደራሽ ቢንጎ"},
 ]
-def get_random_quote(): return random.choice(MOTIVATIONAL_QUOTES)
+
+def get_random_quote():
+    return random.choice(MOTIVATIONAL_QUOTES)
 
 def get_amharic_number(num):
     m = {1:"አንድ",2:"ሁለት",3:"ሶስት",4:"አራት",5:"አምስት",6:"ስድስት",7:"ሰባት",8:"ስምንት",9:"ዘጠኝ",10:"አስር",
@@ -387,14 +415,14 @@ def get_amharic_number(num):
     return m.get(num, str(num))
 
 def get_letter_for_number(num):
-    if 1 <= num <= 15: return "B"
-    elif 16 <= num <= 30: return "I"
-    elif 31 <= num <= 45: return "N"
-    elif 46 <= num <= 60: return "G"
-    else: return "O"
+    if 1 <= num <= 15: return "ቢ"
+    elif 16 <= num <= 30: return "አይ"
+    elif 31 <= num <= 45: return "ኤን"
+    elif 46 <= num <= 60: return "ጂ"
+    else: return "ኦ"
 
 # ===================================================================
-# USERS
+# SUPABASE — USERS
 # ===================================================================
 def load_local_users():
     try:
@@ -422,13 +450,15 @@ def save_local_users(users):
         st.error(f"⚠️ Database write error: {e}")
         return False
 
-def load_all_data(): st.session_state.user_db = load_local_users()
+def load_all_data():
+    st.session_state.user_db = load_local_users()
+
 def save_all_data():
-    if st.session_state.get("user_db"):
+    if "user_db" in st.session_state and st.session_state.user_db:
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
-# GLOBAL CARDS / TIMER
+# GLOBAL CARD TRACKING (Supabase-backed)
 # ===================================================================
 def load_global_cards():
     row = load_state_row()
@@ -436,67 +466,79 @@ def load_global_cards():
         row.get("taken_cards") or [],
         row.get("card_owner") or {},
         row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", CARD_SELECTION_SECONDS),
+        row.get("card_selection_time", 60),
     )
 
 def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selection_time=None):
-    patch = {"taken_cards": list(taken_cards), "card_owner": dict(card_owner)}
-    if timer_start_time is not None: patch["timer_start_time"] = timer_start_time
-    if card_selection_time is not None: patch["card_selection_time"] = card_selection_time
+    patch = {
+        "taken_cards": list(taken_cards),
+        "card_owner": dict(card_owner),
+    }
+    if timer_start_time is not None:
+        patch["timer_start_time"] = timer_start_time
+    if card_selection_time is not None:
+        patch["card_selection_time"] = card_selection_time
     update_state(patch)
     return True
 
+# ===================================================================
+# GLOBAL TIMER (Supabase-backed)
+# ===================================================================
 def load_global_timer():
     row = load_state_row()
-    return (row.get("timer_start_time", time.time()),
-            row.get("card_selection_time", CARD_SELECTION_SECONDS),
-            row.get("game_started", False))
+    return (
+        row.get("timer_start_time", time.time()),
+        row.get("card_selection_time", 60),
+        row.get("game_started", False),
+    )
 
-def save_global_timer(timer_start, duration=CARD_SELECTION_SECONDS, game_started=False):
-    update_state({"timer_start_time": timer_start,
-                  "card_selection_time": duration,
-                  "game_started": game_started})
+def save_global_timer(timer_start, duration=60, game_started=False):
+    update_state({
+        "timer_start_time": timer_start,
+        "card_selection_time": duration,
+        "game_started": game_started,
+    })
     return True
 
-def reset_global_timer(duration=CARD_SELECTION_SECONDS):
+def reset_global_timer(duration=60):
     new_start = time.time()
     save_global_timer(new_start, duration, False)
     return new_start
 
 def mark_game_started_globally():
-    ts, dur, _ = load_global_timer()
-    save_global_timer(ts, dur, True)
+    timer_start, duration, _ = load_global_timer()
+    save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    ts, dur, started = load_global_timer()
-    if started:
+    timer_start, duration, game_started = load_global_timer()
+    if game_started:
         return 0, True
-    elapsed = time.time() - ts
-    remaining = dur - elapsed
+    elapsed = time.time() - timer_start
+    remaining = duration - elapsed
     if remaining <= 0:
-        taken, _, _, _ = load_global_cards()
-        total = max(len(taken), len(st.session_state.clicked_numbers))
-        if total >= MIN_CARDS_TO_START:
+        file_taken, _, _, _ = load_global_cards()
+        total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
+        if total_now >= 3:
             return 0, False
-        reset_global_timer(CARD_SELECTION_SECONDS)
-        return CARD_SELECTION_SECONDS, False
+        else:
+            reset_global_timer(60)
+            return 60, False
     return remaining, False
 
 # ===================================================================
-# ATOMIC CALL
+# GLOBAL CALLER LOCK (Supabase-backed)
 # ===================================================================
 def try_global_call():
-    """Call one number atomically. Returns number or None."""
-    row = load_state_row(force=True)
-
-    # Hard stop: winner exists
-    if row.get("winner_declared") or row.get("game_over"):
+    row = load_state_row()
+    if row.get("winner_declared"):
         return None
 
     now = time.time()
     last_at = row.get("last_called_at", 0) or 0
-    if now - last_at < AUTO_CALL_INTERVAL:
+    if now - last_at < 2.0:
         return None
+
+    update_state({"last_called_at": now, "last_called_by": st.session_state.current_user})
 
     current_called = set(row.get("called_numbers") or [])
     if len(current_called) >= 75:
@@ -508,20 +550,10 @@ def try_global_call():
     called_num = random.choice(available)
     current_called.add(called_num)
 
-    # Re-read right before write
-    fresh = load_state_row(force=True)
-    if fresh.get("winner_declared") or fresh.get("game_over"):
-        st.session_state.winner_declared = True
-        st.session_state.game_over = True
-        st.session_state.auto_call_started = False
-        return None
-
     update_state({
         "called_numbers": list(current_called),
         "last_called_number": called_num,
         "auto_called_count": len(current_called),
-        "last_called_at": now,
-        "last_called_by": st.session_state.current_user,
     })
 
     st.session_state.called_numbers = current_called
@@ -532,7 +564,7 @@ def try_global_call():
     return called_num
 
 # ===================================================================
-# GAME STATE
+# GAME STATE (Supabase-backed)
 # ===================================================================
 def save_game_state():
     update_state({
@@ -559,19 +591,41 @@ def load_game_state():
     st.session_state.game_over = row.get("game_over", False)
     st.session_state.prize_distributed = row.get("prize_distributed", False)
 
+def clear_game_state():
+    update_state({
+        "called_numbers": [],
+        "last_called_number": None,
+        "auto_called_count": 0,
+        "game_started": False,
+        "auto_call_started": False,
+        "winner_declared": False,
+        "game_over": False,
+        "prize_distributed": False,
+    })
+    return True
+
 # ===================================================================
-# RESET
+# RESET FOR NEXT ROUND
 # ===================================================================
 def reset_for_next_round():
     update_state({
-        "winners_list": [], "winner_declared": False, "game_over": False,
-        "prize_distributed": False, "called_numbers": [], "last_called_number": None,
-        "auto_called_count": 0, "game_started": False, "auto_call_started": False,
-        "last_called_at": 0, "last_called_by": None,
-        "taken_cards": [], "card_owner": {},
+        "winners_list": [],
+        "winner_declared": False,
+        "game_over": False,
+        "prize_distributed": False,
+        "called_numbers": [],
+        "last_called_number": None,
+        "auto_called_count": 0,
+        "game_started": False,
+        "auto_call_started": False,
+        "last_called_at": 0,
+        "last_called_by": None,
+        "taken_cards": [],
+        "card_owner": {},
         "timer_start_time": time.time(),
-        "card_selection_time": CARD_SELECTION_SECONDS,
+        "card_selection_time": 60,
     })
+
     st.session_state.selected_card = None
     st.session_state.clicked_numbers = set()
     st.session_state.called_numbers = set()
@@ -583,7 +637,7 @@ def reset_for_next_round():
     st.session_state.game_over = False
     st.session_state.winners_list = []
     st.session_state.prize_distributed = False
-    st.session_state.card_selection_time = CARD_SELECTION_SECONDS
+    st.session_state.card_selection_time = 60
     st.session_state.timer_start_time = time.time()
     st.session_state.taken_cards = []
     st.session_state.card_owner = {}
@@ -591,94 +645,128 @@ def reset_for_next_round():
     st.session_state.rejected_card_num = None
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
-    st.session_state._winner_sound_played = False
-    st.session_state._last_played_number = None
 
 # ===================================================================
-# SYNC
+# SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
 # ===================================================================
 def sync_global_cards():
     global_taken, global_owner, _, _ = load_global_cards()
+    
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
+    
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     if game_started:
         st.session_state.game_started = True
+    
     load_game_state()
+    
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
-        for cid_str, owner in global_owner.items():
+        for card_id_str, owner in global_owner.items():
             if owner == current_user:
-                try: user_cards.add(int(cid_str))
-                except (ValueError, TypeError): pass
+                try:
+                    user_cards.add(int(card_id_str))
+                except (ValueError, TypeError):
+                    pass
         st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
 
+# ===================================================================
+# START-THE-GAME CHECK
+# ===================================================================
 def maybe_start_game():
-    if st.session_state.game_started: return
-    taken, _, _, _ = load_global_cards()
-    total = max(len(taken), len(st.session_state.clicked_numbers))
-    if total < MIN_CARDS_TO_START: return
+    if st.session_state.game_started:
+        return
+    file_taken, _, _, _ = load_global_cards()
+    total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
+    min_required = 3
+    if total_now < min_required:
+        return
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
-        st.session_state.selected_card = (list(st.session_state.clicked_numbers)[0]
-                                          if st.session_state.clicked_numbers else -1)
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.session_state.selected_card = -1
         save_game_state()
+        st.rerun()
 
 # ===================================================================
-# AUTH
+# AUTHENTICATION
 # ===================================================================
-def hash_password(p): return hashlib.sha256(p.encode()).hexdigest()
-def verify_password(p, h): return hash_password(p) == h if h else False
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    return hash_password(password) == hashed if hashed else False
 
 def login_user(username, password):
-    username = username.strip(); password = password.strip()
+    username = username.strip()
+    password = password.strip()
     load_all_data()
+    
     if username == "admin" and password == "admin123":
         if username not in st.session_state.user_db:
             st.session_state.user_db[username] = {
-                "password": hash_password("admin123"), "balance": 0.0,
-                "role": "admin", "name": "Admin", "phone": "",
-                "game_played": 0, "wins": 0,
+                "password": hash_password("admin123"),
+                "balance": 0.0, "role": "admin",
+                "name": "Admin", "phone": "",
+                "game_played": 0, "wins": 0
             }
+            save_local_users(st.session_state.user_db)
+            load_all_data()
         else:
-            st.session_state.user_db[username]["balance"] = 0.0
-        save_local_users(st.session_state.user_db)
+            st.session_state.user_db["admin"]["balance"] = 0.0
+            save_local_users(st.session_state.user_db)
+        
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
-        load_all_data(); sync_global_cards()
+        load_all_data()
+        sync_global_cards()
         return True, "✅ Admin login successful!"
+    
     if username not in st.session_state.user_db:
         return False, "❌ Username not found"
+    
     if verify_password(password, st.session_state.user_db[username]["password"]):
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = st.session_state.user_db[username]["role"]
-        load_all_data(); sync_global_cards()
+        load_all_data()
+        sync_global_cards()
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
 
 def register_user(username, password, name, phone=""):
-    username = username.strip(); password = password.strip(); name = name.strip()
-    if len(username) < 2: return False, "❌ Username must be at least 2 characters"
-    if len(password) < 6: return False, "❌ Password must be at least 6 characters"
+    username = username.strip()
+    password = password.strip()
+    name = name.strip()
+    if len(username) < 2:
+        return False, "❌ Username must be at least 2 characters"
+    if len(password) < 6:
+        return False, "❌ Password must be at least 6 characters"
     load_all_data()
-    if username in st.session_state.user_db: return False, "❌ Username already exists"
+    if username in st.session_state.user_db:
+        return False, "❌ Username already exists"
     st.session_state.user_db[username] = {
-        "password": hash_password(password), "balance": 0.0, "role": "player",
-        "name": name, "phone": phone, "game_played": 0, "wins": 0,
+        "password": hash_password(password),
+        "balance": 0.0, "role": "player",
+        "name": name, "phone": phone,
+        "game_played": 0, "wins": 0
     }
     save_local_users(st.session_state.user_db)
     load_all_data()
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
-    save_all_data(); save_game_state()
+    save_all_data()
+    save_game_state()
     save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
                       st.session_state.timer_start_time, st.session_state.card_selection_time)
     st.session_state.logged_in = False
@@ -686,11 +774,11 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN
+# ADMIN PANEL (unchanged)
 # ===================================================================
 def admin_panel():
     st.markdown("""
-    <div style="background:rgba(255,255,255,0.08);border-radius:15px;padding:20px;margin:10px 0;border:1px solid rgba(255,255,255,0.15);">
+    <div class="glass-container">
         <h3 style="color:#FFD700;text-align:center;">🔧 Admin Panel</h3>
         <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances, view all users.</p>
     </div>
@@ -702,7 +790,8 @@ def admin_panel():
         st.session_state.deposit_msg_text = ""
     users = [u for u in st.session_state.user_db.keys() if u != "admin"]
     if not users:
-        st.info("No users registered yet."); return
+        st.info("No users registered yet.")
+        return
     selected_user = st.selectbox("Select User", users)
     if selected_user:
         ud = st.session_state.user_db.get(selected_user, {})
@@ -719,376 +808,417 @@ def admin_panel():
         with c1:
             if st.button("➕ Add", use_container_width=True):
                 st.session_state.user_db[selected_user]["balance"] = ud.get("balance", 0) + custom_amount
-                save_local_users(st.session_state.user_db); st.rerun()
+                save_local_users(st.session_state.user_db)
+                st.rerun()
         with c2:
             if st.button("💰 Set", use_container_width=True):
                 st.session_state.user_db[selected_user]["balance"] = custom_amount
-                save_local_users(st.session_state.user_db); st.rerun()
+                save_local_users(st.session_state.user_db)
+                st.rerun()
         with c3:
             if st.button("➖ Deduct", use_container_width=True):
                 cur = ud.get("balance", 0)
                 if cur >= custom_amount:
                     st.session_state.user_db[selected_user]["balance"] = cur - custom_amount
-                    save_local_users(st.session_state.user_db); st.rerun()
+                    save_local_users(st.session_state.user_db)
+                    st.rerun()
 
 # ===================================================================
-# BINGO CARDS (204)
+# ALL 204 BINGO CARDS - FULL LIST
 # ===================================================================
 BINGO_CARDS = [
-    {"id": 1, "cells": [['15','16','39','59','66'],['11','28','40','51','68'],['12','20','F','56','67'],['3','30','35','60','72'],['10','24','37','53','64']]},
-    {"id": 2, "cells": [['5','21','35','46','69'],['15','20','42','51','70'],['10','28','F','47','67'],['2','26','31','49','64'],['6','27','33','52','65']]},
-    {"id": 3, "cells": [['14','23','40','58','62'],['13','25','32','46','65'],['3','28','F','50','63'],['6','30','44','54','66'],['10','16','37','53','74']]},
-    {"id": 4, "cells": [['1','19','41','49','72'],['5','26','36','50','69'],['6','29','F','60','61'],['14','25','42','47','71'],['2','24','45','54','65']]},
-    {"id": 5, "cells": [['2','16','43','47','70'],['4','23','32','58','73'],['9','17','F','51','74'],['1','26','34','59','75'],['14','20','31','57','72']]},
-    {"id": 6, "cells": [['3','28','42','46','70'],['15','18','36','53','64'],['14','20','F','55','67'],['6','21','45','57','73'],['11','30','41','60','62']]},
-    {"id": 7, "cells": [['15','28','39','58','65'],['10','19','34','54','68'],['3','17','F','59','71'],['9','16','45','51','66'],['14','24','36','49','64']]},
-    {"id": 8, "cells": [['7','20','32','47','61'],['13','19','36','53','67'],['9','21','F','57','66'],['4','18','38','59','68'],['2','27','45','51','69']]},
-    {"id": 9, "cells": [['5','26','33','56','75'],['2','18','39','54','62'],['1','29','F','58','72'],['9','22','44','57','68'],['13','17','42','55','67']]},
-    {"id": 10, "cells": [['1','20','34','58','75'],['13','18','40','59','69'],['6','27','F','52','67'],['7','23','37','48','70'],['2','29','44','57','73']]},
-    {"id": 11, "cells": [['11','21','44','49','64'],['4','28','34','55','62'],['2','26','F','47','71'],['14','29','41','48','73'],['5','24','31','51','63']]},
-    {"id": 12, "cells": [['9','20','35','59','66'],['1','26','43','56','72'],['6','16','F','58','64'],['12','22','41','49','61'],['2','18','38','51','69']]},
-    {"id": 13, "cells": [['11','16','45','60','73'],['1','26','44','55','69'],['4','29','F','47','72'],['9','28','31','51','64'],['14','23','40','59','68']]},
-    {"id": 14, "cells": [['5','18','45','58','67'],['1','27','42','50','65'],['7','28','F','54','64'],['2','21','43','60','74'],['10','24','32','51','71']]},
-    {"id": 15, "cells": [['5','30','38','48','71'],['1','22','42','60','62'],['2','18','F','50','65'],['3','29','33','46','75'],['12','17','32','55','66']]},
-    {"id": 16, "cells": [['7','23','45','55','62'],['3','27','42','60','71'],['12','21','F','57','66'],['4','24','41','49','68'],['13','17','44','50','75']]},
-    {"id": 17, "cells": [['10','28','32','59','72'],['3','27','40','47','63'],['13','24','F','57','71'],['2','21','41','60','68'],['7','25','42','58','65']]},
-    {"id": 18, "cells": [['13','27','33','51','63'],['7','22','42','48','61'],['10','25','F','54','65'],['8','16','43','52','72'],['14','23','38','60','74']]},
-    {"id": 19, "cells": [['1','22','39','51','62'],['15','25','35','47','75'],['3','23','F','50','66'],['8','26','44','49','70'],['4','28','38','53','67']]},
-    {"id": 20, "cells": [['9','19','35','54','73'],['8','23','43','57','61'],['4','24','F','58','68'],['11','17','32','50','62'],['1','26','38','49','75']]},
-    {"id": 21, "cells": [['8','18','39','54','63'],['2','30','37','57','75'],['13','29','F','56','68'],['15','27','31','49','67'],['6','17','45','52','61']]},
-    {"id": 22, "cells": [['6','26','44','55','62'],['13','19','32','60','61'],['9','25','F','49','75'],['3','20','40','46','65'],['8','27','31','56','71']]},
-    {"id": 23, "cells": [['1','27','40','54','73'],['4','17','33','46','68'],['7','16','F','48','63'],['9','23','36','56','66'],['11','21','34','50','74']]},
-    {"id": 24, "cells": [['9','19','40','46','75'],['8','26','31','48','67'],['1','24','F','59','65'],['7','20','39','49','70'],['12','27','43','57','73']]},
-    {"id": 25, "cells": [['3','23','40','53','75'],['1','27','45','51','68'],['4','28','F','46','73'],['14','29','35','56','61'],['9','30','41','52','74']]},
-    {"id": 26, "cells": [['10','25','37','53','65'],['14','29','38','58','69'],['2','28','F','56','68'],['6','22','35','57','70'],['3','18','45','60','67']]},
-    {"id": 27, "cells": [['11','26','39','51','75'],['3','28','33','56','67'],['10','24','F','58','74'],['7','18','45','53','69'],['13','30','44','47','64']]},
-    {"id": 28, "cells": [['8','17','42','52','74'],['2','24','39','56','63'],['14','16','F','60','62'],['9','21','31','47','72'],['15','18','35','54','70']]},
-    {"id": 29, "cells": [['14','16','32','53','74'],['15','21','34','59','65'],['10','26','F','55','66'],['2','19','45','56','61'],['1','25','40','51','64']]},
-    {"id": 30, "cells": [['8','27','44','54','70'],['11','26','31','55','64'],['9','19','F','57','67'],['6','23','41','49','62'],['13','22','40','56','72']]},
-    {"id": 31, "cells": [['3','27','31','46','71'],['9','24','40','48','67'],['5','17','F','55','62'],['12','18','38','58','68'],['4','25','36','54','73']]},
-    {"id": 32, "cells": [['10','20','32','58','73'],['15','28','34','56','61'],['9','24','F','50','75'],['5','25','37','46','67'],['14','23','31','51','65']]},
-    {"id": 33, "cells": [['7','29','42','56','69'],['15','27','40','60','64'],['1','18','F','51','74'],['4','16','38','57','67'],['8','21','39','59','68']]},
-    {"id": 34, "cells": [['4','17','31','46','70'],['8','29','37','57','65'],['9','24','F','59','75'],['11','27','34','55','63'],['3','22','36','48','73']]},
-    {"id": 35, "cells": [['9','17','35','55','72'],['14','24','45','52','68'],['11','18','F','48','66'],['8','21','36','47','71'],['4','27','37','57','70']]},
-    {"id": 36, "cells": [['2','22','41','54','62'],['13','21','45','51','70'],['15','30','F','47','63'],['4','26','39','50','75'],['10','29','34','58','64']]},
-    {"id": 37, "cells": [['1','21','32','54','65'],['5','28','42','51','63'],['2','26','F','60','61'],['12','24','34','59','62'],['15','17','43','57','72']]},
-    {"id": 38, "cells": [['1','30','45','49','66'],['9','24','42','56','69'],['7','20','F','52','74'],['12','17','36','60','62'],['11','18','35','54','63']]},
-    {"id": 39, "cells": [['10','27','35','51','61'],['14','16','37','53','72'],['1','25','F','48','69'],['11','26','41','58','70'],['13','28','42','47','68']]},
-    {"id": 40, "cells": [['14','17','34','54','63'],['10','28','43','55','70'],['7','16','F','58','71'],['15','24','41','59','69'],['6','29','36','57','64']]},
-    {"id": 41, "cells": [['5','18','31','52','62'],['10','21','43','56','66'],['9','28','F','59','69'],['14','25','40','48','67'],['6','20','35','47','71']]},
-    {"id": 42, "cells": [['11','20','43','49','75'],['10','25','33','58','74'],['15','17','F','50','67'],['13','21','42','52','71'],['2','23','35','51','64']]},
-    {"id": 43, "cells": [['15','18','44','54','69'],['6','19','31','56','64'],['13','16','F','60','70'],['8','27','35','55','66'],['7','29','38','57','72']]},
-    {"id": 44, "cells": [['11','28','35','47','72'],['4','26','45','48','73'],['14','16','F','54','71'],['8','25','33','52','61'],['7','22','44','57','68']]},
-    {"id": 45, "cells": [['9','27','39','48','70'],['6','20','38','51','63'],['7','19','F','55','68'],['11','22','35','46','74'],['8','17','45','47','69']]},
-    {"id": 46, "cells": [['5','17','43','47','74'],['15','18','42','48','63'],['11','21','F','56','64'],['4','23','39','54','66'],['2','25','33','49','65']]},
-    {"id": 47, "cells": [['5','17','38','46','70'],['6','20','43','51','75'],['12','25','F','56','61'],['1','16','45','60','68'],['4','26','35','53','74']]},
-    {"id": 48, "cells": [['4','28','37','53','61'],['2','19','31','49','62'],['7','16','F','56','64'],['14','26','39','52','74'],['6','18','32','57','67']]},
-    {"id": 49, "cells": [['1','21','34','52','67'],['3','29','41','54','69'],['10','24','F','57','70'],['8','26','35','53','72'],['6','19','31','58','64']]},
-    {"id": 50, "cells": [['3','17','36','49','69'],['10','30','40','52','62'],['14','27','F','58','66'],['2','19','41','59','68'],['15','18','42','47','64']]},
-    {"id": 51, "cells": [['2','21','31','49','68'],['12','20','45','54','69'],['10','27','F','48','75'],['9','16','40','46','61'],['14','19','39','57','62']]},
-    {"id": 52, "cells": [['10','22','36','59','74'],['2','21','44','55','70'],['11','26','F','48','72'],['15','23','40','57','75'],['14','18','31','58','66']]},
-    {"id": 53, "cells": [['15','30','35','59','69'],['5','21','45','51','71'],['8','25','F','46','67'],['7','23','40','58','74'],['11','29','42','54','72']]},
-    {"id": 54, "cells": [['1','26','34','60','61'],['6','18','35','52','66'],['4','24','F','50','69'],['15','29','32','48','63'],['7','25','45','53','72']]},
-    {"id": 55, "cells": [['12','24','45','51','65'],['8','16','42','53','62'],['15','19','F','59','64'],['7','25','39','56','70'],['14','20','32','48','74']]},
-    {"id": 56, "cells": [['13','17','44','53','68'],['3','30','45','56','66'],['15','28','F','55','73'],['12','20','33','50','70'],['4','24','43','52','67']]},
-    {"id": 57, "cells": [['5','28','40','56','63'],['12','21','36','53','73'],['14','16','F','60','68'],['15','25','44','58','66'],['11','17','45','54','64']]},
-    {"id": 58, "cells": [['1','16','32','58','74'],['3','28','44','60','67'],['9','24','F','49','64'],['10','20','37','47','71'],['13','19','39','46','61']]},
-    {"id": 59, "cells": [['7','20','34','47','70'],['2','24','43','55','73'],['3','29','F','46','62'],['12','18','45','49','69'],['5','17','33','57','64']]},
-    {"id": 60, "cells": [['14','25','41','48','75'],['9','17','34','51','62'],['1','30','F','60','65'],['13','28','38','49','73'],['6','22','40','54','61']]},
-    {"id": 61, "cells": [['11','26','38','60','71'],['5','25','37','52','65'],['14','16','F','59','62'],['7','18','43','54','64'],['9','28','41','46','74']]},
-    {"id": 62, "cells": [['13','26','31','56','68'],['8','27','43','59','70'],['11','18','F','53','73'],['6','21','36','48','72'],['2','20','42','55','69']]},
-    {"id": 63, "cells": [['12','21','35','49','62'],['1','29','38','55','74'],['15','22','F','51','64'],['5','28','33','50','65'],['4','17','37','60','72']]},
-    {"id": 64, "cells": [['15','24','38','58','64'],['1','22','44','60','73'],['14','21','F','48','67'],['2','29','31','47','68'],['4','23','41','56','61']]},
-    {"id": 65, "cells": [['6','18','35','57','64'],['10','28','32','52','62'],['7','19','F','48','63'],['9','20','39','49','68'],['2','30','33','59','65']]},
-    {"id": 66, "cells": [['1','20','34','54','67'],['2','27','33','51','63'],['14','21','F','58','73'],['3','28','42','46','70'],['4','24','37','55','64']]},
-    {"id": 67, "cells": [['13','28','38','58','71'],['14','22','44','51','73'],['5','26','F','56','61'],['12','24','34','53','72'],['8','17','40','52','62']]},
-    {"id": 68, "cells": [['14','25','41','55','66'],['7','28','38','59','65'],['9','19','F','53','61'],['13','22','33','56','68'],['15','18','44','57','63']]},
-    {"id": 69, "cells": [['10','16','35','55','65'],['6','28','40','46','70'],['2','17','F','59','73'],['15','29','36','47','75'],['8','27','39','51','62']]},
-    {"id": 70, "cells": [['15','30','36','50','70'],['9','18','32','59','65'],['12','17','F','58','75'],['6','21','43','46','62'],['4','23','38','48','69']]},
-    {"id": 71, "cells": [['6','25','31','49','72'],['4','22','43','53','61'],['2','28','F','57','69'],['7','17','41','54','63'],['12','19','45','46','65']]},
-    {"id": 72, "cells": [['8','18','40','46','64'],['5','20','35','47','71'],['6','27','F','49','73'],['10','19','42','55','65'],['2','17','45','58','75']]},
-    {"id": 73, "cells": [['6','28','37','48','72'],['2','23','43','57','61'],['15','30','F','54','66'],['13','21','34','60','65'],['7','27','35','46','63']]},
-    {"id": 74, "cells": [['10','24','45','51','72'],['14','21','36','53','67'],['3','17','F','49','62'],['7','18','41','48','66'],['9','26','44','54','63']]},
-    {"id": 75, "cells": [['6','17','44','59','75'],['7','20','37','46','69'],['4','29','F','50','63'],['3','23','41','49','71'],['14','24','40','52','72']]},
-    {"id": 76, "cells": [['4','19','39','48','62'],['10','24','31','60','70'],['6','23','F','51','66'],['8','18','35','50','73'],['2','27','41','47','61']]},
-    {"id": 77, "cells": [['1','18','34','60','74'],['7','27','35','56','61'],['15','25','F','55','68'],['14','21','38','53','64'],['13','17','40','58','75']]},
-    {"id": 78, "cells": [['15','27','37','47','67'],['11','17','34','58','70'],['1','30','F','46','68'],['8','24','39','50','62'],['13','22','38','57','66']]},
-    {"id": 79, "cells": [['4','26','39','57','72'],['13','17','40','58','61'],['11','29','F','54','69'],['3','16','44','53','65'],['8','18','45','46','62']]},
-    {"id": 80, "cells": [['8','23','39','57','73'],['4','27','37','56','66'],['1','19','F','51','65'],['5','30','31','47','63'],['2','17','32','48','67']]},
-    {"id": 81, "cells": [['3','23','45','49','66'],['5','16','41','50','62'],['14','19','F','47','72'],['9','20','44','51','73'],['2','25','38','52','64']]},
-    {"id": 82, "cells": [['14','16','36','54','63'],['8','17','31','59','64'],['1','25','F','55','72'],['7','20','33','47','66'],['2','18','41','58','61']]},
-    {"id": 83, "cells": [['1','16','31','53','67'],['3','20','34','57','73'],['9','28','F','49','63'],['10','26','38','54','70'],['2','25','36','47','61']]},
-    {"id": 84, "cells": [['11','29','32','59','64'],['12','19','41','60','67'],['13','28','F','56','62'],['10','24','39','46','75'],['5','22','38','58','74']]},
-    {"id": 85, "cells": [['13','28','31','51','62'],['1','30','34','59','66'],['14','17','F','50','64'],['3','16','36','56','71'],['4','29','40','47','61']]},
-    {"id": 86, "cells": [['4','21','37','54','67'],['13','27','44','57','61'],['15','26','F','46','71'],['2','25','33','58','70'],['9','28','42','48','68']]},
-    {"id": 87, "cells": [['2','25','35','46','66'],['1','17','43','49','63'],['15','29','F','59','72'],['14','20','33','58','62'],['8','22','34','48','73']]},
-    {"id": 88, "cells": [['13','19','43','55','64'],['14','18','42','48','63'],['12','23','F','58','75'],['15','29','44','52','65'],['7','27','40','57','73']]},
-    {"id": 89, "cells": [['2','16','44','58','75'],['5','26','40','56','65'],['14','17','F','54','61'],['10','24','33','57','72'],['7','22','38','60','69']]},
-    {"id": 90, "cells": [['13','26','44','48','69'],['3','20','38','58','70'],['5','17','F','46','72'],['12','22','32','56','62'],['1','24','36','54','63']]},
-    {"id": 91, "cells": [['5','29','41','59','72'],['1','25','31','46','63'],['10','30','F','57','71'],['8','17','34','55','75'],['6','28','32','47','74']]},
-    {"id": 92, "cells": [['5','18','37','59','63'],['9','27','38','57','70'],['14','24','F','52','66'],['13','28','41','56','71'],['1','30','45','46','72']]},
-    {"id": 93, "cells": [['14','21','33','46','65'],['15','18','40','53','71'],['13','16','F','51','63'],['7','23','34','48','75'],['8','20','31','47','74']]},
-    {"id": 94, "cells": [['1','19','39','58','67'],['8','22','40','53','62'],['7','30','F','50','65'],['5','25','41','46','72'],['2','17','38','56','64']]},
-    {"id": 95, "cells": [['4','19','37','52','70'],['6','24','43','60','65'],['5','16','F','56','75'],['12','29','41','51','67'],['9','30','39','58','61']]},
-    {"id": 96, "cells": [['2','18','34','54','74'],['14','27','45','57','64'],['11','21','F','56','62'],['13','19','33','48','61'],['4','16','41','53','72']]},
-    {"id": 97, "cells": [['2','29','45','47','66'],['12','30','42','60','74'],['9','21','F','58','61'],['6','27','40','48','62'],['15','23','34','57','65']]},
-    {"id": 98, "cells": [['13','24','40','57','68'],['15','20','45','50','64'],['9','19','F','60','67'],['8','28','43','56','70'],['2','27','38','47','65']]},
-    {"id": 99, "cells": [['7','30','45','49','66'],['12','19','35','55','62'],['3','23','F','53','67'],['10','25','36','50','65'],['11','29','32','51','74']]},
-    {"id": 100, "cells": [['15','27','31','54','73'],['10','29','37','50','69'],['8','23','F','57','75'],['11','25','43','58','68'],['4','24','38','46','74']]},
-    {"id": 101, "cells": [['15','17','35','59','75'],['9','22','43','54','74'],['1','29','F','51','64'],['7','16','37','48','66'],['10','23','41','52','65']]},
-    {"id": 102, "cells": [['7','16','32','50','64'],['10','29','38','48','63'],['13','22','F','53','74'],['12','18','44','56','70'],['4','27','39','57','71']]},
-    {"id": 103, "cells": [['3','23','41','58','62'],['4','22','35','50','61'],['12','17','F','59','73'],['2','20','43','52','75'],['8','27','44','51','67']]},
-    {"id": 104, "cells": [['13','25','39','58','68'],['9','19','42','46','67'],['4','22','F','52','75'],['5','18','32','49','72'],['6','23','38','51','70']]},
-    {"id": 105, "cells": [['12','17','36','49','67'],['6','16','41','56','63'],['4','22','F','57','74'],['5','20','39','60','62'],['1','29','35','51','65']]},
-    {"id": 106, "cells": [['15','16','43','54','61'],['9','24','42','60','70'],['13','27','F','56','63'],['14','20','45','57','62'],['10','18','35','53','72']]},
-    {"id": 107, "cells": [['3','28','34','57','62'],['14','30','40','52','68'],['4','27','F','49','65'],['9','22','33','58','70'],['2','29','36','47','63']]},
-    {"id": 108, "cells": [['1','23','41','47','75'],['7','22','40','52','62'],['3','16','F','58','68'],['2','18','43','50','67'],['6','30','44','57','61']]},
-    {"id": 109, "cells": [['15','27','36','47','70'],['13','17','42','59','61'],['5','23','F','57','62'],['7','25','38','50','69'],['6','26','35','52','72']]},
-    {"id": 110, "cells": [['11','27','41','51','64'],['13','30','34','55','74'],['3','28','F','54','66'],['6','18','37','46','62'],['7','26','32','57','70']]},
-    {"id": 111, "cells": [['3','30','41','51','66'],['12','25','32','53','72'],['8','20','F','47','71'],['13','24','39','60','74'],['1','28','38','50','63']]},
-    {"id": 112, "cells": [['12','24','41','50','68'],['14','21','35','52','65'],['7','17','F','46','70'],['3','20','43','57','74'],['1','29','33','48','62']]},
-    {"id": 113, "cells": [['11','21','34','56','63'],['12','23','32','53','69'],['3','24','F','54','71'],['2','26','37','49','72'],['4','22','36','48','75']]},
-    {"id": 114, "cells": [['12','30','37','51','74'],['14','19','43','57','63'],['7','28','F','48','67'],['13','22','31','46','62'],['3','20','38','54','70']]},
-    {"id": 115, "cells": [['2','19','39','50','70'],['9','23','34','49','64'],['13','27','F','59','61'],['11','26','38','53','67'],['14','28','44','54','63']]},
-    {"id": 116, "cells": [['7','21','38','56','65'],['15','26','34','52','75'],['1','30','F','50','71'],['4','27','43','54','66'],['12','28','44','59','70']]},
-    {"id": 117, "cells": [['1','21','33','57','65'],['2','29','32','50','61'],['9','25','F','53','74'],['6','28','34','55','75'],['14','18','37','47','67']]},
-    {"id": 118, "cells": [['1','22','31','47','67'],['6','26','37','54','64'],['10','27','F','49','62'],['14','24','42','55','72'],['5','18','34','59','71']]},
-    {"id": 119, "cells": [['14','26','45','56','72'],['12','29','42','55','62'],['15','23','F','48','73'],['3','28','41','49','61'],['13','16','31','54','65']]},
-    {"id": 120, "cells": [['7','25','37','60','70'],['13','20','43','50','69'],['4','18','F','55','74'],['5','26','40','48','67'],['8','17','39','46','73']]},
-    {"id": 121, "cells": [['11','27','38','51','63'],['7','20','41','59','64'],['5','28','F','54','71'],['12','29','33','56','73'],['8','25','40','55','69']]},
-    {"id": 122, "cells": [['11','21','32','51','70'],['6','28','44','60','74'],['5','18','F','57','63'],['1','16','38','46','62'],['9','17','31','53','73']]},
-    {"id": 123, "cells": [['14','20','43','54','70'],['10','28','40','51','69'],['6','21','F','53','67'],['8','18','35','50','74'],['3','29','34','48','64']]},
-    {"id": 124, "cells": [['6','20','38','50','66'],['5','21','33','49','61'],['4','30','F','48','75'],['13','26','41','60','65'],['15','19','36','56','63']]},
-    {"id": 125, "cells": [['12','28','33','58','75'],['1','25','39','60','66'],['13','20','F','48','61'],['14','21','44','46','65'],['5','22','38','54','67']]},
-    {"id": 126, "cells": [['13','22','41','57','65'],['12','30','32','60','62'],['6','24','F','58','61'],['1','16','44','50','63'],['2','17','45','53','69']]},
-    {"id": 127, "cells": [['13','26','43','60','65'],['4','16','38','52','62'],['2','25','F','58','63'],['9','17','34','47','74'],['5','27','41','46','68']]},
-    {"id": 128, "cells": [['7','25','43','47','63'],['11','16','32','58','61'],['2','23','F','55','71'],['3','22','38','46','68'],['1','30','36','57','72']]},
-    {"id": 129, "cells": [['3','25','43','57','63'],['2','20','35','59','71'],['13','23','F','60','74'],['10','29','38','49','73'],['11','21','42','53','70']]},
-    {"id": 130, "cells": [['5','18','31','56','75'],['15','27','42','59','66'],['4','16','F','57','71'],['1','30','45','51','64'],['2','28','43','53','67']]},
-    {"id": 131, "cells": [['2','19','36','51','64'],['14','29','37','46','70'],['3','28','F','55','68'],['12','23','32','56','67'],['1','20','40','48','71']]},
-    {"id": 132, "cells": [['1','30','32','48','67'],['5','22','42','57','64'],['6','17','F','58','65'],['7','24','43','46','73'],['2','18','37','55','74']]},
-    {"id": 133, "cells": [['14','28','37','55','73'],['6','16','39','54','72'],['7','22','F','58','63'],['4','25','32','51','74'],['10','23','40','52','61']]},
-    {"id": 134, "cells": [['10','25','38','58','74'],['9','24','41','49','69'],['1','26','F','48','66'],['4','28','39','57','75'],['14','17','42','52','61']]},
-    {"id": 135, "cells": [['13','24','45','52','61'],['8','22','35','60','73'],['7','17','F','54','68'],['9','27','42','59','63'],['5','26','40','49','71']]},
-    {"id": 136, "cells": [['15','30','40','47','72'],['4','22','32','55','70'],['13','24','F','53','66'],['5','29','35','58','61'],['2','17','31','51','71']]},
-    {"id": 137, "cells": [['1','27','38','56','61'],['7','19','43','53','70'],['3','24','F','52','65'],['11','22','31','51','74'],['12','16','45','57','71']]},
-    {"id": 138, "cells": [['4','30','35','58','65'],['6','24','42','56','61'],['1','27','F','54','71'],['10','16','39','55','64'],['13','21','36','53','67']]},
-    {"id": 139, "cells": [['11','29','45','47','75'],['4','21','41','46','67'],['12','17','F','53','69'],['6','22','40','51','74'],['14','19','44','60','62']]},
-    {"id": 140, "cells": [['6','18','32','51','62'],['8','21','43','57','65'],['2','16','F','49','71'],['13','30','41','59','75'],['7','29','35','48','64']]},
-    {"id": 141, "cells": [['11','20','42','49','70'],['5','26','41','47','72'],['6','18','F','60','66'],['4','21','45','57','63'],['14','19','36','52','69']]},
-    {"id": 142, "cells": [['13','23','44','60','69'],['10','27','42','47','71'],['2','24','F','58','68'],['4','29','31','59','63'],['12','25','45','55','65']]},
-    {"id": 143, "cells": [['6','30','41','48','63'],['13','20','37','53','66'],['10','16','F','57','73'],['14','28','35','54','67'],['8','29','39','51','72']]},
-    {"id": 144, "cells": [['14','20','42','60','65'],['12','27','43','49','66'],['15','21','F','50','64'],['4','17','41','55','67'],['6','25','39','51','72']]},
-    {"id": 145, "cells": [['15','30','33','56','69'],['9','29','32','57','65'],['4','22','F','46','66'],['3','28','43','48','72'],['14','16','39','52','67']]},
-    {"id": 146, "cells": [['10','20','36','55','64'],['2','19','39','58','67'],['7','28','F','54','63'],['14','30','35','60','66'],['4','23','45','56','62']]},
-    {"id": 147, "cells": [['11','29','34','50','68'],['8','26','35','58','74'],['12','27','F','46','64'],['2','30','42','49','73'],['15','23','41','57','69']]},
-    {"id": 148, "cells": [['14','20','38','53','74'],['15','22','45','56','64'],['10','17','F','50','63'],['3','25','37','51','69'],['6','29','35','59','61']]},
-    {"id": 149, "cells": [['14','23','37','52','72'],['15','27','40','54','63'],['7','18','F','47','75'],['6','16','42','57','61'],['12','20','32','60','62']]},
-    {"id": 150, "cells": [['6','24','33','48','75'],['10','19','37','50','64'],['7','28','F','57','68'],['13','17','43','58','72'],['11','21','35','53','74']]},
-    {"id": 151, "cells": [['3','19','42','56','71'],['8','22','37','46','62'],['15','29','F','57','72'],['9','17','39','60','69'],['1','18','40','59','64']]},
-    {"id": 152, "cells": [['6','21','38','52','63'],['11','24','37','55','72'],['14','27','F','49','61'],['2','23','44','58','68'],['10','29','33','47','74']]},
-    {"id": 153, "cells": [['14','16','44','51','69'],['1','17','34','56','67'],['7','29','F','47','75'],['4','30','41','54','65'],['10','18','43','49','61']]},
-    {"id": 154, "cells": [['10','30','35','53','67'],['14','18','38','47','64'],['5','26','F','60','69'],['6','20','32','56','61'],['15','27','39','48','65']]},
-    {"id": 155, "cells": [['12','16','31','54','62'],['9','23','41','56','73'],['13','20','F','60','61'],['2','28','42','57','67'],['7','24','35','50','63']]},
-    {"id": 156, "cells": [['14','26','42','56','66'],['11','30','31','57','69'],['1','18','F','54','70'],['8','29','34','52','71'],['15','16','40','50','62']]},
-    {"id": 157, "cells": [['6','24','40','58','62'],['10','26','31','47','74'],['13','25','F','57','64'],['1','28','41','48','65'],['14','29','35','53','73']]},
-    {"id": 158, "cells": [['1','18','40','56','75'],['15','17','42','54','64'],['11','24','F','60','70'],['7','20','38','51','72'],['14','21','43','48','65']]},
-    {"id": 159, "cells": [['12','17','36','53','72'],['9','21','38','56','65'],['4','26','F','50','70'],['10','18','40','59','67'],['8','22','35','55','69']]},
-    {"id": 160, "cells": [['3','25','33','56','69'],['5','24','36','54','70'],['9','23','F','60','66'],['12','27','32','49','68'],['10','18','43','46','73']]},
-    {"id": 161, "cells": [['2','25','36','51','65'],['9','16','42','59','61'],['6','27','F','50','62'],['11','17','39','52','75'],['10','22','37','60','72']]},
-    {"id": 162, "cells": [['8','20','43','56','69'],['13','30','40','47','70'],['14','29','F','57','75'],['2','25','34','60','61'],['3','19','31','54','71']]},
-    {"id": 163, "cells": [['12','19','37','53','61'],['1','23','35','46','74'],['13','21','F','55','72'],['3','30','39','54','64'],['15','20','31','58','75']]},
-    {"id": 164, "cells": [['13','22','42','55','65'],['15','30','32','52','72'],['5','18','F','54','75'],['11','25','39','58','61'],['14','24','41','46','68']]},
-    {"id": 165, "cells": [['13','30','36','57','70'],['14','26','40','52','64'],['12','22','F','51','68'],['10','18','37','47','66'],['7','16','39','56','67']]},
-    {"id": 166, "cells": [['1','19','41','47','74'],['9','26','42','53','68'],['4','29','F','54','67'],['12','21','32','56','65'],['8','18','45','49','70']]},
-    {"id": 167, "cells": [['8','18','33','49','67'],['5','24','31','55','66'],['6','20','F','59','72'],['15','19','37','47','73'],['12','26','42','46','71']]},
-    {"id": 168, "cells": [['12','27','33','48','69'],['9','24','38','49','71'],['11','16','F','57','75'],['7','18','31','46','61'],['2','20','32','60','73']]},
-    {"id": 169, "cells": [['13','18','34','52','75'],['10','19','32','54','61'],['3','26','F','51','62'],['15','16','38','50','70'],['12','21','37','48','66']]},
-    {"id": 170, "cells": [['9','23','34','48','73'],['5','22','35','55','72'],['4','19','F','50','67'],['15','24','40','49','63'],['10','29','42','51','64']]},
-    {"id": 171, "cells": [['5','25','36','57','70'],['11','24','31','51','69'],['9','29','F','60','66'],['12','30','39','48','72'],['6','27','38','52','68']]},
-    {"id": 172, "cells": [['11','20','43','59','70'],['3','29','41','50','69'],['5','18','F','46','65'],['14','30','39','52','74'],['15','24','40','47','64']]},
-    {"id": 173, "cells": [['14','16','38','53','66'],['15','30','31','60','61'],['4','18','F','56','68'],['3','19','43','58','69'],['7','23','39','48','71']]},
-    {"id": 174, "cells": [['11','21','33','49','68'],['5','18','44','48','74'],['13','17','F','55','75'],['3','26','38','57','71'],['9','25','43','56','66']]},
-    {"id": 175, "cells": [['10','17','43','52','62'],['2','27','42','51','74'],['12','29','F','55','61'],['1','22','31','57','75'],['8','21','45','46','70']]},
-    {"id": 176, "cells": [['8','27','44','49','65'],['6','20','40','51','63'],['15','24','F','60','68'],['9','26','33','52','70'],['14','22','42','53','67']]},
-    {"id": 177, "cells": [['3','28','39','55','62'],['1','19','44','50','61'],['15','18','F','57','71'],['9','16','40','52','75'],['13','21','35','54','64']]},
-    {"id": 178, "cells": [['6','28','37','60','61'],['2','24','39','56','66'],['7','20','F','46','63'],['15','26','43','47','74'],['4','19','34','48','65']]},
-    {"id": 179, "cells": [['4','22','45','46','75'],['5','27','33','49','65'],['14','26','F','58','63'],['11','24','43','48','70'],['15','30','36','53','73']]},
-    {"id": 180, "cells": [['12','23','31','54','65'],['9','29','43','55','70'],['2','18','F','57','68'],['15','21','39','56','64'],['5','19','38','52','75']]},
-    {"id": 181, "cells": [['9','24','44','53','68'],['4','19','38','57','63'],['5','25','F','55','66'],['8','28','42','49','70'],['13','21','35','59','62']]},
-    {"id": 182, "cells": [['10','16','32','55','74'],['4','29','42','46','67'],['11','20','F','50','70'],['15','19','38','49','75'],['12','27','31','58','71']]},
-    {"id": 183, "cells": [['1','23','45','57','61'],['13','18','38','49','63'],['15','26','F','48','62'],['2','19','39','58','70'],['6','28','32','55','72']]},
-    {"id": 184, "cells": [['10','22','32','54','68'],['2','17','42','59','66'],['8','18','F','55','63'],['1','27','40','56','69'],['15','30','43','49','71']]},
-    {"id": 185, "cells": [['10','24','44','58','66'],['5','22','43','46','69'],['13','21','F','54','75'],['2','20','31','55','61'],['3','28','33','50','74']]},
-    {"id": 186, "cells": [['1','29','43','54','61'],['14','28','45','51','69'],['9','25','F','59','67'],['5','23','33','58','63'],['7','16','31','48','74']]},
-    {"id": 187, "cells": [['12','26','36','48','71'],['1','29','38','49','74'],['3','30','F','59','70'],['9','21','33','60','64'],['11','18','40','52','67']]},
-    {"id": 188, "cells": [['8','29','44','49','65'],['13','21','41','58','71'],['10','16','F','53','69'],['4','24','43','48','74'],['11','25','40','47','63']]},
-    {"id": 189, "cells": [['14','17','36','52','63'],['3','23','45','59','70'],['13','28','F','53','74'],['15','24','41','56','67'],['9','26','42','55','66']]},
-    {"id": 190, "cells": [['7','26','40','47','65'],['15','18','45','57','63'],['14','16','F','58','71'],['2','20','38','46','72'],['8','28','32','56','64']]},
-    {"id": 191, "cells": [['1','30','39','55','66'],['7','27','45','60','74'],['5','20','F','58','69'],['13','17','44','57','62'],['9','24','36','51','65']]},
-    {"id": 192, "cells": [['8','29','35','60','71'],['9','25','41','53','67'],['14','20','F','55','65'],['2','19','42','51','68'],['13','28','43','57','61']]},
-    {"id": 193, "cells": [['14','29','44','53','65'],['8','25','43','52','72'],['13','19','F','59','71'],['7','18','39','57','75'],['3','23','36','50','69']]},
-    {"id": 194, "cells": [['4','29','44','50','67'],['15','26','35','49','75'],['1','17','F','57','63'],['6','21','37','48','66'],['5','18','36','47','72']]},
-    {"id": 195, "cells": [['8','22','31','53','73'],['1','19','32','58','61'],['11','27','F','56','71'],['10','24','40','47','68'],['2','20','45','60','65']]},
-    {"id": 196, "cells": [['4','16','38','49','74'],['2','30','42','60','73'],['5','19','F','56','64'],['6','22','44','51','62'],['8','25','39','54','70']]},
-    {"id": 197, "cells": [['4','25','41','49','65'],['5','24','39','51','61'],['8','22','F','54','73'],['2','30','43','47','62'],['9','28','35','57','67']]},
-    {"id": 198, "cells": [['6','17','42','54','73'],['4','25','43','59','66'],['5','30','F','57','64'],['13','29','45','58','67'],['12','28','33','55','71']]},
-    {"id": 199, "cells": [['10','29','40','57','61'],['5','17','33','50','73'],['12','25','F','54','63'],['9','16','36','60','68'],['2','21','31','59','71']]},
-    {"id": 200, "cells": [['6','27','43','48','62'],['2','26','45','54','70'],['5','24','F','47','74'],['10','19','40','46','65'],['14','30','35','52','61']]},
-    {"id": 201, "cells": [['5','20','38','58','61'],['10','22','41','52','64'],['2','19','F','57','62'],['12','23','36','51','63'],['3','26','31','53','74']]},
-    {"id": 202, "cells": [['9','22','36','60','69'],['12','21','32','56','74'],['15','24','F','47','73'],['7','30','43','59','63'],['1','16','33','52','67']]},
-    {"id": 203, "cells": [['8','16','41','59','67'],['6','26','34','58','65'],['14','23','F','57','62'],['4','18','31','55','72'],['5','25','44','52','68']]},
-    {"id": 204, "cells": [['12','20','39','55','64'],['5','26','33','58','67'],['6','17','F','54','74'],['3','29','40','57','71'],['1','19','31','49','69']]},
+    {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
+    {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
+    {"id": 3, "cells": [['14', '23', '40', '58', '62'], ['13', '25', '32', '46', '65'], ['3', '28', 'F', '50', '63'], ['6', '30', '44', '54', '66'], ['10', '16', '37', '53', '74']]},
+    {"id": 4, "cells": [['1', '19', '41', '49', '72'], ['5', '26', '36', '50', '69'], ['6', '29', 'F', '60', '61'], ['14', '25', '42', '47', '71'], ['2', '24', '45', '54', '65']]},
+    {"id": 5, "cells": [['2', '16', '43', '47', '70'], ['4', '23', '32', '58', '73'], ['9', '17', 'F', '51', '74'], ['1', '26', '34', '59', '75'], ['14', '20', '31', '57', '72']]},
+    {"id": 6, "cells": [['3', '28', '42', '46', '70'], ['15', '18', '36', '53', '64'], ['14', '20', 'F', '55', '67'], ['6', '21', '45', '57', '73'], ['11', '30', '41', '60', '62']]},
+    {"id": 7, "cells": [['15', '28', '39', '58', '65'], ['10', '19', '34', '54', '68'], ['3', '17', 'F', '59', '71'], ['9', '16', '45', '51', '66'], ['14', '24', '36', '49', '64']]},
+    {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
+    {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
+    {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
+    {"id": 11, "cells": [['11', '21', '44', '49', '64'], ['4', '28', '34', '55', '62'], ['2', '26', 'F', '47', '71'], ['14', '29', '41', '48', '73'], ['5', '24', '31', '51', '63']]},
+    {"id": 12, "cells": [['9', '20', '35', '59', '66'], ['1', '26', '43', '56', '72'], ['6', '16', 'F', '58', '64'], ['12', '22', '41', '49', '61'], ['2', '18', '38', '51', '69']]},
+    {"id": 13, "cells": [['11', '16', '45', '60', '73'], ['1', '26', '44', '55', '69'], ['4', '29', 'F', '47', '72'], ['9', '28', '31', '51', '64'], ['14', '23', '40', '59', '68']]},
+    {"id": 14, "cells": [['5', '18', '45', '58', '67'], ['1', '27', '42', '50', '65'], ['7', '28', 'F', '54', '64'], ['2', '21', '43', '60', '74'], ['10', '24', '32', '51', '71']]},
+    {"id": 15, "cells": [['5', '30', '38', '48', '71'], ['1', '22', '42', '60', '62'], ['2', '18', 'F', '50', '65'], ['3', '29', '33', '46', '75'], ['12', '17', '32', '55', '66']]},
+    {"id": 16, "cells": [['7', '23', '45', '55', '62'], ['3', '27', '42', '60', '71'], ['12', '21', 'F', '57', '66'], ['4', '24', '41', '49', '68'], ['13', '17', '44', '50', '75']]},
+    {"id": 17, "cells": [['10', '28', '32', '59', '72'], ['3', '27', '40', '47', '63'], ['13', '24', 'F', '57', '71'], ['2', '21', '41', '60', '68'], ['7', '25', '42', '58', '65']]},
+    {"id": 18, "cells": [['13', '27', '33', '51', '63'], ['7', '22', '42', '48', '61'], ['10', '25', 'F', '54', '65'], ['8', '16', '43', '52', '72'], ['14', '23', '38', '60', '74']]},
+    {"id": 19, "cells": [['1', '22', '39', '51', '62'], ['15', '25', '35', '47', '75'], ['3', '23', 'F', '50', '66'], ['8', '26', '44', '49', '70'], ['4', '28', '38', '53', '67']]},
+    {"id": 20, "cells": [['9', '19', '35', '54', '73'], ['8', '23', '43', '57', '61'], ['4', '24', 'F', '58', '68'], ['11', '17', '32', '50', '62'], ['1', '26', '38', '49', '75']]},
+    {"id": 21, "cells": [['8', '18', '39', '54', '63'], ['2', '30', '37', '57', '75'], ['13', '29', 'F', '56', '68'], ['15', '27', '31', '49', '67'], ['6', '17', '45', '52', '61']]},
+    {"id": 22, "cells": [['6', '26', '44', '55', '62'], ['13', '19', '32', '60', '61'], ['9', '25', 'F', '49', '75'], ['3', '20', '40', '46', '65'], ['8', '27', '31', '56', '71']]},
+    {"id": 23, "cells": [['1', '27', '40', '54', '73'], ['4', '17', '33', '46', '68'], ['7', '16', 'F', '48', '63'], ['9', '23', '36', '56', '66'], ['11', '21', '34', '50', '74']]},
+    {"id": 24, "cells": [['9', '19', '40', '46', '75'], ['8', '26', '31', '48', '67'], ['1', '24', 'F', '59', '65'], ['7', '20', '39', '49', '70'], ['12', '27', '43', '57', '73']]},
+    {"id": 25, "cells": [['3', '23', '40', '53', '75'], ['1', '27', '45', '51', '68'], ['4', '28', 'F', '46', '73'], ['14', '29', '35', '56', '61'], ['9', '30', '41', '52', '74']]},
+    {"id": 26, "cells": [['10', '25', '37', '53', '65'], ['14', '29', '38', '58', '69'], ['2', '28', 'F', '56', '68'], ['6', '22', '35', '57', '70'], ['3', '18', '45', '60', '67']]},
+    {"id": 27, "cells": [['11', '26', '39', '51', '75'], ['3', '28', '33', '56', '67'], ['10', '24', 'F', '58', '74'], ['7', '18', '45', '53', '69'], ['13', '30', '44', '47', '64']]},
+    {"id": 28, "cells": [['8', '17', '42', '52', '74'], ['2', '24', '39', '56', '63'], ['14', '16', 'F', '60', '62'], ['9', '21', '31', '47', '72'], ['15', '18', '35', '54', '70']]},
+    {"id": 29, "cells": [['14', '16', '32', '53', '74'], ['15', '21', '34', '59', '65'], ['10', '26', 'F', '55', '66'], ['2', '19', '45', '56', '61'], ['1', '25', '40', '51', '64']]},
+    {"id": 30, "cells": [['8', '27', '44', '54', '70'], ['11', '26', '31', '55', '64'], ['9', '19', 'F', '57', '67'], ['6', '23', '41', '49', '62'], ['13', '22', '40', '56', '72']]},
+    {"id": 31, "cells": [['3', '27', '31', '46', '71'], ['9', '24', '40', '48', '67'], ['5', '17', 'F', '55', '62'], ['12', '18', '38', '58', '68'], ['4', '25', '36', '54', '73']]},
+    {"id": 32, "cells": [['10', '20', '32', '58', '73'], ['15', '28', '34', '56', '61'], ['9', '24', 'F', '50', '75'], ['5', '25', '37', '46', '67'], ['14', '23', '31', '51', '65']]},
+    {"id": 33, "cells": [['7', '29', '42', '56', '69'], ['15', '27', '40', '60', '64'], ['1', '18', 'F', '51', '74'], ['4', '16', '38', '57', '67'], ['8', '21', '39', '59', '68']]},
+    {"id": 34, "cells": [['4', '17', '31', '46', '70'], ['8', '29', '37', '57', '65'], ['9', '24', 'F', '59', '75'], ['11', '27', '34', '55', '63'], ['3', '22', '36', '48', '73']]},
+    {"id": 35, "cells": [['9', '17', '35', '55', '72'], ['14', '24', '45', '52', '68'], ['11', '18', 'F', '48', '66'], ['8', '21', '36', '47', '71'], ['4', '27', '37', '57', '70']]},
+    {"id": 36, "cells": [['2', '22', '41', '54', '62'], ['13', '21', '45', '51', '70'], ['15', '30', 'F', '47', '63'], ['4', '26', '39', '50', '75'], ['10', '29', '34', '58', '64']]},
+    {"id": 37, "cells": [['1', '21', '32', '54', '65'], ['5', '28', '42', '51', '63'], ['2', '26', 'F', '60', '61'], ['12', '24', '34', '59', '62'], ['15', '17', '43', '57', '72']]},
+    {"id": 38, "cells": [['1', '30', '45', '49', '66'], ['9', '24', '42', '56', '69'], ['7', '20', 'F', '52', '74'], ['12', '17', '36', '60', '62'], ['11', '18', '35', '54', '63']]},
+    {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
+    {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
+    {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
+    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
+    {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
+    {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
+    {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
+    {"id": 46, "cells": [['5', '17', '43', '47', '74'], ['15', '18', '42', '48', '63'], ['11', '21', 'F', '56', '64'], ['4', '23', '39', '54', '66'], ['2', '25', '33', '49', '65']]},
+    {"id": 47, "cells": [['5', '17', '38', '46', '70'], ['6', '20', '43', '51', '75'], ['12', '25', 'F', '56', '61'], ['1', '16', '45', '60', '68'], ['4', '26', '35', '53', '74']]},
+    {"id": 48, "cells": [['4', '28', '37', '53', '61'], ['2', '19', '31', '49', '62'], ['7', '16', 'F', '56', '64'], ['14', '26', '39', '52', '74'], ['6', '18', '32', '57', '67']]},
+    {"id": 49, "cells": [['1', '21', '34', '52', '67'], ['3', '29', '41', '54', '69'], ['10', '24', 'F', '57', '70'], ['8', '26', '35', '53', '72'], ['6', '19', '31', '58', '64']]},
+    {"id": 50, "cells": [['3', '17', '36', '49', '69'], ['10', '30', '40', '52', '62'], ['14', '27', 'F', '58', '66'], ['2', '19', '41', '59', '68'], ['15', '18', '42', '47', '64']]},
+    {"id": 51, "cells": [['2', '21', '31', '49', '68'], ['12', '20', '45', '54', '69'], ['10', '27', 'F', '48', '75'], ['9', '16', '40', '46', '61'], ['14', '19', '39', '57', '62']]},
+    {"id": 52, "cells": [['10', '22', '36', '59', '74'], ['2', '21', '44', '55', '70'], ['11', '26', 'F', '48', '72'], ['15', '23', '40', '57', '75'], ['14', '18', '31', '58', '66']]},
+    {"id": 53, "cells": [['15', '30', '35', '59', '69'], ['5', '21', '45', '51', '71'], ['8', '25', 'F', '46', '67'], ['7', '23', '40', '58', '74'], ['11', '29', '42', '54', '72']]},
+    {"id": 54, "cells": [['1', '26', '34', '60', '61'], ['6', '18', '35', '52', '66'], ['4', '24', 'F', '50', '69'], ['15', '29', '32', '48', '63'], ['7', '25', '45', '53', '72']]},
+    {"id": 55, "cells": [['12', '24', '45', '51', '65'], ['8', '16', '42', '53', '62'], ['15', '19', 'F', '59', '64'], ['7', '25', '39', '56', '70'], ['14', '20', '32', '48', '74']]},
+    {"id": 56, "cells": [['13', '17', '44', '53', '68'], ['3', '30', '45', '56', '66'], ['15', '28', 'F', '55', '73'], ['12', '20', '33', '50', '70'], ['4', '24', '43', '52', '67']]},
+    {"id": 57, "cells": [['5', '28', '40', '56', '63'], ['12', '21', '36', '53', '73'], ['14', '16', 'F', '60', '68'], ['15', '25', '44', '58', '66'], ['11', '17', '45', '54', '64']]},
+    {"id": 58, "cells": [['1', '16', '32', '58', '74'], ['3', '28', '44', '60', '67'], ['9', '24', 'F', '49', '64'], ['10', '20', '37', '47', '71'], ['13', '19', '39', '46', '61']]},
+    {"id": 59, "cells": [['7', '20', '34', '47', '70'], ['2', '24', '43', '55', '73'], ['3', '29', 'F', '46', '62'], ['12', '18', '45', '49', '69'], ['5', '17', '33', '57', '64']]},
+    {"id": 60, "cells": [['14', '25', '41', '48', '75'], ['9', '17', '34', '51', '62'], ['1', '30', 'F', '60', '65'], ['13', '28', '38', '49', '73'], ['6', '22', '40', '54', '61']]},
+    {"id": 61, "cells": [['11', '26', '38', '60', '71'], ['5', '25', '37', '52', '65'], ['14', '16', 'F', '59', '62'], ['7', '18', '43', '54', '64'], ['9', '28', '41', '46', '74']]},
+    {"id": 62, "cells": [['13', '26', '31', '56', '68'], ['8', '27', '43', '59', '70'], ['11', '18', 'F', '53', '73'], ['6', '21', '36', '48', '72'], ['2', '20', '42', '55', '69']]},
+    {"id": 63, "cells": [['12', '21', '35', '49', '62'], ['1', '29', '38', '55', '74'], ['15', '22', 'F', '51', '64'], ['5', '28', '33', '50', '65'], ['4', '17', '37', '60', '72']]},
+    {"id": 64, "cells": [['15', '24', '38', '58', '64'], ['1', '22', '44', '60', '73'], ['14', '21', 'F', '48', '67'], ['2', '29', '31', '47', '68'], ['4', '23', '41', '56', '61']]},
+    {"id": 65, "cells": [['6', '18', '35', '57', '64'], ['10', '28', '32', '52', '62'], ['7', '19', 'F', '48', '63'], ['9', '20', '39', '49', '68'], ['2', '30', '33', '59', '65']]},
+    {"id": 66, "cells": [['1', '20', '34', '54', '67'], ['2', '27', '33', '51', '63'], ['14', '21', 'F', '58', '73'], ['3', '28', '42', '46', '70'], ['4', '24', '37', '55', '64']]},
+    {"id": 67, "cells": [['13', '28', '38', '58', '71'], ['14', '22', '44', '51', '73'], ['5', '26', 'F', '56', '61'], ['12', '24', '34', '53', '72'], ['8', '17', '40', '52', '62']]},
+    {"id": 68, "cells": [['14', '25', '41', '55', '66'], ['7', '28', '38', '59', '65'], ['9', '19', 'F', '53', '61'], ['13', '22', '33', '56', '68'], ['15', '18', '44', '57', '63']]},
+    {"id": 69, "cells": [['10', '16', '35', '55', '65'], ['6', '28', '40', '46', '70'], ['2', '17', 'F', '59', '73'], ['15', '29', '36', '47', '75'], ['8', '27', '39', '51', '62']]},
+    {"id": 70, "cells": [['15', '30', '36', '50', '70'], ['9', '18', '32', '59', '65'], ['12', '17', 'F', '58', '75'], ['6', '21', '43', '46', '62'], ['4', '23', '38', '48', '69']]},
+    {"id": 71, "cells": [['6', '25', '31', '49', '72'], ['4', '22', '43', '53', '61'], ['2', '28', 'F', '57', '69'], ['7', '17', '41', '54', '63'], ['12', '19', '45', '46', '65']]},
+    {"id": 72, "cells": [['8', '18', '40', '46', '64'], ['5', '20', '35', '47', '71'], ['6', '27', 'F', '49', '73'], ['10', '19', '42', '55', '65'], ['2', '17', '45', '58', '75']]},
+    {"id": 73, "cells": [['6', '28', '37', '48', '72'], ['2', '23', '43', '57', '61'], ['15', '30', 'F', '54', '66'], ['13', '21', '34', '60', '65'], ['7', '27', '35', '46', '63']]},
+    {"id": 74, "cells": [['10', '24', '45', '51', '72'], ['14', '21', '36', '53', '67'], ['3', '17', 'F', '49', '62'], ['7', '18', '41', '48', '66'], ['9', '26', '44', '54', '63']]},
+    {"id": 75, "cells": [['6', '17', '44', '59', '75'], ['7', '20', '37', '46', '69'], ['4', '29', 'F', '50', '63'], ['3', '23', '41', '49', '71'], ['14', '24', '40', '52', '72']]},
+    {"id": 76, "cells": [['4', '19', '39', '48', '62'], ['10', '24', '31', '60', '70'], ['6', '23', 'F', '51', '66'], ['8', '18', '35', '50', '73'], ['2', '27', '41', '47', '61']]},
+    {"id": 77, "cells": [['1', '18', '34', '60', '74'], ['7', '27', '35', '56', '61'], ['15', '25', 'F', '55', '68'], ['14', '21', '38', '53', '64'], ['13', '17', '40', '58', '75']]},
+    {"id": 78, "cells": [['15', '27', '37', '47', '67'], ['11', '17', '34', '58', '70'], ['1', '30', 'F', '46', '68'], ['8', '24', '39', '50', '62'], ['13', '22', '38', '57', '66']]},
+    {"id": 79, "cells": [['4', '26', '39', '57', '72'], ['13', '17', '40', '58', '61'], ['11', '29', 'F', '54', '69'], ['3', '16', '44', '53', '65'], ['8', '18', '45', '46', '62']]},
+    {"id": 80, "cells": [['8', '23', '39', '57', '73'], ['4', '27', '37', '56', '66'], ['1', '19', 'F', '51', '65'], ['5', '30', '31', '47', '63'], ['2', '17', '32', '48', '67']]},
+    {"id": 81, "cells": [['3', '23', '45', '49', '66'], ['5', '16', '41', '50', '62'], ['14', '19', 'F', '47', '72'], ['9', '20', '44', '51', '73'], ['2', '25', '38', '52', '64']]},
+    {"id": 82, "cells": [['14', '16', '36', '54', '63'], ['8', '17', '31', '59', '64'], ['1', '25', 'F', '55', '72'], ['7', '20', '33', '47', '66'], ['2', '18', '41', '58', '61']]},
+    {"id": 83, "cells": [['1', '16', '31', '53', '67'], ['3', '20', '34', '57', '73'], ['9', '28', 'F', '49', '63'], ['10', '26', '38', '54', '70'], ['2', '25', '36', '47', '61']]},
+    {"id": 84, "cells": [['11', '29', '32', '59', '64'], ['12', '19', '41', '60', '67'], ['13', '28', 'F', '56', '62'], ['10', '24', '39', '46', '75'], ['5', '22', '38', '58', '74']]},
+    {"id": 85, "cells": [['13', '28', '31', '51', '62'], ['1', '30', '34', '59', '66'], ['14', '17', 'F', '50', '64'], ['3', '16', '36', '56', '71'], ['4', '29', '40', '47', '61']]},
+    {"id": 86, "cells": [['4', '21', '37', '54', '67'], ['13', '27', '44', '57', '61'], ['15', '26', 'F', '46', '71'], ['2', '25', '33', '58', '70'], ['9', '28', '42', '48', '68']]},
+    {"id": 87, "cells": [['2', '25', '35', '46', '66'], ['1', '17', '43', '49', '63'], ['15', '29', 'F', '59', '72'], ['14', '20', '33', '58', '62'], ['8', '22', '34', '48', '73']]},
+    {"id": 88, "cells": [['13', '19', '43', '55', '64'], ['14', '18', '42', '48', '63'], ['12', '23', 'F', '58', '75'], ['15', '29', '44', '52', '65'], ['7', '27', '40', '57', '73']]},
+    {"id": 89, "cells": [['2', '16', '44', '58', '75'], ['5', '26', '40', '56', '65'], ['14', '17', 'F', '54', '61'], ['10', '24', '33', '57', '72'], ['7', '22', '38', '60', '69']]},
+    {"id": 90, "cells": [['13', '26', '44', '48', '69'], ['3', '20', '38', '58', '70'], ['5', '17', 'F', '46', '72'], ['12', '22', '32', '56', '62'], ['1', '24', '36', '54', '63']]},
+    {"id": 91, "cells": [['5', '29', '41', '59', '72'], ['1', '25', '31', '46', '63'], ['10', '30', 'F', '57', '71'], ['8', '17', '34', '55', '75'], ['6', '28', '32', '47', '74']]},
+    {"id": 92, "cells": [['5', '18', '37', '59', '63'], ['9', '27', '38', '57', '70'], ['14', '24', 'F', '52', '66'], ['13', '28', '41', '56', '71'], ['1', '30', '45', '46', '72']]},
+    {"id": 93, "cells": [['14', '21', '33', '46', '65'], ['15', '18', '40', '53', '71'], ['13', '16', 'F', '51', '63'], ['7', '23', '34', '48', '75'], ['8', '20', '31', '47', '74']]},
+    {"id": 94, "cells": [['1', '19', '39', '58', '67'], ['8', '22', '40', '53', '62'], ['7', '30', 'F', '50', '65'], ['5', '25', '41', '46', '72'], ['2', '17', '38', '56', '64']]},
+    {"id": 95, "cells": [['4', '19', '37', '52', '70'], ['6', '24', '43', '60', '65'], ['5', '16', 'F', '56', '75'], ['12', '29', '41', '51', '67'], ['9', '30', '39', '58', '61']]},
+    {"id": 96, "cells": [['2', '18', '34', '54', '74'], ['14', '27', '45', '57', '64'], ['11', '21', 'F', '56', '62'], ['13', '19', '33', '48', '61'], ['4', '16', '41', '53', '72']]},
+    {"id": 97, "cells": [['2', '29', '45', '47', '66'], ['12', '30', '42', '60', '74'], ['9', '21', 'F', '58', '61'], ['6', '27', '40', '48', '62'], ['15', '23', '34', '57', '65']]},
+    {"id": 98, "cells": [['13', '24', '40', '57', '68'], ['15', '20', '45', '50', '64'], ['9', '19', 'F', '60', '67'], ['8', '28', '43', '56', '70'], ['2', '27', '38', '47', '65']]},
+    {"id": 99, "cells": [['7', '30', '45', '49', '66'], ['12', '19', '35', '55', '62'], ['3', '23', 'F', '53', '67'], ['10', '25', '36', '50', '65'], ['11', '29', '32', '51', '74']]},
+    {"id": 100, "cells": [['15', '27', '31', '54', '73'], ['10', '29', '37', '50', '69'], ['8', '23', 'F', '57', '75'], ['11', '25', '43', '58', '68'], ['4', '24', '38', '46', '74']]},
+    {"id": 101, "cells": [['15', '17', '35', '59', '75'], ['9', '22', '43', '54', '74'], ['1', '29', 'F', '51', '64'], ['7', '16', '37', '48', '66'], ['10', '23', '41', '52', '65']]},
+    {"id": 102, "cells": [['7', '16', '32', '50', '64'], ['10', '29', '38', '48', '63'], ['13', '22', 'F', '53', '74'], ['12', '18', '44', '56', '70'], ['4', '27', '39', '57', '71']]},
+    {"id": 103, "cells": [['3', '23', '41', '58', '62'], ['4', '22', '35', '50', '61'], ['12', '17', 'F', '59', '73'], ['2', '20', '43', '52', '75'], ['8', '27', '44', '51', '67']]},
+    {"id": 104, "cells": [['13', '25', '39', '58', '68'], ['9', '19', '42', '46', '67'], ['4', '22', 'F', '52', '75'], ['5', '18', '32', '49', '72'], ['6', '23', '38', '51', '70']]},
+    {"id": 105, "cells": [['12', '17', '36', '49', '67'], ['6', '16', '41', '56', '63'], ['4', '22', 'F', '57', '74'], ['5', '20', '39', '60', '62'], ['1', '29', '35', '51', '65']]},
+    {"id": 106, "cells": [['15', '16', '43', '54', '61'], ['9', '24', '42', '60', '70'], ['13', '27', 'F', '56', '63'], ['14', '20', '45', '57', '62'], ['10', '18', '35', '53', '72']]},
+    {"id": 107, "cells": [['3', '28', '34', '57', '62'], ['14', '30', '40', '52', '68'], ['4', '27', 'F', '49', '65'], ['9', '22', '33', '58', '70'], ['2', '29', '36', '47', '63']]},
+    {"id": 108, "cells": [['1', '23', '41', '47', '75'], ['7', '22', '40', '52', '62'], ['3', '16', 'F', '58', '68'], ['2', '18', '43', '50', '67'], ['6', '30', '44', '57', '61']]},
+    {"id": 109, "cells": [['15', '27', '36', '47', '70'], ['13', '17', '42', '59', '61'], ['5', '23', 'F', '57', '62'], ['7', '25', '38', '50', '69'], ['6', '26', '35', '52', '72']]},
+    {"id": 110, "cells": [['11', '27', '41', '51', '64'], ['13', '30', '34', '55', '74'], ['3', '28', 'F', '54', '66'], ['6', '18', '37', '46', '62'], ['7', '26', '32', '57', '70']]},
+    {"id": 111, "cells": [['3', '30', '41', '51', '66'], ['12', '25', '32', '53', '72'], ['8', '20', 'F', '47', '71'], ['13', '24', '39', '60', '74'], ['1', '28', '38', '50', '63']]},
+    {"id": 112, "cells": [['12', '24', '41', '50', '68'], ['14', '21', '35', '52', '65'], ['7', '17', 'F', '46', '70'], ['3', '20', '43', '57', '74'], ['1', '29', '33', '48', '62']]},
+    {"id": 113, "cells": [['11', '21', '34', '56', '63'], ['12', '23', '32', '53', '69'], ['3', '24', 'F', '54', '71'], ['2', '26', '37', '49', '72'], ['4', '22', '36', '48', '75']]},
+    {"id": 114, "cells": [['12', '30', '37', '51', '74'], ['14', '19', '43', '57', '63'], ['7', '28', 'F', '48', '67'], ['13', '22', '31', '46', '62'], ['3', '20', '38', '54', '70']]},
+    {"id": 115, "cells": [['2', '19', '39', '50', '70'], ['9', '23', '34', '49', '64'], ['13', '27', 'F', '59', '61'], ['11', '26', '38', '53', '67'], ['14', '28', '44', '54', '63']]},
+    {"id": 116, "cells": [['7', '21', '38', '56', '65'], ['15', '26', '34', '52', '75'], ['1', '30', 'F', '50', '71'], ['4', '27', '43', '54', '66'], ['12', '28', '44', '59', '70']]},
+    {"id": 117, "cells": [['1', '21', '33', '57', '65'], ['2', '29', '32', '50', '61'], ['9', '25', 'F', '53', '74'], ['6', '28', '34', '55', '75'], ['14', '18', '37', '47', '67']]},
+    {"id": 118, "cells": [['1', '22', '31', '47', '67'], ['6', '26', '37', '54', '64'], ['10', '27', 'F', '49', '62'], ['14', '24', '42', '55', '72'], ['5', '18', '34', '59', '71']]},
+    {"id": 119, "cells": [['14', '26', '45', '56', '72'], ['12', '29', '42', '55', '62'], ['15', '23', 'F', '48', '73'], ['3', '28', '41', '49', '61'], ['13', '16', '31', '54', '65']]},
+    {"id": 120, "cells": [['7', '25', '37', '60', '70'], ['13', '20', '43', '50', '69'], ['4', '18', 'F', '55', '74'], ['5', '26', '40', '48', '67'], ['8', '17', '39', '46', '73']]},
+    {"id": 121, "cells": [['11', '27', '38', '51', '63'], ['7', '20', '41', '59', '64'], ['5', '28', 'F', '54', '71'], ['12', '29', '33', '56', '73'], ['8', '25', '40', '55', '69']]},
+    {"id": 122, "cells": [['11', '21', '32', '51', '70'], ['6', '28', '44', '60', '74'], ['5', '18', 'F', '57', '63'], ['1', '16', '38', '46', '62'], ['9', '17', '31', '53', '73']]},
+    {"id": 123, "cells": [['14', '20', '43', '54', '70'], ['10', '28', '40', '51', '69'], ['6', '21', 'F', '53', '67'], ['8', '18', '35', '50', '74'], ['3', '29', '34', '48', '64']]},
+    {"id": 124, "cells": [['6', '20', '38', '50', '66'], ['5', '21', '33', '49', '61'], ['4', '30', 'F', '48', '75'], ['13', '26', '41', '60', '65'], ['15', '19', '36', '56', '63']]},
+    {"id": 125, "cells": [['12', '28', '33', '58', '75'], ['1', '25', '39', '60', '66'], ['13', '20', 'F', '48', '61'], ['14', '21', '44', '46', '65'], ['5', '22', '38', '54', '67']]},
+    {"id": 126, "cells": [['13', '22', '41', '57', '65'], ['12', '30', '32', '60', '62'], ['6', '24', 'F', '58', '61'], ['1', '16', '44', '50', '63'], ['2', '17', '45', '53', '69']]},
+    {"id": 127, "cells": [['13', '26', '43', '60', '65'], ['4', '16', '38', '52', '62'], ['2', '25', 'F', '58', '63'], ['9', '17', '34', '47', '74'], ['5', '27', '41', '46', '68']]},
+    {"id": 128, "cells": [['7', '25', '43', '47', '63'], ['11', '16', '32', '58', '61'], ['2', '23', 'F', '55', '71'], ['3', '22', '38', '46', '68'], ['1', '30', '36', '57', '72']]},
+    {"id": 129, "cells": [['3', '25', '43', '57', '63'], ['2', '20', '35', '59', '71'], ['13', '23', 'F', '60', '74'], ['10', '29', '38', '49', '73'], ['11', '21', '42', '53', '70']]},
+    {"id": 130, "cells": [['5', '18', '31', '56', '75'], ['15', '27', '42', '59', '66'], ['4', '16', 'F', '57', '71'], ['1', '30', '45', '51', '64'], ['2', '28', '43', '53', '67']]},
+    {"id": 131, "cells": [['2', '19', '36', '51', '64'], ['14', '29', '37', '46', '70'], ['3', '28', 'F', '55', '68'], ['12', '23', '32', '56', '67'], ['1', '20', '40', '48', '71']]},
+    {"id": 132, "cells": [['1', '30', '32', '48', '67'], ['5', '22', '42', '57', '64'], ['6', '17', 'F', '58', '65'], ['7', '24', '43', '46', '73'], ['2', '18', '37', '55', '74']]},
+    {"id": 133, "cells": [['14', '28', '37', '55', '73'], ['6', '16', '39', '54', '72'], ['7', '22', 'F', '58', '63'], ['4', '25', '32', '51', '74'], ['10', '23', '40', '52', '61']]},
+    {"id": 134, "cells": [['10', '25', '38', '58', '74'], ['9', '24', '41', '49', '69'], ['1', '26', 'F', '48', '66'], ['4', '28', '39', '57', '75'], ['14', '17', '42', '52', '61']]},
+    {"id": 135, "cells": [['13', '24', '45', '52', '61'], ['8', '22', '35', '60', '73'], ['7', '17', 'F', '54', '68'], ['9', '27', '42', '59', '63'], ['5', '26', '40', '49', '71']]},
+    {"id": 136, "cells": [['15', '30', '40', '47', '72'], ['4', '22', '32', '55', '70'], ['13', '24', 'F', '53', '66'], ['5', '29', '35', '58', '61'], ['2', '17', '31', '51', '71']]},
+    {"id": 137, "cells": [['1', '27', '38', '56', '61'], ['7', '19', '43', '53', '70'], ['3', '24', 'F', '52', '65'], ['11', '22', '31', '51', '74'], ['12', '16', '45', '57', '71']]},
+    {"id": 138, "cells": [['4', '30', '35', '58', '65'], ['6', '24', '42', '56', '61'], ['1', '27', 'F', '54', '71'], ['10', '16', '39', '55', '64'], ['13', '21', '36', '53', '67']]},
+    {"id": 139, "cells": [['11', '29', '45', '47', '75'], ['4', '21', '41', '46', '67'], ['12', '17', 'F', '53', '69'], ['6', '22', '40', '51', '74'], ['14', '19', '44', '60', '62']]},
+    {"id": 140, "cells": [['6', '18', '32', '51', '62'], ['8', '21', '43', '57', '65'], ['2', '16', 'F', '49', '71'], ['13', '30', '41', '59', '75'], ['7', '29', '35', '48', '64']]},
+    {"id": 141, "cells": [['11', '20', '42', '49', '70'], ['5', '26', '41', '47', '72'], ['6', '18', 'F', '60', '66'], ['4', '21', '45', '57', '63'], ['14', '19', '36', '52', '69']]},
+    {"id": 142, "cells": [['13', '23', '44', '60', '69'], ['10', '27', '42', '47', '71'], ['2', '24', 'F', '58', '68'], ['4', '29', '31', '59', '63'], ['12', '25', '45', '55', '65']]},
+    {"id": 143, "cells": [['6', '30', '41', '48', '63'], ['13', '20', '37', '53', '66'], ['10', '16', 'F', '57', '73'], ['14', '28', '35', '54', '67'], ['8', '29', '39', '51', '72']]},
+    {"id": 144, "cells": [['14', '20', '42', '60', '65'], ['12', '27', '43', '49', '66'], ['15', '21', 'F', '50', '64'], ['4', '17', '41', '55', '67'], ['6', '25', '39', '51', '72']]},
+    {"id": 145, "cells": [['15', '30', '33', '56', '69'], ['9', '29', '32', '57', '65'], ['4', '22', 'F', '46', '66'], ['3', '28', '43', '48', '72'], ['14', '16', '39', '52', '67']]},
+    {"id": 146, "cells": [['10', '20', '36', '55', '64'], ['2', '19', '39', '58', '67'], ['7', '28', 'F', '54', '63'], ['14', '30', '35', '60', '66'], ['4', '23', '45', '56', '62']]},
+    {"id": 147, "cells": [['11', '29', '34', '50', '68'], ['8', '26', '35', '58', '74'], ['12', '27', 'F', '46', '64'], ['2', '30', '42', '49', '73'], ['15', '23', '41', '57', '69']]},
+    {"id": 148, "cells": [['14', '20', '38', '53', '74'], ['15', '22', '45', '56', '64'], ['10', '17', 'F', '50', '63'], ['3', '25', '37', '51', '69'], ['6', '29', '35', '59', '61']]},
+    {"id": 149, "cells": [['14', '23', '37', '52', '72'], ['15', '27', '40', '54', '63'], ['7', '18', 'F', '47', '75'], ['6', '16', '42', '57', '61'], ['12', '20', '32', '60', '62']]},
+    {"id": 150, "cells": [['6', '24', '33', '48', '75'], ['10', '19', '37', '50', '64'], ['7', '28', 'F', '57', '68'], ['13', '17', '43', '58', '72'], ['11', '21', '35', '53', '74']]},
+    {"id": 151, "cells": [['3', '19', '42', '56', '71'], ['8', '22', '37', '46', '62'], ['15', '29', 'F', '57', '72'], ['9', '17', '39', '60', '69'], ['1', '18', '40', '59', '64']]},
+    {"id": 152, "cells": [['6', '21', '38', '52', '63'], ['11', '24', '37', '55', '72'], ['14', '27', 'F', '49', '61'], ['2', '23', '44', '58', '68'], ['10', '29', '33', '47', '74']]},
+    {"id": 153, "cells": [['14', '16', '44', '51', '69'], ['1', '17', '34', '56', '67'], ['7', '29', 'F', '47', '75'], ['4', '30', '41', '54', '65'], ['10', '18', '43', '49', '61']]},
+    {"id": 154, "cells": [['10', '30', '35', '53', '67'], ['14', '18', '38', '47', '64'], ['5', '26', 'F', '60', '69'], ['6', '20', '32', '56', '61'], ['15', '27', '39', '48', '65']]},
+    {"id": 155, "cells": [['12', '16', '31', '54', '62'], ['9', '23', '41', '56', '73'], ['13', '20', 'F', '60', '61'], ['2', '28', '42', '57', '67'], ['7', '24', '35', '50', '63']]},
+    {"id": 156, "cells": [['14', '26', '42', '56', '66'], ['11', '30', '31', '57', '69'], ['1', '18', 'F', '54', '70'], ['8', '29', '34', '52', '71'], ['15', '16', '40', '50', '62']]},
+    {"id": 157, "cells": [['6', '24', '40', '58', '62'], ['10', '26', '31', '47', '74'], ['13', '25', 'F', '57', '64'], ['1', '28', '41', '48', '65'], ['14', '29', '35', '53', '73']]},
+    {"id": 158, "cells": [['1', '18', '40', '56', '75'], ['15', '17', '42', '54', '64'], ['11', '24', 'F', '60', '70'], ['7', '20', '38', '51', '72'], ['14', '21', '43', '48', '65']]},
+    {"id": 159, "cells": [['12', '17', '36', '53', '72'], ['9', '21', '38', '56', '65'], ['4', '26', 'F', '50', '70'], ['10', '18', '40', '59', '67'], ['8', '22', '35', '55', '69']]},
+    {"id": 160, "cells": [['3', '25', '33', '56', '69'], ['5', '24', '36', '54', '70'], ['9', '23', 'F', '60', '66'], ['12', '27', '32', '49', '68'], ['10', '18', '43', '46', '73']]},
+    {"id": 161, "cells": [['2', '25', '36', '51', '65'], ['9', '16', '42', '59', '61'], ['6', '27', 'F', '50', '62'], ['11', '17', '39', '52', '75'], ['10', '22', '37', '60', '72']]},
+    {"id": 162, "cells": [['8', '20', '43', '56', '69'], ['13', '30', '40', '47', '70'], ['14', '29', 'F', '57', '75'], ['2', '25', '34', '60', '61'], ['3', '19', '31', '54', '71']]},
+    {"id": 163, "cells": [['12', '19', '37', '53', '61'], ['1', '23', '35', '46', '74'], ['13', '21', 'F', '55', '72'], ['3', '30', '39', '54', '64'], ['15', '20', '31', '58', '75']]},
+    {"id": 164, "cells": [['13', '22', '42', '55', '65'], ['15', '30', '32', '52', '72'], ['5', '18', 'F', '54', '75'], ['11', '25', '39', '58', '61'], ['14', '24', '41', '46', '68']]},
+    {"id": 165, "cells": [['13', '30', '36', '57', '70'], ['14', '26', '40', '52', '64'], ['12', '22', 'F', '51', '68'], ['10', '18', '37', '47', '66'], ['7', '16', '39', '56', '67']]},
+    {"id": 166, "cells": [['1', '19', '41', '47', '74'], ['9', '26', '42', '53', '68'], ['4', '29', 'F', '54', '67'], ['12', '21', '32', '56', '65'], ['8', '18', '45', '49', '70']]},
+    {"id": 167, "cells": [['8', '18', '33', '49', '67'], ['5', '24', '31', '55', '66'], ['6', '20', 'F', '59', '72'], ['15', '19', '37', '47', '73'], ['12', '26', '42', '46', '71']]},
+    {"id": 168, "cells": [['12', '27', '33', '48', '69'], ['9', '24', '38', '49', '71'], ['11', '16', 'F', '57', '75'], ['7', '18', '31', '46', '61'], ['2', '20', '32', '60', '73']]},
+    {"id": 169, "cells": [['13', '18', '34', '52', '75'], ['10', '19', '32', '54', '61'], ['3', '26', 'F', '51', '62'], ['15', '16', '38', '50', '70'], ['12', '21', '37', '48', '66']]},
+    {"id": 170, "cells": [['9', '23', '34', '48', '73'], ['5', '22', '35', '55', '72'], ['4', '19', 'F', '50', '67'], ['15', '24', '40', '49', '63'], ['10', '29', '42', '51', '64']]},
+    {"id": 171, "cells": [['5', '25', '36', '57', '70'], ['11', '24', '31', '51', '69'], ['9', '29', 'F', '60', '66'], ['12', '30', '39', '48', '72'], ['6', '27', '38', '52', '68']]},
+    {"id": 172, "cells": [['11', '20', '43', '59', '70'], ['3', '29', '41', '50', '69'], ['5', '18', 'F', '46', '65'], ['14', '30', '39', '52', '74'], ['15', '24', '40', '47', '64']]},
+    {"id": 173, "cells": [['14', '16', '38', '53', '66'], ['15', '30', '31', '60', '61'], ['4', '18', 'F', '56', '68'], ['3', '19', '43', '58', '69'], ['7', '23', '39', '48', '71']]},
+    {"id": 174, "cells": [['11', '21', '33', '49', '68'], ['5', '18', '44', '48', '74'], ['13', '17', 'F', '55', '75'], ['3', '26', '38', '57', '71'], ['9', '25', '43', '56', '66']]},
+    {"id": 175, "cells": [['10', '17', '43', '52', '62'], ['2', '27', '42', '51', '74'], ['12', '29', 'F', '55', '61'], ['1', '22', '31', '57', '75'], ['8', '21', '45', '46', '70']]},
+    {"id": 176, "cells": [['8', '27', '44', '49', '65'], ['6', '20', '40', '51', '63'], ['15', '24', 'F', '60', '68'], ['9', '26', '33', '52', '70'], ['14', '22', '42', '53', '67']]},
+    {"id": 177, "cells": [['3', '28', '39', '55', '62'], ['1', '19', '44', '50', '61'], ['15', '18', 'F', '57', '71'], ['9', '16', '40', '52', '75'], ['13', '21', '35', '54', '64']]},
+    {"id": 178, "cells": [['6', '28', '37', '60', '61'], ['2', '24', '39', '56', '66'], ['7', '20', 'F', '46', '63'], ['15', '26', '43', '47', '74'], ['4', '19', '34', '48', '65']]},
+    {"id": 179, "cells": [['4', '22', '45', '46', '75'], ['5', '27', '33', '49', '65'], ['14', '26', 'F', '58', '63'], ['11', '24', '43', '48', '70'], ['15', '30', '36', '53', '73']]},
+    {"id": 180, "cells": [['12', '23', '31', '54', '65'], ['9', '29', '43', '55', '70'], ['2', '18', 'F', '57', '68'], ['15', '21', '39', '56', '64'], ['5', '19', '38', '52', '75']]},
+    {"id": 181, "cells": [['9', '24', '44', '53', '68'], ['4', '19', '38', '57', '63'], ['5', '25', 'F', '55', '66'], ['8', '28', '42', '49', '70'], ['13', '21', '35', '59', '62']]},
+    {"id": 182, "cells": [['10', '16', '32', '55', '74'], ['4', '29', '42', '46', '67'], ['11', '20', 'F', '50', '70'], ['15', '19', '38', '49', '75'], ['12', '27', '31', '58', '71']]},
+    {"id": 183, "cells": [['1', '23', '45', '57', '61'], ['13', '18', '38', '49', '63'], ['15', '26', 'F', '48', '62'], ['2', '19', '39', '58', '70'], ['6', '28', '32', '55', '72']]},
+    {"id": 184, "cells": [['10', '22', '32', '54', '68'], ['2', '17', '42', '59', '66'], ['8', '18', 'F', '55', '63'], ['1', '27', '40', '56', '69'], ['15', '30', '43', '49', '71']]},
+    {"id": 185, "cells": [['10', '24', '44', '58', '66'], ['5', '22', '43', '46', '69'], ['13', '21', 'F', '54', '75'], ['2', '20', '31', '55', '61'], ['3', '28', '33', '50', '74']]},
+    {"id": 186, "cells": [['1', '29', '43', '54', '61'], ['14', '28', '45', '51', '69'], ['9', '25', 'F', '59', '67'], ['5', '23', '33', '58', '63'], ['7', '16', '31', '48', '74']]},
+    {"id": 187, "cells": [['12', '26', '36', '48', '71'], ['1', '29', '38', '49', '74'], ['3', '30', 'F', '59', '70'], ['9', '21', '33', '60', '64'], ['11', '18', '40', '52', '67']]},
+    {"id": 188, "cells": [['8', '29', '44', '49', '65'], ['13', '21', '41', '58', '71'], ['10', '16', 'F', '53', '69'], ['4', '24', '43', '48', '74'], ['11', '25', '40', '47', '63']]},
+    {"id": 189, "cells": [['14', '17', '36', '52', '63'], ['3', '23', '45', '59', '70'], ['13', '28', 'F', '53', '74'], ['15', '24', '41', '56', '67'], ['9', '26', '42', '55', '66']]},
+    {"id": 190, "cells": [['7', '26', '40', '47', '65'], ['15', '18', '45', '57', '63'], ['14', '16', 'F', '58', '71'], ['2', '20', '38', '46', '72'], ['8', '28', '32', '56', '64']]},
+    {"id": 191, "cells": [['1', '30', '39', '55', '66'], ['7', '27', '45', '60', '74'], ['5', '20', 'F', '58', '69'], ['13', '17', '44', '57', '62'], ['9', '24', '36', '51', '65']]},
+    {"id": 192, "cells": [['8', '29', '35', '60', '71'], ['9', '25', '41', '53', '67'], ['14', '20', 'F', '55', '65'], ['2', '19', '42', '51', '68'], ['13', '28', '43', '57', '61']]},
+    {"id": 193, "cells": [['14', '29', '44', '53', '65'], ['8', '25', '43', '52', '72'], ['13', '19', 'F', '59', '71'], ['7', '18', '39', '57', '75'], ['3', '23', '36', '50', '69']]},
+    {"id": 194, "cells": [['4', '29', '44', '50', '67'], ['15', '26', '35', '49', '75'], ['1', '17', 'F', '57', '63'], ['6', '21', '37', '48', '66'], ['5', '18', '36', '47', '72']]},
+    {"id": 195, "cells": [['8', '22', '31', '53', '73'], ['1', '19', '32', '58', '61'], ['11', '27', 'F', '56', '71'], ['10', '24', '40', '47', '68'], ['2', '20', '45', '60', '65']]},
+    {"id": 196, "cells": [['4', '16', '38', '49', '74'], ['2', '30', '42', '60', '73'], ['5', '19', 'F', '56', '64'], ['6', '22', '44', '51', '62'], ['8', '25', '39', '54', '70']]},
+    {"id": 197, "cells": [['4', '25', '41', '49', '65'], ['5', '24', '39', '51', '61'], ['8', '22', 'F', '54', '73'], ['2', '30', '43', '47', '62'], ['9', '28', '35', '57', '67']]},
+    {"id": 198, "cells": [['6', '17', '42', '54', '73'], ['4', '25', '43', '59', '66'], ['5', '30', 'F', '57', '64'], ['13', '29', '45', '58', '67'], ['12', '28', '33', '55', '71']]},
+    {"id": 199, "cells": [['10', '29', '40', '57', '61'], ['5', '17', '33', '50', '73'], ['12', '25', 'F', '54', '63'], ['9', '16', '36', '60', '68'], ['2', '21', '31', '59', '71']]},
+    {"id": 200, "cells": [['6', '27', '43', '48', '62'], ['2', '26', '45', '54', '70'], ['5', '24', 'F', '47', '74'], ['10', '19', '40', '46', '65'], ['14', '30', '35', '52', '61']]},
+    {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
+    {"id": 202, "cells": [['9', '22', '36', '60', '69'], ['12', '21', '32', '56', '74'], ['15', '24', 'F', '47', '73'], ['7', '30', '43', '59', '63'], ['1', '16', '33', '52', '67']]},
+    {"id": 203, "cells": [['8', '16', '41', '59', '67'], ['6', '26', '34', '58', '65'], ['14', '23', 'F', '57', '62'], ['4', '18', '31', '55', '72'], ['5', '25', '44', '52', '68']]},
+    {"id": 204, "cells": [['12', '20', '39', '55', '64'], ['5', '26', '33', '58', '67'], ['6', '17', 'F', '54', '74'], ['3', '29', '40', '57', '71'], ['1', '19', '31', '49', '69']]},
 ]
 
-_CARDS_BY_ID = {c["id"]: c["cells"] for c in BINGO_CARDS}
-def get_card_data(cid): return _CARDS_BY_ID.get(cid)
+# ===================================================================
+# WINNER DETECTION
+# ===================================================================
+def get_card(card_id):
+    for card in BINGO_CARDS:
+        if card["id"] == card_id:
+            return card
+    return None
 
-# ===================================================================
-# WIN CHECK
-# ===================================================================
+def get_card_data(card_id):
+    card = get_card(card_id)
+    return card["cells"] if card else None
+
 def check_winning_pattern(card_data, called_numbers):
-    if not called_numbers or not card_data: return None
+    if not called_numbers or not card_data:
+        return None
     called_set = set(called_numbers)
-    def m(v): return True if v == 'F' else int(v) in called_set
-    for r in range(5):
-        if all(m(card_data[r][c]) for c in range(5)):
-            return {'type': f"Row {r+1}", 'cells': [card_data[r][c] for c in range(5)]}
-    for c in range(5):
-        if all(m(card_data[r][c]) for r in range(5)):
-            return {'type': f"Column {['B','I','N','G','O'][c]}", 'cells': [card_data[r][c] for r in range(5)]}
-    if all(m(card_data[i][i]) for i in range(5)):
+    def is_marked(value):
+        if value == 'F': return True
+        return int(value) in called_set
+    for row in range(5):
+        if all(is_marked(card_data[row][col]) for col in range(5)):
+            return {'type': f"Row {row + 1}", 'cells': [card_data[row][col] for col in range(5)]}
+    for col in range(5):
+        if all(is_marked(card_data[row][col]) for row in range(5)):
+            letters = ['B','I','N','G','O']
+            return {'type': f"Column {letters[col]}", 'cells': [card_data[row][col] for row in range(5)]}
+    if all(is_marked(card_data[i][i]) for i in range(5)):
         return {'type': "Diagonal Main", 'cells': [card_data[i][i] for i in range(5)]}
-    if all(m(card_data[i][4-i]) for i in range(5)):
-        return {'type': "Diagonal Anti", 'cells': [card_data[i][4-i] for i in range(5)]}
-    lc = [card_data[0][0], card_data[0][4], card_data[4][0], card_data[4][4]]
-    if all(m(x) for x in lc): return {'type': "Large Corners", 'cells': lc}
-    sc = [card_data[1][1], card_data[1][3], card_data[3][1], card_data[3][3]]
-    if all(m(x) for x in sc): return {'type': "Small Corners", 'cells': sc}
+    if all(is_marked(card_data[i][4 - i]) for i in range(5)):
+        return {'type': "Diagonal Anti", 'cells': [card_data[i][4 - i] for i in range(5)]}
+    large_corners = [card_data[0][0], card_data[0][4], card_data[4][0], card_data[4][4]]
+    if all(is_marked(c) for c in large_corners):
+        return {'type': "Large Corners", 'cells': large_corners}
+    small_corners = [card_data[1][1], card_data[1][3], card_data[3][1], card_data[3][3]]
+    if all(is_marked(c) for c in small_corners):
+        return {'type': "Small Corners", 'cells': small_corners}
     return None
 
 # ===================================================================
-# WINNER + PRIZE (atomic)
+# GAME FUNCTIONS
 # ===================================================================
 def check_for_winners():
-    if st.session_state.winner_declared: return
-    called = list(st.session_state.called_numbers)
-    winners = []
-    for cid in st.session_state.taken_cards:
-        data = get_card_data(cid)
-        if not data: continue
-        pat = check_winning_pattern(data, called)
-        if not pat: continue
-        owner = st.session_state.card_owner.get(str(cid), "Unknown")
-        existing = next((w for w in winners if w["username"] == owner), None)
-        if existing:
-            existing["cards"].append(cid); existing["patterns"].append(pat['type'])
-        else:
-            winners.append({"username": owner, "cards": [cid],
-                            "patterns": [pat['type']], "card_data": data})
-    if not winners: return
-
-    # 🛑 Write winner flag FIRST — stops all callers globally
-    update_state({
-        "winner_declared": True,
-        "game_over": True,
-        "auto_call_started": False,
-        "winners_list": winners,
-        "last_called_at": time.time(),
-    })
-
-    st.session_state.winners_list = winners
-    st.session_state.winner_declared = True
-    st.session_state.game_over = True
-    st.session_state.auto_call_started = False
-    st.session_state.celebration_start_time = time.time()
-
-    distribute_prizes(winners)
-    save_global_winners(winners, True, st.session_state.called_numbers,
-                        st.session_state.last_called_number,
-                        st.session_state.auto_called_count, True,
-                        st.session_state.prize_distributed)
+    if st.session_state.winner_declared:
+        return
+    called_numbers = list(st.session_state.called_numbers)
+    winners_found = []
+    for card_id in st.session_state.taken_cards:
+        card_data = get_card_data(card_id)
+        if card_data:
+            pattern = check_winning_pattern(card_data, called_numbers)
+            if pattern:
+                owner = st.session_state.card_owner.get(str(card_id), "Unknown")
+                existing = next((w for w in winners_found if w["username"] == owner), None)
+                if existing:
+                    existing["cards"].append(card_id)
+                    existing["patterns"].append(pattern['type'])
+                else:
+                    winners_found.append({
+                        "username": owner,
+                        "cards": [card_id],
+                        "patterns": [pattern['type']],
+                        "card_data": card_data
+                    })
+    if winners_found:
+        st.session_state.winners_list = winners_found
+        st.session_state.winner_declared = True
+        st.session_state.game_over = True
+        st.session_state.auto_call_started = False
+        st.session_state.celebration_start_time = time.time()
+        distribute_prizes(winners_found)
+        save_game_state()
+        save_global_winners(
+            winners_found, True,
+            st.session_state.called_numbers,
+            st.session_state.last_called_number,
+            st.session_state.auto_called_count,
+            True, st.session_state.prize_distributed
+        )
 
 def distribute_prizes(winners):
-    _, _, _, _, _, _, already_paid, _ = load_global_winners()
-    if already_paid or st.session_state.prize_distributed:
+    """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
+    _, _, _, _, _, _, global_paid, _ = load_global_winners()
+    if global_paid:
         st.session_state.prize_distributed = True
         return
+
+    if st.session_state.prize_distributed:
+        return
+
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
-    per_winner = total_prize // len(winners) if winners else 0
-    for w in winners:
-        u = w.get("username")
-        if u in st.session_state.user_db:
-            st.session_state.user_db[u]["balance"] = st.session_state.user_db[u].get("balance", 0) + per_winner
-            st.session_state.user_db[u]["wins"] = st.session_state.user_db[u].get("wins", 0) + 1
-            st.session_state.user_db[u]["game_played"] = st.session_state.user_db[u].get("game_played", 0) + 1
+    prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
+
+    for winner in winners:
+        username = winner.get("username")
+        if username in st.session_state.user_db:
+            st.session_state.user_db[username]["balance"] = \
+                st.session_state.user_db[username].get("balance", 0) + prize_per_winner
+            st.session_state.user_db[username]["wins"] = \
+                st.session_state.user_db[username].get("wins", 0) + 1
+            st.session_state.user_db[username]["game_played"] = \
+                st.session_state.user_db[username].get("game_played", 0) + 1
+
     save_all_data()
     st.session_state.prize_distributed = True
-    save_global_winners(winners, True, st.session_state.called_numbers,
-                        st.session_state.last_called_number,
-                        st.session_state.auto_called_count, True, True)
+    save_global_winners(
+        winners, True,
+        st.session_state.called_numbers,
+        st.session_state.last_called_number,
+        st.session_state.auto_called_count,
+        True, True
+    )
 
 # ===================================================================
-# DISPLAY
+# DISPLAY FUNCTIONS
 # ===================================================================
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
-    if called_numbers is None: called_numbers = []
-    data = get_card_data(card_id)
-    if not data: return
+    if not st.session_state.winner_declared:
+        sync_global_winners()
+    if called_numbers is None:
+        called_numbers = []
+    card = get_card(card_id)
+    if not card:
+        return
+    cells = card["cells"]
     border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
     title_color = '#FFD700' if is_winner else '#FFFFFF'
     card_class = 'winner-card' if is_winner else ''
     html = f"""
-    <div class="bingo-card-wrap {card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:10px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:360px;border:2px solid {border_color};box-sizing:border-box;{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:0.95rem;font-weight:bold;margin-bottom:6px;">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+        <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;">
             {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
         </div>
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <table style="width:100%;border-collapse:collapse;">
             <tr>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">N</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">G</td>
+                <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">O</td>
+            </tr>
     """
-    for L in ['B','I','N','G','O']:
-        html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.7rem;">{L}</td>'
-    html += '</tr>'
-    called_set = set(called_numbers)
-    for r in range(5):
+    for row_idx in range(5):
         html += '<tr>'
-        for c in range(5):
-            v = data[r][c]
-            if v == 'F':
-                html += '<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div class="free-cell" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1rem;border:2px solid #FFD700;">★</div></td>'
+        for col_idx in range(5):
+            value = cells[row_idx][col_idx]
+            if value == 'F':
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,215,0,0.15);color:#FFD700;font-size:1.1rem;border:2px solid #FFD700;">★</div></td>'
             else:
-                num = int(v); is_called = num in called_set
+                num = int(value)
+                is_called = num in called_numbers
+                style = ''
                 if is_called and is_winner:
-                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;'
+                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;animation:winnerPulse 1s ease-in-out infinite alternate;'
                 elif is_called:
-                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;'
+                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;transform:scale(1.05);'
                 else:
                     style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 1px;text-align:center;"><div class="cell-circle" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;{style}font-weight:bold;font-size:0.75rem;border:2px solid;">{v}</div></td>'
+                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;"><div style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;{style}font-weight:bold;font-size:0.8rem;border:2px solid;">{value}</div></td>'
         html += '</tr>'
     html += '</table>'
-    tc = sum(1 for row in data for val in row if val != 'F' and int(val) in called_set)
+    total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.85rem;margin-top:5px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += '<div style="text-align:center;color:#FFD700;font-size:0.65rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.9rem;margin-top:6px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
+        html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {tc}/24 called</div>'
+        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    master = {'B': list(range(1,16)), 'I': list(range(16,31)),
-              'N': list(range(31,46)), 'G': list(range(46,61)),
-              'O': list(range(61,76))}
-    called = st.session_state.called_numbers
-    last = st.session_state.last_called_number
-    html = """
+    if not st.session_state.winner_declared:
+        sync_global_winners()
+    master_board = {
+        'B': list(range(1, 16)), 'I': list(range(16, 31)),
+        'N': list(range(31, 46)), 'G': list(range(46, 61)),
+        'O': list(range(61, 76))
+    }
+    called_numbers = list(st.session_state.called_numbers)
+    html = '''
     <style>
-        .board-container { max-width: 950px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
+        .board-container { max-width: 950px; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
         .board-title { text-align: center; font-size: 1.8rem; font-weight: bold; color: #FFD700; margin-bottom: 12px; }
-        .board-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 6px 4px; text-align: center; font-size: 0.85rem; font-weight: bold; }
+        .board-table { width: 100%; border-collapse: collapse; }
+        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 6px 4px; text-align: center; font-size: 0.85rem; font-weight: bold; min-width: 30px; }
         .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.5rem; font-weight: 900; padding: 10px 4px; letter-spacing: 3px; }
         .board-number { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.06); }
         .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
@@ -1098,184 +1228,80 @@ def display_master_board():
     </style>
     <div class="board-container">
         <div class="board-title">🎯 BINGO Board</div>
-    """
-    if last:
-        letter = get_letter_for_number(last)
-        amharic = get_amharic_number(last)
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{last} ({letter}) - {amharic}</span></div>'
+    '''
+    if st.session_state.last_called_number:
+        letter = get_letter_for_number(st.session_state.last_called_number)
+        amharic = get_amharic_number(st.session_state.last_called_number)
+        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     html += '<table class="board-table"><tr>'
-    for L in ['B','I','N','G','O']:
-        html += f'<td class="header-cell">{L}</td>'
+    for letter in ['B', 'I', 'N', 'G', 'O']:
+        html += f'<td class="header-cell">{letter}</td>'
     html += '</tr>'
     for row in range(15):
         html += '<tr>'
-        for L in ['B','I','N','G','O']:
-            n = master[L][row]
-            if n == last:
-                html += f'<td><div class="board-number last-called">{n}</div></td>'
-            elif n in called:
-                html += f'<td><div class="board-number called">{n}</div></td>'
+        for letter in ['B', 'I', 'N', 'G', 'O']:
+            num = master_board[letter][row]
+            is_called = num in called_numbers
+            is_last = num == st.session_state.last_called_number
+            if is_last:
+                html += f'<td><div class="board-number last-called">{num}</div></td>'
+            elif is_called:
+                html += f'<td><div class="board-number called">{num}</div></td>'
             else:
-                html += f'<td><div class="board-number">{n}</div></td>'
+                html += f'<td><div class="board-number">{num}</div></td>'
         html += '</tr>'
     html += '</table>'
-    html += f'<div class="board-stats">📊 Called: <strong>{len(called)}</strong> / 75 numbers</div>'
+    html += f'<div class="board-stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
-# HEADER (rendered once at top)
+# CARD SELECTION
 # ===================================================================
-def render_header():
-    quote = get_random_quote()
-    st.markdown(f"""
-    <div class="motivation-box">
-        <div class="quote">"{quote['am']}"</div>
-        <div class="author">{quote['en']} — {quote['author']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("""
-    <div style="text-align:center;padding:10px 0;margin-bottom:10px;">
-        <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:6px;margin:0;">
-            🎯🍀 ደራሽ ቢንጎ -Derash BINGO
-        </h1>
-        <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">@2026</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ===================================================================
-# ⚡ FRAGMENT: AUTO-CALL (only this reruns every 1.5s)
-# ===================================================================
-@st.fragment(run_every=1.5)
-def auto_call_fragment():
-    if not st.session_state.game_started:
-        return
-    if st.session_state.winner_declared or st.session_state.game_over:
-        return
-
-    # Read fresh global state
-    _, gd, _, _, _, go, _, _ = load_global_winners()
-    if gd or go:
-        sync_global_winners()
-        st.session_state.auto_call_started = False
-        st.rerun(scope="app")
-        return
-
-    # Try to call one number
-    just_called = try_global_call()
-
-    # Re-read after call
-    _, gd2, _, _, _, go2, _, _ = load_global_winners()
-    if gd2 or go2:
-        sync_global_winners()
-        st.session_state.auto_call_started = False
-        st.rerun(scope="app")
-        return
-
-    # Refresh local state from DB
-    load_game_state()
-
-    # Play sound only if number changed
-    if just_called is not None and just_called != st.session_state.get("_last_played_number"):
-        st.session_state["_last_played_number"] = just_called
-        st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-
-# ===================================================================
-# ⚡ FRAGMENT: BOARD + CARDS (renders on its own, refreshes with auto-call)
-# ===================================================================
-@st.fragment(run_every=1.5)
-def board_and_cards_fragment():
-    if not st.session_state.game_started:
-        return
-
-    # Pull latest called numbers from DB (keeps in sync with other players)
-    load_game_state()
-
-    all_player_cards = list(st.session_state.clicked_numbers)
-    if st.session_state.current_user:
-        _, _go, _, _ = load_global_cards()
-        _my = []
-        for _cid_str, _owner in _go.items():
-            if _owner == st.session_state.current_user:
-                try: _my.append(int(_cid_str))
-                except (ValueError, TypeError): pass
-        if _my:
-            _my = sorted(set(_my))
-            st.session_state.clicked_numbers = set(_my)
-            all_player_cards = _my
-
-    st.markdown(f"""
-    <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
-        🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
-        <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;">
-            {len(st.session_state.called_numbers)}/75 Called
-        </span>
-        <span style="margin-left:8px;background:rgba(76,175,80,0.15);padding:2px 10px;border-radius:12px;color:#4CAF50;">
-            ✅ Your Cards: {len(all_player_cards)}/2
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    board_col, cards_col = st.columns([2, 1], gap="small")
-    with board_col:
-        display_master_board()
-    with cards_col:
-        st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
-        if all_player_cards:
-            for cid in all_player_cards:
-                display_selected_card(cid, list(st.session_state.called_numbers), False)
-        else:
-            st.warning("⚠️ በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
-            st.info("💡 ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
-
-    st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
-
-# ===================================================================
-# ⚡ FRAGMENT: CARD SELECTION GRID (only reruns on click)
-# ===================================================================
-@st.fragment
-def card_selection_fragment():
+def render_card_selection():
+    # 🛡️ Absolute guard: never render the grid once the game is running
     if st.session_state.game_started or st.session_state.winner_declared:
+        st.rerun()
         return
 
-    remaining, game_started = get_global_remaining_time()
-    st.session_state.card_selection_time = remaining
-    if game_started:
-        st.session_state.game_started = True
-        st.rerun(scope="app")
-        return
+    if not st.session_state.game_started:
+        _ft, _, _, _ = load_global_cards()
+        _tn = max(len(_ft), len(st.session_state.clicked_numbers))
+        _rem, _ = get_global_remaining_time()
+        if _tn >= 3 and _rem <= 0:
+            mark_game_started_globally()
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if len(st.session_state.clicked_numbers) > 0 else -1
+            save_game_state()
+            st.rerun()
+            return
 
-    # Auto-start when time hits 0 and 3+ cards exist
-    file_taken, _, _, _ = load_global_cards()
-    total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-    if total_now >= MIN_CARDS_TO_START and remaining <= 0:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        st.session_state.selected_card = (list(st.session_state.clicked_numbers)[0]
-                                          if st.session_state.clicked_numbers else -1)
-        save_game_state()
-        st.rerun(scope="app")
+    if st.session_state.current_role == "admin":
+        st.warning("⚠️ Admin cannot play.")
         return
 
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
 
+    remaining = st.session_state.card_selection_time
     if remaining <= 0:
-        # Timer ended but not enough cards — reset
-        reset_global_timer(CARD_SELECTION_SECONDS)
-        st.rerun(scope="fragment")
+        st.rerun()
         return
 
-    minutes = int(remaining // 60); seconds = int(remaining % 60)
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
 
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
+
+    file_taken, _, _, _ = load_global_cards()
+    total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
     your_cards = len(st.session_state.clicked_numbers)
-    available = 204 - total_now
-    enough_cards = total_now >= MIN_CARDS_TO_START
+    available = 204 - total_selected
+    enough_cards = total_selected >= 3
 
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
 
@@ -1284,7 +1310,7 @@ def card_selection_fragment():
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">⌚ {time_str}</div>
         <div style="font-size:0.9rem;color:#FFFFFF;line-height:1.9;">
             🟢 <b>Your Cards:</b> {your_cards}/2 &nbsp;|&nbsp;
-            📊 <b>Global:</b> {total_now}/204 &nbsp;|&nbsp;
+            📊 <b>Global:</b> {total_selected}/204 &nbsp;|&nbsp;
             ⬜ <b>Available:</b> {available}
         </div>
         <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">💰 {balance:.2f} ETB</div>
@@ -1292,9 +1318,9 @@ def card_selection_fragment():
     """, unsafe_allow_html=True)
 
     if not enough_cards:
-        st.warning(f"⚠️ Waiting for {MIN_CARDS_TO_START - total_now} more card(s). Game starts at 0:00 with 3+ cards! 🎯")
+        st.warning(f"⚠️ Waiting for {3 - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
     else:
-        st.success(f"✅ 3+ cards ready! Game starts at 0:00 — {int(remaining)}s remaining 🎯")
+        st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
 
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
@@ -1306,7 +1332,7 @@ def card_selection_fragment():
     )
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
-        st.rerun(scope="fragment")
+        st.rerun()
 
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
@@ -1324,7 +1350,8 @@ def card_selection_fragment():
         cols = st.columns(cols_per_row)
         for col_idx in range(cols_per_row):
             card_num = row_start + col_idx
-            if card_num > 204: break
+            if card_num > 204:
+                break
             is_mine = card_num in clicked
             is_taken = card_num in taken and not is_mine
             is_rejected = (rejected == card_num) and not is_mine and not is_taken
@@ -1339,24 +1366,24 @@ def card_selection_fragment():
                             st.session_state.taken_cards.remove(card_num)
                         if str(card_num) in st.session_state.card_owner:
                             del st.session_state.card_owner[str(card_num)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + CARD_PRICE
+                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
                         save_all_data()
                         save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
                                           st.session_state.timer_start_time, st.session_state.card_selection_time)
                         st.session_state.rejected_card_num = None
                         st.session_state.insufficient_balance_card_num = None
-                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +{CARD_PRICE} ETB"
-                        st.rerun(scope="fragment")
+                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+                        st.rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
                 elif is_rejected:
                     if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
-                        st.rerun(scope="fragment")
+                        st.rerun()
                 elif is_insufficient:
                     if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
-                        st.rerun(scope="fragment")
+                        st.rerun()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
@@ -1365,12 +1392,12 @@ def card_selection_fragment():
                             st.session_state.rejected_card_num = card_num
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = ""
-                        elif user_balance < CARD_PRICE:
+                        elif user_balance < 10:
                             st.session_state.insufficient_balance_card_num = card_num
                             st.session_state.rejected_card_num = None
                             st.session_state.flash_msg = ""
                         else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - CARD_PRICE
+                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
                             save_all_data()
                             st.session_state.clicked_numbers.add(card_num)
                             if card_num not in st.session_state.taken_cards:
@@ -1380,111 +1407,34 @@ def card_selection_fragment():
                                               st.session_state.timer_start_time, st.session_state.card_selection_time)
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -{CARD_PRICE} ETB"
-                        st.rerun(scope="fragment")
+                            st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+                        st.rerun()
 
-    # Progress bar
-    st.progress(min(1.0, 1 - (remaining / CARD_SELECTION_SECONDS)) if remaining > 0 else 1.0)
-
-# ===================================================================
-# WINNER OVERLAY (rendered globally, one-shot sound)
-# ===================================================================
-def render_winner_overlay():
-    sync_global_winners()
-    if not (st.session_state.winner_declared and st.session_state.game_started):
-        return False
-
-    total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
-    per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
-
-    patterns = []; names = []; all_cards = []
-    for w in st.session_state.winners_list:
-        patterns.extend(w.get("patterns", []))
-        names.append(w.get("username", "Unknown"))
-        all_cards.extend(w.get("cards", []))
-    pattern_str = ", ".join(patterns) if patterns else "BINGO!"
-    names_str = ", ".join(names)
-
-    # One-shot winner sound
-    if not st.session_state.get("_winner_sound_played", False):
-        st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
-        st.session_state["_winner_sound_played"] = True
-
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
-                border:4px solid #FFD700;border-radius:20px;padding:20px 12px;margin:15px 0;
-                text-align:center;box-shadow: 0 0 60px rgba(255,215,0,0.4);
-                animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
-        <div class="winner-overlay-emoji" style="font-size:3rem;color:#FFD700;letter-spacing:8px;">🎉🎊🏆👑🎊🎉</div>
-        <div class="winner-overlay-title" style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉</div>
-        <div style="font-size:1.3rem;color:#FFD700;margin:6px 0;">🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊</div>
-        <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:12px 0;">
-            <span class="winner-overlay-emoji" style="display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
-            <span class="winner-overlay-emoji" style="display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
-            <span class="winner-overlay-emoji" style="display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">🏆</span>
-            <span class="winner-overlay-emoji" style="display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">👑</span>
-            <span class="winner-overlay-emoji" style="display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">🥳</span>
-        </div>
-        <div style="font-size:1.4rem;color:#FFFFFF;margin:10px 0;padding:10px;background:rgba(0,0,0,0.25);border-radius:12px;">
-            🏆 አሸናፊ: <span style="color:#FFD700;font-weight:900;">{names_str}</span> 🏆
-        </div>
-        <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
-            💰 ሽልማት: <strong style="color:#FFD700;">{per_winner:.2f} ETB</strong>
-        </div>
-        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
-            🏅 የድል መንገድ: {pattern_str}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.balloons(); st.snow()
-
-    st.markdown("""
-    <div style="text-align:center;margin:20px 0 15px 0;">
-        <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.winners_list:
-        wcp = {}
-        for w in st.session_state.winners_list:
-            for cid in w.get("cards", []):
-                wcp[cid] = ", ".join(w.get("patterns", ["BINGO!"]))
-        for i in range(0, len(all_cards), 3):
-            chunk = all_cards[i:i+3]
-            card_cols = st.columns(len(chunk))
-            for idx, cid in enumerate(chunk):
-                with card_cols[idx]:
-                    display_selected_card(cid, list(st.session_state.called_numbers), True, wcp.get(cid, "BINGO!"))
-
-    if st.session_state.winners_list:
-        st.markdown("### 🏆 አሸናፊዎች 🏆")
-        for w in st.session_state.winners_list:
-            pat = ", ".join(w.get("patterns", ["BINGO!"]))
-            cards = ", ".join([f"#{c}" for c in w.get("cards", [])])
-            st.success(f"🎉 {w.get('username')} - Card(s): {cards} - {pat} 🎉")
-
-    st.markdown("""
-    <div style="text-align:center;margin:25px 0 10px 0;">
-        <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
-            ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    col_a, col_b, col_c = st.columns([1, 2, 1])
-    with col_b:
-        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
-            st.session_state.winner_acknowledged = True
-            reset_for_next_round()
-            st.rerun()
-    return True
+    st.progress(1 - (remaining / 60) if remaining > 0 else 0)
 
 # ===================================================================
-# MAIN RENDER
+# MAIN APP
 # ===================================================================
-render_header()
+quote = get_random_quote()
+st.markdown(f"""
+<div class="motivation-box">
+    <div class="quote">"{quote['am']}"</div>
+    <div class="author">{quote['en']} — {quote['author']}</div>
+</div>
+""", unsafe_allow_html=True)
 
-# LOGIN
+st.markdown("""
+<div style="text-align:center;padding:10px 0;margin-bottom:10px;">
+    🎯🍀 <h1 style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:2.2rem;background:linear-gradient(135deg,#FFD700,#FFA500,#FFD700);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:6px;margin:0;">
+        ደራሽ ቢንጎ -Derash BINGO 
+    </h1>
+    <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:3px;margin-top:-3px;">@2026</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ===================================================================
+# LOGIN / REGISTER
+# ===================================================================
 if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     with tab1:
@@ -1496,7 +1446,9 @@ if not st.session_state.logged_in:
                 load_all_data()
                 success, message = login_user(username, password)
                 if success:
-                    st.success(message); st.balloons(); st.rerun()
+                    st.success(message)
+                    st.balloons()
+                    st.rerun()
                 else:
                     st.error(message)
     with tab2:
@@ -1518,19 +1470,27 @@ if not st.session_state.logged_in:
                     success, message = register_user(username, password, full_name, phone)
                     if success:
                         st.success("🎉🎊🥳 በትክክል ተመዝግበዋል! 🥳🎊🎉")
-                        st.balloons(); load_all_data(); time.sleep(1); st.rerun()
+                        st.balloons()
+                        load_all_data()
+                        time.sleep(2)
+                        st.rerun()
                     else:
                         st.error(message)
     st.stop()
 
-# ADMIN
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 if st.session_state.current_role == "admin":
     admin_panel()
     st.markdown("---")
 
+# ===================================================================
 # USER INFO
+# ===================================================================
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
+
 if st.session_state.current_user == "admin":
     balance = 0.0
     if "admin" in st.session_state.user_db:
@@ -1547,16 +1507,26 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if st.sidebar.button("🚪 Logout", use_container_width=True):
-    logout_user(); st.rerun()
+    logout_user()
+    st.rerun()
+
 st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
-# SYNC GLOBAL
+# ===================================================================
+# SYNC GLOBAL STATE
+# ===================================================================
 sync_global_cards()
 sync_global_winners()
+
+# ===================================================================
+# START THE GAME
+# ===================================================================
 maybe_start_game()
 
+# ===================================================================
 # ADMIN VIEW
+# ===================================================================
 if st.session_state.current_role == "admin":
     st.info("🔧 Admin Mode")
     if st.session_state.game_started:
@@ -1569,34 +1539,212 @@ if st.session_state.current_role == "admin":
         st.info("⏳ Waiting for game to start...")
     st.stop()
 
-# WINNER OVERLAY (global)
-if render_winner_overlay():
+# ===================================================================
+# ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
+#    (even those who did NOT pick a card)
+# ===================================================================
+if st.session_state.winner_declared and st.session_state.game_started:
+    sync_global_winners()
+    total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
+    prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
+
+    winning_patterns = []
+    winner_names = []
+    all_winner_cards = []
+    for winner in st.session_state.winners_list:
+        winning_patterns.extend(winner.get("patterns", []))
+        winner_names.append(winner.get("username", "Unknown"))
+        all_winner_cards.extend(winner.get("cards", []))
+    winning_pattern = ", ".join(winning_patterns) if winning_patterns else "BINGO!"
+    winner_names_str = ", ".join(winner_names)
+
+    st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
+                border:4px solid #FFD700;border-radius:20px;padding:20px 12px;margin:15px 0;
+                text-align:center;box-shadow: 0 0 60px rgba(255,215,0,0.4);
+                animation: celebrationPulse 0.8s ease-in-out infinite alternate;">
+        <div style="font-size:3rem;color:#FFD700;letter-spacing:8px;">🎉🎊🏆👑🎊🎉</div>
+        <div style="font-size:2rem;color:#FFD700;margin:8px 0;font-weight:900;">🎉 ቢንጎ! አሸናፊዉ ታዉቋል!!! 🎉</div>
+        <div style="font-size:1.3rem;color:#FFD700;margin:6px 0;">🎊🍀🥳 ለቀጣይ ጨዋታ መልካም ዕድል!!! 🥳🍀🎊</div>
+        <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:12px 0;">
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">🏆</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">👑</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">🥳</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 1s;">🎉</span>
+        </div>
+        <div style="font-size:1.4rem;color:#FFFFFF;margin:10px 0;padding:10px;background:rgba(0,0,0,0.25);border-radius:12px;">
+            🏆 አሸናፊ: <span style="color:#FFD700;font-weight:900;">{winner_names_str}</span> 🏆
+        </div>
+        <div style="font-size:1.1rem;color:#4CAF50;margin:6px 0;font-weight:bold;">
+            💰 ሽልማት: <strong style="color:#FFD700;">{prize_per_winner:.2f} ETB</strong>
+        </div>
+        <div style="font-size:1.2rem;color:#FFD700;margin:8px 0;padding:6px;background:rgba(255,215,0,0.1);border-radius:10px;">
+            🏅 የድል መንገድ: {winning_pattern}
+        </div>
+        <div style="font-size:1.2rem;color:#FFD700;margin:10px 0;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,0.3);">
+            🎉🏆ያለዉ ካርቴላ ዉስን ስለሆን ፈጥንው ይምረጡ🏆🎉
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.1s;">👇⭐</span>
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.7s;">የዚህን ጨዋታ አሸናፊ ካርቴላ ለማየት ከታች ይመልከቱ!</span>
+            <span style="font-size:1.6rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.9s;">🌟👇</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.balloons()
+    st.snow()
+
+    st.markdown("""
+    <div style="text-align:center;margin:20px 0 15px 0;">
+        <h2 style="color:#FFD700;font-size:1.8rem;">🎉🏆 የአሸናፊዎች ካርቴላ 🏆🎉</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.winners_list:
+        wcp = {}
+        for winner in st.session_state.winners_list:
+            for cid in winner.get("cards", []):
+                wcp[cid] = ", ".join(winner.get("patterns", ["BINGO!"]))
+        for i in range(0, len(all_winner_cards), 3):
+            chunk = all_winner_cards[i:i+3]
+            card_cols = st.columns(len(chunk))
+            for idx, cid in enumerate(chunk):
+                with card_cols[idx]:
+                    display_selected_card(cid, list(st.session_state.called_numbers), True, wcp.get(cid, "BINGO!"))
+
+    if st.session_state.winners_list:
+        st.markdown("### 🏆 አሸናፊዎች 🏆")
+        for idx, winner in enumerate(st.session_state.winners_list, 1):
+            patterns = ", ".join(winner.get("patterns", ["BINGO!"]))
+            cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
+            st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
+
+    # ✅ RESUME BUTTON — visible to EVERY logged-in player
+    st.markdown("""
+    <div style="text-align:center;margin:25px 0 10px 0;">
+        <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
+            ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
+            st.session_state.winner_acknowledged = True
+            reset_for_next_round()
+            st.rerun()
     st.stop()
 
-# PRE-GAME or IN-GAME
+# ===================================================================
+# ✅ PLAYER DISPLAY
+# ===================================================================
 if st.session_state.game_started:
-    board_and_cards_fragment()
-    auto_call_fragment()
+    all_player_cards = list(st.session_state.clicked_numbers)
+
+    if st.session_state.current_user:
+        _gt, _go, _, _ = load_global_cards()
+        _my = []
+        for _cid_str, _owner in _go.items():
+            if _owner == st.session_state.current_user:
+                try:
+                    _my.append(int(_cid_str))
+                except (ValueError, TypeError):
+                    pass
+        if _my:
+            _my = sorted(set(_my))
+            st.session_state.clicked_numbers = set(_my)
+            all_player_cards = _my
+
+    st.markdown(f"""
+    <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
+        🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
+        <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;">
+            {len(st.session_state.called_numbers)}/75 Called
+        </span>
+        <span style="margin-left:8px;background:rgba(76,175,80,0.15);padding:2px 10px;border-radius:12px;color:#4CAF50;">
+            ✅ Your Cards: {len(all_player_cards)}/2
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    board_col, cards_col = st.columns([2, 1], gap="large")
+    with board_col:
+        display_master_board()
+    with cards_col:
+        st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
+        if all_player_cards:
+            for cid in all_player_cards:
+                display_selected_card(cid, list(st.session_state.called_numbers), False)
+        else:
+            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
+            st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+    st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
+
 else:
     _ft, _, _, _ = load_global_cards()
     _total = max(len(_ft), len(st.session_state.clicked_numbers))
     _rem, _gstarted = get_global_remaining_time()
-    if _gstarted or (_total >= MIN_CARDS_TO_START and _rem <= 0):
+
+    if _gstarted or (_total >= 3 and _rem <= 0):
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
-        st.session_state.selected_card = (list(st.session_state.clicked_numbers)[0]
-                                          if st.session_state.clicked_numbers else -1)
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.session_state.selected_card = -1
         save_game_state()
         st.rerun()
-    else:
-        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-        card_selection_fragment()
 
+    if not st.session_state.game_started:
+        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
+        render_card_selection()
+        time.sleep(1)
+        st.rerun()
+    else:
+        st.rerun()
+
+# ===================================================================
 # FOOTER
+# ===================================================================
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;">
     🎯 Derash BINGO | 204 Cards | Selected: {len(st.session_state.clicked_numbers)}/2 | Called: {len(st.session_state.called_numbers)}/75
 </div>
 """, unsafe_allow_html=True)
+
+# ===================================================================
+# ✅ AUTO-CALL — stops the moment a winner exists
+# ===================================================================
+if st.session_state.game_started and not st.session_state.winner_declared:
+    _, _gd, _, _, _, _, _, _ = load_global_winners()
+    if _gd:
+        sync_global_winners()
+        st.rerun()
+    else:
+        just_called = try_global_call()
+        load_game_state()
+        if just_called is not None:
+            st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+        time.sleep(0.3)
+        st.rerun()
+
+# ===================================================================
+# ✅ AUTO-RERUN
+# ===================================================================
+if st.session_state.game_started and st.session_state.winner_declared:
+    pass
+elif not st.session_state.game_started:
+    maybe_start_game()
+    time.sleep(0.5)
+    st.rerun()
+else:
+    time.sleep(0.5)
+    st.rerun()
