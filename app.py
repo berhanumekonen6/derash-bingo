@@ -132,6 +132,11 @@ st.markdown("""
         transform: translateY(0px) scale(0.97) !important;
         box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
     }
+    /* ✅ Instant visual feedback on card click */
+    .stButton > button:focus {
+        outline: 2px solid #FFFFFF !important;
+        outline-offset: 2px !important;
+    }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
@@ -157,8 +162,6 @@ st.markdown("""
         max-width: 100% !important;
         overflow: hidden !important;
     }
-
-    /* Board — never wider than its column */
     .board-container {
         width: 100% !important;
         max-width: 100% !important;
@@ -177,11 +180,10 @@ st.markdown("""
     .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.3rem; font-weight: 900; padding: 8px 2px; letter-spacing: 2px; }
     .board-number { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06); }
     .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
-    .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
+    .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; animation: winnerPulse 1s ease-in-out infinite alternate; }
     .board-stats { text-align: center; margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
     .board-stats strong { color: #FFD700; }
 
-    /* Cards — always inside their column */
     .cards-container {
         display: flex;
         flex-direction: column;
@@ -197,18 +199,25 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* ============================================================
-       Responsive — stack on mobile so nothing overlaps
-       ============================================================ */
+    /* ✅ Last-called banner */
+    .last-called-banner {
+        background: linear-gradient(135deg, rgba(229,57,53,0.25), rgba(229,57,53,0.1));
+        border: 2px solid #FF6B6B;
+        border-radius: 12px;
+        padding: 10px 15px;
+        text-align: center;
+        margin: 10px 0;
+        animation: lastCalledPop 0.4s ease-out;
+    }
+    @keyframes lastCalledPop {
+        0% { transform: scale(0.9); opacity: 0.6; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Responsive */
     @media (max-width: 900px) {
-        .game-layout {
-            flex-direction: column !important;
-            gap: 12px !important;
-        }
-        .board-column, .cards-column {
-            flex: 1 1 100% !important;
-            width: 100% !important;
-        }
+        .game-layout { flex-direction: column !important; gap: 12px !important; }
+        .board-column, .cards-column { flex: 1 1 100% !important; width: 100% !important; }
     }
     @media (max-width: 768px) {
         .board-table td { padding: 3px 1px; font-size: 0.7rem; }
@@ -250,14 +259,13 @@ st.markdown("""
         min-height: 44px !important;
         border-radius: 8px !important;
         font-weight: bold !important;
+        /* ✅ Instant click feedback */
+        transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease !important;
     }
     div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
         margin-bottom: 3px !important;
     }
 
-    /* ============================================================
-       ✅ Prevent board/card overflow that causes overlap
-       ============================================================ */
     .board-container,
     .board-table,
     .player-card-wrap,
@@ -356,6 +364,10 @@ def init_session_state():
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
         'global_selected_count': 0,
+        # ✅ Track last-seen global values for instant sync feedback
+        'last_seen_called': None,
+        'last_seen_winner_sig': None,
+        'pending_card_click': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -461,6 +473,28 @@ def sync_global_winners():
         st.session_state.prize_distributed = prize_distributed
         return changed
     return False
+
+# ===================================================================
+# ✅ GLOBAL CALLED NUMBERS SYNC — every rerun, reads from DB
+# ===================================================================
+def sync_global_called_numbers():
+    """
+    ✅ Reads called_numbers from the shared DB row and mirrors into the local
+    session. Every player therefore sees exactly the same called numbers
+    (and same last_called_number) as soon as their page reruns.
+    """
+    try:
+        row = load_state_row()
+        db_called = set(row.get("called_numbers") or [])
+        db_last = row.get("last_called_number")
+        db_count = row.get("auto_called_count", 0)
+
+        # Always overwrite local mirror from DB
+        st.session_state.called_numbers = db_called
+        st.session_state.last_called_number = db_last
+        st.session_state.auto_called_count = db_count if db_count else len(db_called)
+    except Exception:
+        pass
 
 # ===================================================================
 # GAME CONSTANTS
@@ -571,6 +605,120 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
+# ✅ ATOMIC CARD SELECTION (prevents race conditions and lags)
+# ===================================================================
+def atomic_select_card(card_num):
+    """
+    ✅ Atomically select a card:
+      1. Re-read the state row from DB (fresh).
+      2. Check it's not already taken.
+      3. Check the user doesn't already own MAX cards.
+      4. Check the user's balance.
+      5. Update DB and return a status dict.
+    This eliminates the "click → wait" lag because we do the check + write
+    in a single tight routine right before the rerun.
+    """
+    row = load_state_row()
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+    user = st.session_state.current_user
+
+    if str(card_num) in owner and owner[str(card_num)] != user:
+        return {"ok": False, "reason": "taken"}
+    if card_num in taken and owner.get(str(card_num)) != user:
+        return {"ok": False, "reason": "taken"}
+
+    # Count cards owned by this user (fresh from DB)
+    user_card_count = sum(1 for o in owner.values() if o == user)
+    if user_card_count >= MAX_CARDS_PER_PLAYER:
+        return {"ok": False, "reason": "max"}
+
+    # Re-load balance fresh
+    users = load_local_users()
+    user_row = users.get(user, {})
+    bal = float(user_row.get("balance", 0))
+    if bal < CARD_PRICE:
+        return {"ok": False, "reason": "balance"}
+
+    # Perform the write
+    if card_num not in taken:
+        taken.append(card_num)
+    owner[str(card_num)] = user
+
+    supabase.table("users").upsert({
+        "username": user,
+        "password": user_row.get("password", ""),
+        "balance": bal - CARD_PRICE,
+        "role": user_row.get("role", "player"),
+        "name": user_row.get("name", ""),
+        "phone": user_row.get("phone", ""),
+        "game_played": int(user_row.get("game_played", 0)),
+        "wins": int(user_row.get("wins", 0)),
+    }).execute()
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+
+    # Mirror locally
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+    st.session_state.clicked_numbers = set(
+        int(k) for k, v in owner.items() if v == user
+    )
+    st.session_state.global_selected_count = len(taken)
+    st.session_state.user_db = users
+    st.session_state.user_db[user]["balance"] = bal - CARD_PRICE
+
+    return {"ok": True, "reason": "selected"}
+
+def atomic_deselect_card(card_num):
+    """✅ Atomically deselect a card owned by the current user (with refund)."""
+    row = load_state_row()
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+    user = st.session_state.current_user
+
+    if str(card_num) not in owner or owner[str(card_num)] != user:
+        return {"ok": False, "reason": "not_owner"}
+
+    if card_num in taken:
+        taken.remove(card_num)
+    del owner[str(card_num)]
+
+    users = load_local_users()
+    user_row = users.get(user, {})
+    bal = float(user_row.get("balance", 0))
+
+    supabase.table("users").upsert({
+        "username": user,
+        "password": user_row.get("password", ""),
+        "balance": bal + CARD_PRICE,
+        "role": user_row.get("role", "player"),
+        "name": user_row.get("name", ""),
+        "phone": user_row.get("phone", ""),
+        "game_played": int(user_row.get("game_played", 0)),
+        "wins": int(user_row.get("wins", 0)),
+    }).execute()
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+    st.session_state.clicked_numbers = set(
+        int(k) for k, v in owner.items() if v == user
+    )
+    st.session_state.global_selected_count = len(taken)
+    st.session_state.user_db = users
+    st.session_state.user_db[user]["balance"] = bal + CARD_PRICE
+
+    return {"ok": True, "reason": "deselected"}
+
+# ===================================================================
 # ✅ GLOBAL CARD SELECTION COUNTER
 # ===================================================================
 def get_global_selected_count():
@@ -630,11 +778,6 @@ def get_global_remaining_time():
 # ✅ CHECK IF GAME SHOULD START (globally)
 # ===================================================================
 def maybe_start_game():
-    """
-    ✅ If the global timer has hit 0:00 AND 3+ cards are globally selected,
-    mark the game as started in the shared DB so EVERY player's next rerun
-    sees it and displays the Bingo board + player cards.
-    """
     row = load_state_row()
     if row.get("game_started"):
         st.session_state.game_started = True
@@ -783,6 +926,8 @@ def reset_for_next_round():
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
     st.session_state.global_selected_count = 0
+    st.session_state.last_seen_called = None
+    st.session_state.last_seen_winner_sig = None
 
 # ===================================================================
 # SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
@@ -810,7 +955,7 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
-        st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
+        st.session_state.clicked_numbers = user_cards
 
 # ===================================================================
 # AUTHENTICATION
@@ -940,7 +1085,7 @@ def admin_panel():
                     st.rerun()
 
 # ===================================================================
-# ALL 204 BINGO CARDS - FULL LIST
+# ALL 204 BINGO CARDS
 # ===================================================================
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
@@ -1249,10 +1394,6 @@ def check_for_winners():
         })
 
 def distribute_prizes(winners):
-    """
-    ✅ Multiple winners are paid EQUALLY by winning-CARD count.
-    Guarded by the global `prize_distributed` flag so it pays exactly once.
-    """
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
     if global_paid:
         st.session_state.prize_distributed = True
@@ -1310,7 +1451,6 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
     title_color = '#FFD700' if is_winner else '#FFFFFF'
     card_class = 'winner-card' if is_winner else ''
-    # ✅ Wrapper ensures the card never overflows its column
     html = f"""
     <div class="player-card-wrap">
     <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);width:100%;max-width:400px;box-sizing:border-box;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
@@ -1363,7 +1503,6 @@ def display_master_board():
         'O': list(range(61, 76))
     }
     called_numbers = list(st.session_state.called_numbers)
-    # ✅ Board container is width-constrained so it never overlaps cards
     html = '''
     <div class="board-container">
         <div class="board-title">🎯 BINGO Board</div>
@@ -1404,7 +1543,7 @@ def render_card_selection():
 
     if not st.session_state.game_started:
         _ft, _, _, _ = load_global_cards()
-        _tn = max(len(_ft), len(st.session_state.clicked_numbers))
+        _tn = len(_ft)
         _rem, _ = get_global_remaining_time()
         if _tn >= 3 and _rem <= 0:
             mark_game_started_globally()
@@ -1498,19 +1637,11 @@ def render_card_selection():
             with cols[col_idx]:
                 if is_mine:
                     if st.button(f"✅{card_num}", key=f"card_{card_num}", use_container_width=True, type="primary"):
-                        user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        st.session_state.clicked_numbers.discard(card_num)
-                        if card_num in st.session_state.taken_cards:
-                            st.session_state.taken_cards.remove(card_num)
-                        if str(card_num) in st.session_state.card_owner:
-                            del st.session_state.card_owner[str(card_num)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                        save_all_data()
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                          st.session_state.timer_start_time, st.session_state.card_selection_time)
-                        st.session_state.rejected_card_num = None
-                        st.session_state.insufficient_balance_card_num = None
-                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+                        res = atomic_deselect_card(card_num)
+                        if res["ok"]:
+                            st.session_state.rejected_card_num = None
+                            st.session_state.insufficient_balance_card_num = None
+                            st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
                         st.rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
@@ -1524,28 +1655,21 @@ def render_card_selection():
                         st.rerun()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
-                        user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
-                        if has_max:
-                            st.session_state.rejected_card_num = card_num
-                            st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = ""
-                        elif user_balance < 10:
-                            st.session_state.insufficient_balance_card_num = card_num
-                            st.session_state.rejected_card_num = None
-                            st.session_state.flash_msg = ""
-                        else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                            save_all_data()
-                            st.session_state.clicked_numbers.add(card_num)
-                            if card_num not in st.session_state.taken_cards:
-                                st.session_state.taken_cards.append(card_num)
-                            st.session_state.card_owner[str(card_num)] = st.session_state.current_user
-                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                              st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        # ✅ Atomic: single check + write, instant feedback
+                        res = atomic_select_card(card_num)
+                        if res["ok"]:
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+                        else:
+                            if res["reason"] == "max":
+                                st.session_state.rejected_card_num = card_num
+                                st.session_state.insufficient_balance_card_num = None
+                            elif res["reason"] == "balance":
+                                st.session_state.insufficient_balance_card_num = card_num
+                                st.session_state.rejected_card_num = None
+                            else:  # taken
+                                st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
                         st.rerun()
 
     st.progress(1 - (remaining / 60) if remaining > 0 else 0)
@@ -1655,7 +1779,8 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # SYNC GLOBAL STATE
 # ===================================================================
 sync_global_cards()
-sync_global_winners()
+sync_global_called_numbers()   # ✅ Called numbers global from DB
+sync_global_winners()          # ✅ Winner celebration global from DB
 
 # ===================================================================
 # START THE GAME
@@ -1835,18 +1960,13 @@ if st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Side-by-side columns. Board column is wider (2:1).
     board_col, cards_col = st.columns([2, 1], gap="large")
-
     with board_col:
-        # Board always fits inside its column — CSS caps it
         display_master_board()
-
     with cards_col:
         st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
         if all_player_cards:
             for cid in all_player_cards:
-                # Every card is wrapped in .player-card-wrap → always inside its column
                 display_selected_card(cid, list(st.session_state.called_numbers), False)
         else:
             st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
@@ -1889,7 +2009,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists
+# ✅ AUTO-CALL — stops the moment a winner exists; syncs called numbers globally
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
@@ -1898,10 +2018,12 @@ if st.session_state.game_started and not st.session_state.winner_declared:
         st.rerun()
     else:
         just_called = try_global_call()
-        load_game_state()
+        # ✅ Refresh local mirror from DB so every player sees the same called numbers
+        sync_global_called_numbers()
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-        time.sleep(0.3)
+        # Faster loop = more responsive updates across all clients
+        time.sleep(0.25)
         st.rerun()
 
 # ===================================================================
@@ -1911,8 +2033,9 @@ if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
     maybe_start_game()
-    time.sleep(0.5)
+    # Slightly faster rerun when in card-selection (snappier feel)
+    time.sleep(0.4)
     st.rerun()
 else:
-    time.sleep(0.5)
+    time.sleep(0.4)
     st.rerun()
