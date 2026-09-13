@@ -135,12 +135,87 @@ st.markdown("""
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
+    /* ============================================================
+       ✅ NON-OVERLAP LAYOUT — Board left, cards right
+       ============================================================ */
+    .game-layout {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 16px !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+    .board-column {
+        flex: 2 1 0 !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+    .cards-column {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+
+    /* Board — never wider than its column */
+    .board-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 14px !important;
+        background: rgba(0,0,0,0.2);
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.08);
+        overflow: hidden !important;
+    }
+    .board-title { text-align: center; font-size: 1.5rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }
+    .board-table { width: 100%; border-collapse: collapse; table-layout: fixed !important; }
+    .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 4px 2px; text-align: center; font-size: 0.8rem; font-weight: bold; }
+    .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.3rem; font-weight: 900; padding: 8px 2px; letter-spacing: 2px; }
+    .board-number { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06); }
+    .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
+    .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
+    .board-stats { text-align: center; margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
+    .board-stats strong { color: #FFD700; }
+
+    /* Cards — always inside their column */
+    .cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .player-card-wrap {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+
+    /* ============================================================
+       Responsive — stack on mobile so nothing overlaps
+       ============================================================ */
+    @media (max-width: 900px) {
+        .game-layout {
+            flex-direction: column !important;
+            gap: 12px !important;
+        }
+        .board-column, .cards-column {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+        }
+    }
     @media (max-width: 768px) {
-        .board-table td { padding: 3px 2px; font-size: 0.7rem; min-width: 22px; }
+        .board-table td { padding: 3px 1px; font-size: 0.7rem; }
         .board-number { width: 26px; height: 26px; font-size: 0.7rem; }
         .board-table .header-cell { font-size: 1.1rem; padding: 6px 2px; }
-        .board-container { padding: 10px !important; margin: 5px 0 !important; }
-        .board-title { font-size: 1.3rem !important; }
+        .board-container { padding: 10px !important; margin: 0 !important; }
+        .board-title { font-size: 1.2rem !important; }
         .motivation-box { padding: 8px 12px !important; }
         .motivation-box .quote { font-size: 0.85rem !important; }
         h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
@@ -178,6 +253,17 @@ st.markdown("""
     }
     div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
         margin-bottom: 3px !important;
+    }
+
+    /* ============================================================
+       ✅ Prevent board/card overflow that causes overlap
+       ============================================================ */
+    .board-container,
+    .board-table,
+    .player-card-wrap,
+    .winner-card {
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -269,6 +355,7 @@ def init_session_state():
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
+        'global_selected_count': 0,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -382,6 +469,7 @@ CARD_PRICE = 10
 PRIZE_PER_CARD = 8
 CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
+MIN_CARDS_TO_START = 3
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -483,6 +571,19 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
+# ✅ GLOBAL CARD SELECTION COUNTER
+# ===================================================================
+def get_global_selected_count():
+    try:
+        row = load_state_row()
+        taken = row.get("taken_cards") or []
+        count = len(taken)
+        st.session_state.global_selected_count = count
+        return count
+    except Exception:
+        return st.session_state.get("global_selected_count", 0)
+
+# ===================================================================
 # GLOBAL TIMER (Supabase-backed)
 # ===================================================================
 def load_global_timer():
@@ -517,14 +618,48 @@ def get_global_remaining_time():
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
     if remaining <= 0:
-        file_taken, _, _, _ = load_global_cards()
-        total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-        if total_now >= 3:
+        total_now = get_global_selected_count()
+        if total_now >= MIN_CARDS_TO_START:
             return 0, False
         else:
             reset_global_timer(60)
             return 60, False
     return remaining, False
+
+# ===================================================================
+# ✅ CHECK IF GAME SHOULD START (globally)
+# ===================================================================
+def maybe_start_game():
+    """
+    ✅ If the global timer has hit 0:00 AND 3+ cards are globally selected,
+    mark the game as started in the shared DB so EVERY player's next rerun
+    sees it and displays the Bingo board + player cards.
+    """
+    row = load_state_row()
+    if row.get("game_started"):
+        st.session_state.game_started = True
+        return
+
+    total_now = len(row.get("taken_cards") or [])
+    timer_start = row.get("timer_start_time", time.time())
+    duration = row.get("card_selection_time", 60)
+    elapsed = time.time() - timer_start
+    remaining = duration - elapsed
+
+    if total_now >= MIN_CARDS_TO_START and remaining <= 0:
+        update_state({
+            "game_started": True,
+            "auto_call_started": False,
+            "last_call_time": time.time(),
+        })
+        st.session_state.game_started = True
+        st.session_state.auto_call_started = False
+        if len(st.session_state.clicked_numbers) > 0:
+            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
+        else:
+            st.session_state.selected_card = -1
+        save_game_state()
+        st.rerun()
 
 # ===================================================================
 # GLOBAL CALLER LOCK (Supabase-backed)
@@ -591,6 +726,7 @@ def load_game_state():
         st.session_state.winner_declared = row.get("winner_declared", False)
     st.session_state.game_over = row.get("game_over", False)
     st.session_state.prize_distributed = row.get("prize_distributed", False)
+    st.session_state.game_started = row.get("game_started", False)
 
 def clear_game_state():
     update_state({
@@ -646,6 +782,7 @@ def reset_for_next_round():
     st.session_state.rejected_card_num = None
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
+    st.session_state.global_selected_count = 0
 
 # ===================================================================
 # SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
@@ -655,6 +792,7 @@ def sync_global_cards():
     
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
+    st.session_state.global_selected_count = len(global_taken)
     
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
@@ -673,29 +811,6 @@ def sync_global_cards():
                 except (ValueError, TypeError):
                     pass
         st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
-
-# ===================================================================
-# START-THE-GAME CHECK
-# ===================================================================
-def maybe_start_game():
-    if st.session_state.game_started:
-        return
-    file_taken, _, _, _ = load_global_cards()
-    total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-    min_required = 3
-    if total_now < min_required:
-        return
-    remaining, _ = get_global_remaining_time()
-    if remaining <= 0:
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
-        st.rerun()
 
 # ===================================================================
 # AUTHENTICATION
@@ -775,7 +890,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL (unchanged)
+# ADMIN PANEL
 # ===================================================================
 def admin_panel():
     st.markdown("""
@@ -1077,11 +1192,6 @@ def check_winning_pattern(card_data, called_numbers):
 # GAME FUNCTIONS
 # ===================================================================
 def check_for_winners():
-    """
-    ✅ Reads authoritative state from Supabase, detects ALL winning cards,
-    groups them by owner (a player with 2 winning cards still counts once),
-    then persists the result and distributes prizes.
-    """
     if st.session_state.winner_declared:
         return
 
@@ -1125,10 +1235,6 @@ def check_for_winners():
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
 
-        # ✅ Split prize equally across ALL winning cards (not just winners).
-        # Each winning CARD counts as a share — that's the fair rule:
-        # total prize = (taken_cards * PRIZE_PER_CARD); each winner gets
-        # (their_winning_card_count / total_winning_cards) of that pool.
         distribute_prizes(winners_found)
 
         update_state({
@@ -1145,9 +1251,6 @@ def check_for_winners():
 def distribute_prizes(winners):
     """
     ✅ Multiple winners are paid EQUALLY by winning-CARD count.
-    Example: 5 total cards sold * 8 ETB = 40 ETB pool.
-             Player A has 1 winning card, Player B has 2 winning cards.
-             Total winning cards = 3. So A gets 40/3 ≈ 13.33, B gets 40/3*2 ≈ 26.66.
     Guarded by the global `prize_distributed` flag so it pays exactly once.
     """
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
@@ -1161,14 +1264,12 @@ def distribute_prizes(winners):
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
 
-    # Total winning cards across all winners (used to split proportionally)
     total_winning_cards = sum(len(w.get("cards", [])) for w in winners)
     if total_winning_cards <= 0:
         total_winning_cards = 1
 
     prize_per_card = total_prize / total_winning_cards
 
-    # Reload fresh users to avoid overwriting concurrent balance changes
     load_all_data()
 
     for winner in winners:
@@ -1209,12 +1310,14 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
     title_color = '#FFD700' if is_winner else '#FFFFFF'
     card_class = 'winner-card' if is_winner else ''
+    # ✅ Wrapper ensures the card never overflows its column
     html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
+    <div class="player-card-wrap">
+    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:12px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);width:100%;max-width:400px;box-sizing:border-box;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
         <div style="text-align:center;color:{title_color};font-size:1rem;font-weight:bold;margin-bottom:8px;">
             {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
         </div>
-        <table style="width:100%;border-collapse:collapse;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
             <tr>
                 <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">B</td>
                 <td style="border:1px solid rgba(255,255,255,0.08);padding:4px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.75rem;">I</td>
@@ -1248,7 +1351,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
         html += f'<div style="text-align:center;color:#FFD700;font-size:0.7rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
         html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:4px;">✅ {total_called}/24 called</div>'
-    html += '</div>'
+    html += '</div></div>'
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
@@ -1260,26 +1363,15 @@ def display_master_board():
         'O': list(range(61, 76))
     }
     called_numbers = list(st.session_state.called_numbers)
+    # ✅ Board container is width-constrained so it never overlaps cards
     html = '''
-    <style>
-        .board-container { max-width: 950px; margin: 0 auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
-        .board-title { text-align: center; font-size: 1.8rem; font-weight: bold; color: #FFD700; margin-bottom: 12px; }
-        .board-table { width: 100%; border-collapse: collapse; }
-        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 6px 4px; text-align: center; font-size: 0.85rem; font-weight: bold; min-width: 30px; }
-        .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.5rem; font-weight: 900; padding: 10px 4px; letter-spacing: 3px; }
-        .board-number { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.06); }
-        .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
-        .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
-        .board-stats { text-align: center; margin-top: 12px; font-size: 0.9rem; color: rgba(255,255,255,0.5); padding: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; }
-        .board-stats strong { color: #FFD700; }
-    </style>
     <div class="board-container">
         <div class="board-title">🎯 BINGO Board</div>
     '''
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:1.1rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 15px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
+        html += f'<div style="text-align:center;font-size:1.05rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:3px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += f'<td class="header-cell">{letter}</td>'
@@ -1344,7 +1436,7 @@ def render_card_selection():
     balance = user.get("balance", 0)
 
     file_taken, _, _, _ = load_global_cards()
-    total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
+    total_selected = len(file_taken)
     your_cards = len(st.session_state.clicked_numbers)
     available = 204 - total_selected
     enough_cards = total_selected >= 3
@@ -1586,14 +1678,11 @@ if st.session_state.current_role == "admin":
     st.stop()
 
 # ===================================================================
-# ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
-#    Displays ALL winning cards from ALL winners, prize split equally.
+# ✅ GLOBAL WINNER OVERLAY
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
 
-    # ✅ Prize math: pool = total_cards * PRIZE_PER_CARD
-    #    Split by winning-CARD count across all winners.
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     total_winning_cards = sum(len(w.get("cards", [])) for w in st.session_state.winners_list) or 1
     prize_per_card = total_prize / total_winning_cards
@@ -1601,7 +1690,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     winning_patterns = []
     winner_names = []
     all_winner_cards = []
-    per_winner_info = []  # for the winners list below
+    per_winner_info = []
     for winner in st.session_state.winners_list:
         winning_patterns.extend(winner.get("patterns", []))
         winner_names.append(winner.get("username", "Unknown"))
@@ -1659,7 +1748,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.balloons()
     st.snow()
 
-    # ✅ Per-winner payout summary (visible to everyone)
     st.markdown("""
     <div style="text-align:center;margin:20px 0 10px 0;">
         <h2 style="color:#FFD700;font-size:1.6rem;">💰 የአሸናፊዎች ሽልማት 💰</h2>
@@ -1680,13 +1768,11 @@ if st.session_state.winner_declared and st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Display ALL winning cards from ALL winners
     if st.session_state.winners_list:
         wcp = {}
         for winner in st.session_state.winners_list:
             for cid in winner.get("cards", []):
                 wcp[cid] = ", ".join(winner.get("patterns", ["BINGO!"]))
-        # Show in rows of up to 3
         for i in range(0, len(all_winner_cards), 3):
             chunk = all_winner_cards[i:i+3]
             card_cols = st.columns(len(chunk))
@@ -1701,7 +1787,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
             cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
             st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
 
-    # ✅ RESUME BUTTON — visible to EVERY logged-in player
     st.markdown("""
     <div style="text-align:center;margin:25px 0 10px 0;">
         <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
@@ -1719,7 +1804,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.stop()
 
 # ===================================================================
-# ✅ PLAYER DISPLAY
+# ✅ PLAYER DISPLAY — Board left, Cards right (NON-OVERLAPPING)
 # ===================================================================
 if st.session_state.game_started:
     all_player_cards = list(st.session_state.clicked_numbers)
@@ -1750,22 +1835,28 @@ if st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
+    # ✅ Side-by-side columns. Board column is wider (2:1).
     board_col, cards_col = st.columns([2, 1], gap="large")
+
     with board_col:
+        # Board always fits inside its column — CSS caps it
         display_master_board()
+
     with cards_col:
         st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
         if all_player_cards:
             for cid in all_player_cards:
+                # Every card is wrapped in .player-card-wrap → always inside its column
                 display_selected_card(cid, list(st.session_state.called_numbers), False)
         else:
             st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
             st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
     _ft, _, _, _ = load_global_cards()
-    _total = max(len(_ft), len(st.session_state.clicked_numbers))
+    _total = len(_ft)
     _rem, _gstarted = get_global_remaining_time()
 
     if _gstarted or (_total >= 3 and _rem <= 0):
