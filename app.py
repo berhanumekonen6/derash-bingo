@@ -289,13 +289,42 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
+# LOCAL FILE STORAGE
+# ===================================================================
+def load_local_users():
+    try:
+        if os.path.exists(get_local_users_file()):
+            with open(get_local_users_file(), "r") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[load_local_users] {e}")
+    return {}
+
+def save_local_users(users):
+    try:
+        path = get_local_users_file()
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(users, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"[save_local_users] FAILED: {e}")
+        return False
+
+def load_all_data():
+    local_users = load_local_users()
+    st.session_state.user_db = local_users if local_users else {}
+
+def save_all_data():
+    if "user_db" in st.session_state and st.session_state.user_db:
+        save_local_users(st.session_state.user_db)
+
+# ===================================================================
 # ✅ AUTO-LOGIN FROM URL (?u=username)
 # ===================================================================
 if not st.session_state.logged_in:
     _url_user = st.query_params.get("u", None)
     if _url_user:
-        load_local_users_data = None
-        # Load users DB directly here so we can check
         try:
             if os.path.exists(get_local_users_file()):
                 with open(get_local_users_file(), "r") as f:
@@ -418,63 +447,6 @@ def get_letter_for_number(num):
     elif 31 <= num <= 45: return "ኤን"
     elif 46 <= num <= 60: return "ጂ"
     else: return "ኦ"
-
-# ===================================================================
-# LOCAL FILE STORAGE
-# ===================================================================
-def load_local_users():
-    try:
-        if os.path.exists(get_local_users_file()):
-            with open(get_local_users_file(), "r") as f:
-                return json.load(f)
-    except:
-        pass
-    return {}
-
-def save_local_users(users):
-    try:
-        with open(get_local_users_file(), "w") as f:
-            json.dump(users, f, indent=2)
-        return True
-    except:
-        return False
-
-def load_all_data():
-    local_users = load_local_users()
-    st.session_state.user_db = local_users if local_users else {}
-
-def save_all_data():
-    if "user_db" in st.session_state and st.session_state.user_db:
-        save_local_users(st.session_state.user_db)
-
-# ===================================================================
-# ✅ PERSIST ALL STATE — call this often
-# ===================================================================
-def persist_all_state():
-    """Force-save ALL in-memory state to disk. Safe to call anytime."""
-    try:
-        save_all_data()
-        save_game_state()
-        save_global_cards(
-            st.session_state.taken_cards,
-            st.session_state.card_owner,
-            st.session_state.timer_start_time,
-            st.session_state.card_selection_time
-        )
-        if st.session_state.winner_declared:
-            save_global_winners(
-                st.session_state.winners_list,
-                True,
-                st.session_state.called_numbers,
-                st.session_state.last_called_number,
-                st.session_state.auto_called_count,
-                True,
-                st.session_state.prize_distributed
-            )
-        return True
-    except Exception as e:
-        print(f"[persist_all_state] {e}")
-        return False
 
 # ===================================================================
 # GLOBAL CARD TRACKING
@@ -741,6 +713,8 @@ def verify_password(password, hashed):
 def login_user(username, password):
     username = username.strip()
     password = password.strip()
+    # ✅ ALWAYS read fresh from disk before checking
+    st.session_state.user_db = {}
     load_all_data()
     
     if username == "admin" and password == "admin123":
@@ -784,17 +758,29 @@ def register_user(username, password, name, phone=""):
         return False, "❌ Username must be at least 2 characters"
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
+    
+    # ✅ Always read fresh from disk before checking duplicates
+    st.session_state.user_db = {}
     load_all_data()
+    
     if username in st.session_state.user_db:
         return False, "❌ Username already exists"
+    
     st.session_state.user_db[username] = {
         "password": hash_password(password),
         "balance": 0.0, "role": "player",
         "name": name, "phone": phone,
         "game_played": 0, "wins": 0
     }
-    save_local_users(st.session_state.user_db)
+    saved_ok = save_local_users(st.session_state.user_db)
+    if not saved_ok:
+        # Roll back the in-memory change so we don't lie to the user
+        del st.session_state.user_db[username]
+        return False, "❌ Failed to save account. Please contact admin."
     load_all_data()
+    # Verify the user actually exists on disk
+    if username not in st.session_state.user_db:
+        return False, "❌ Registration saved but couldn't be verified. Try again."
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
@@ -809,6 +795,35 @@ def logout_user():
         st.query_params.clear()
     except:
         pass
+
+# ===================================================================
+# ✅ PERSIST ALL STATE — call this often
+# ===================================================================
+def persist_all_state():
+    """Force-save ALL in-memory state to disk. Safe to call anytime."""
+    try:
+        save_all_data()
+        save_game_state()
+        save_global_cards(
+            st.session_state.taken_cards,
+            st.session_state.card_owner,
+            st.session_state.timer_start_time,
+            st.session_state.card_selection_time
+        )
+        if st.session_state.winner_declared:
+            save_global_winners(
+                st.session_state.winners_list,
+                True,
+                st.session_state.called_numbers,
+                st.session_state.last_called_number,
+                st.session_state.auto_called_count,
+                True,
+                st.session_state.prize_distributed
+            )
+        return True
+    except Exception as e:
+        print(f"[persist_all_state] {e}")
+        return False
 
 # ===================================================================
 # ADMIN PANEL
@@ -1463,6 +1478,8 @@ if not st.session_state.logged_in:
             password = st.text_input("🔑 Password", type="password")
             submitted = st.form_submit_button("🎰 Login")
             if submitted and username and password:
+                # ✅ Force a completely fresh read from disk
+                st.session_state.user_db = {}
                 load_all_data()
                 success, message = login_user(username, password)
                 if success:
@@ -1584,9 +1601,6 @@ if st.session_state.game_started:
             st.session_state.clicked_numbers = set(_my)
             all_player_cards = _my
     
-    # ==============================================================
-    # ✅ WINNER DECLARED — celebration for EVERY player
-    # ==============================================================
     if st.session_state.winner_declared:
         sync_global_winners()
         
@@ -1684,9 +1698,6 @@ if st.session_state.game_started:
                 reset_for_next_round()
                 st.rerun()
     
-    # ==============================================================
-    # ✅ GAME RUNNING — board + player's own cards
-    # ==============================================================
     else:
         if st.session_state.current_user:
             _gt, _go, _, _ = load_global_cards()
