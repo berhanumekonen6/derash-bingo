@@ -1741,6 +1741,7 @@ if st.session_state.game_started:
     with board_col:
         display_master_board()
     with cards_col:
+            with cards_col:
         st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
         if all_player_cards:
             for cid in all_player_cards:
@@ -1748,6 +1749,17 @@ if st.session_state.game_started:
         else:
             st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
             st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+            # ✅ Resume button for non-playing players — lets them return to card selection
+            st.markdown("""
+            <div style="text-align:center;margin:15px 0 5px 0;">
+                <p style="color:#FFD700;font-size:1rem;font-weight:bold;margin:0;">
+                    ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
+                reset_for_next_round()
+                st.rerun()
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
