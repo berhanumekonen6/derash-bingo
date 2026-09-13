@@ -1245,11 +1245,6 @@ def display_master_board():
 # CARD SELECTION
 # ===================================================================
 def render_card_selection():
-    # 🛡️ Absolute guard: never render the grid once the game is running
-    if st.session_state.game_started or st.session_state.winner_declared:
-        st.rerun()
-        return
-
     if not st.session_state.game_started:
         _ft, _, _, _ = load_global_cards()
         _tn = max(len(_ft), len(st.session_state.clicked_numbers))
@@ -1648,6 +1643,21 @@ if st.session_state.game_started:
             st.session_state.clicked_numbers = set(_my)
             all_player_cards = _my
 
+    # ✅ GAME RUNNING — board + player's own cards
+    if st.session_state.current_user:
+        _gt, _go, _, _ = load_global_cards()
+        _my = []
+        for _cid_str, _owner in _go.items():
+            if _owner == st.session_state.current_user:
+                try:
+                    _my.append(int(_cid_str))
+                except (ValueError, TypeError):
+                    pass
+        if _my:
+            _my = sorted(set(_my))
+            st.session_state.clicked_numbers = set(_my)
+            all_player_cards = _my
+
     st.markdown(f"""
     <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
         🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
@@ -1674,30 +1684,15 @@ if st.session_state.game_started:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # Sync from shared state first
-    _ft, _, _, _ = load_global_cards()
-    _total = max(len(_ft), len(st.session_state.clicked_numbers))
-    _rem, _gstarted = get_global_remaining_time()
-
-    # If game already started globally → flip the flag and rerun (skip grid)
-    if _gstarted or (_total >= 3 and _rem <= 0):
-        mark_game_started_globally()
+    if st.session_state.card_selection_time <= 0 and len(st.session_state.taken_cards) >= 3:
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
         st.rerun()
-
-    # ONLY show the card grid if the game has NOT started yet
     if not st.session_state.game_started:
         st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
         render_card_selection()
+        # ✅ Tick the countdown every second
         time.sleep(1)
-        st.rerun()
-    else:
         st.rerun()
 
 # ===================================================================
