@@ -1096,21 +1096,36 @@ def check_for_winners():
         )
 
 def distribute_prizes(winners):
+    """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
+    # Step 1: check shared flag first so multiple clients don't double-pay
+    _, _, _, _, _, _, global_paid, _ = load_global_winners()
+    if global_paid:
+        st.session_state.prize_distributed = True
+        return
+
     if st.session_state.prize_distributed:
         return
+
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
+
+    # Step 2: credit every winner's balance equally
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
-            st.session_state.user_db[username]["balance"] = st.session_state.user_db[username].get("balance", 0) + prize_per_winner
-            st.session_state.user_db[username]["wins"] = st.session_state.user_db[username].get("wins", 0) + 1
-            st.session_state.user_db[username]["game_played"] = st.session_state.user_db[username].get("game_played", 0) + 1
+            st.session_state.user_db[username]["balance"] = \
+                st.session_state.user_db[username].get("balance", 0) + prize_per_winner
+            st.session_state.user_db[username]["wins"] = \
+                st.session_state.user_db[username].get("wins", 0) + 1
+            st.session_state.user_db[username]["game_played"] = \
+                st.session_state.user_db[username].get("game_played", 0) + 1
+
+    # Step 3: persist balances AND the paid flag together
     save_all_data()
     st.session_state.prize_distributed = True
     save_global_winners(
-        st.session_state.winners_list, True,
+        winners, True,
         st.session_state.called_numbers,
         st.session_state.last_called_number,
         st.session_state.auto_called_count,
