@@ -447,6 +447,7 @@ CARD_PRICE = 10
 PRIZE_PER_CARD = 8
 CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
+MIN_CARDS_TO_START = 3
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -582,12 +583,39 @@ def get_global_remaining_time():
     if remaining <= 0:
         file_taken, _, _, _ = load_global_cards()
         total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-        if total_now >= 3:
+        if total_now >= MIN_CARDS_TO_START:
             return 0, False
         else:
             reset_global_timer(60)
             return 60, False
     return int(math.ceil(remaining)), False
+
+# ===================================================================
+# ✅ GLOBAL START CONDITION — the single source of truth
+#    Returns (should_show_game, global_card_count, global_remaining_sec)
+#    should_show_game is True ONLY if:
+#       • at least 3 cards globally selected, AND
+#       • global timer has reached 0:00
+# ===================================================================
+def check_global_start_condition():
+    row = load_state_row(force=True)
+    global_taken = list(row.get("taken_cards") or [])
+    global_count = len(global_taken)
+
+    timer_start = row.get("timer_start_time", time.time())
+    duration = row.get("card_selection_time", 60)
+    game_started = bool(row.get("game_started", False))
+
+    elapsed = time.time() - timer_start
+    remaining = duration - elapsed
+
+    # Both conditions must be satisfied
+    if global_count >= MIN_CARDS_TO_START and remaining <= 0:
+        return True, global_count, 0
+    # Also honor an explicit server-side start flag
+    if game_started and global_count >= MIN_CARDS_TO_START:
+        return True, global_count, max(0, int(math.ceil(remaining)))
+    return False, global_count, max(0, int(math.ceil(remaining)))
 
 # ===================================================================
 # GLOBAL CALLER LOCK
@@ -745,8 +773,7 @@ def maybe_start_game():
         return
     file_taken, _, _, _ = load_global_cards()
     total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
-    min_required = 3
-    if total_now < min_required:
+    if total_now < MIN_CARDS_TO_START:
         return
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
@@ -1180,7 +1207,6 @@ def check_winning_pattern(card_data, called_numbers):
 # GAME FUNCTIONS
 # ===================================================================
 def check_for_winners(force_fresh=False):
-    """✅ Bulletproof winner detection."""
     if st.session_state.winner_declared and not force_fresh:
         return
 
@@ -1400,7 +1426,7 @@ def render_card_selection():
         _ft, _, _, _ = load_global_cards()
         _tn = max(len(_ft), len(st.session_state.clicked_numbers))
         _rem, _ = get_global_remaining_time()
-        if _tn >= 3 and _rem <= 0:
+        if _tn >= MIN_CARDS_TO_START and _rem <= 0:
             mark_game_started_globally()
             st.session_state.game_started = True
             st.session_state.auto_call_started = False
@@ -1433,7 +1459,7 @@ def render_card_selection():
     total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
     your_cards = len(st.session_state.clicked_numbers)
     available = 204 - total_selected
-    enough_cards = total_selected >= 3
+    enough_cards = total_selected >= MIN_CARDS_TO_START
 
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
 
@@ -1450,7 +1476,7 @@ def render_card_selection():
     """, unsafe_allow_html=True)
 
     if not enough_cards:
-        st.warning(f"⚠️ Waiting for {3 - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
+        st.warning(f"⚠️ Waiting for {MIN_CARDS_TO_START - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
     else:
         st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
 
@@ -1640,6 +1666,35 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
+# ✅ GLOBAL GATE — Display decision comes ONLY from the shared DB.
+#    The BINGO board + player cards are shown ONLY when:
+#      • at least 3 cards are globally selected, AND
+#      • the global timer has reached 0:00
+#    Otherwise, force every player back to card selection.
+# ===================================================================
+_show_game, _g_count, _g_remaining = check_global_start_condition()
+
+if not _show_game:
+    # Force local state to card-selection mode
+    if (st.session_state.game_started
+            or st.session_state.winner_declared
+            or st.session_state.winners_list):
+        st.session_state.game_started = False
+        st.session_state.winner_declared = False
+        st.session_state.game_over = False
+        st.session_state.winners_list = []
+        st.session_state.winner_acknowledged = False
+        st.session_state.selected_card = None
+        st.session_state.celebration_start_time = None
+        st.session_state.prize_distributed = False
+
+# ===================================================================
+# SYNC GLOBAL STATE
+# ===================================================================
+sync_global_cards()
+sync_global_winners()
+
+# ===================================================================
 # ✅ SESSION SELF-HEAL — runs FIRST so no st.stop() can trap the session
 # ===================================================================
 try:
@@ -1719,12 +1774,6 @@ try:
             st.session_state.winners_list = _db_winners
 except Exception:
     pass
-
-# ===================================================================
-# SYNC GLOBAL STATE
-# ===================================================================
-sync_global_cards()
-sync_global_winners()
 
 # ===================================================================
 # START THE GAME
@@ -1832,9 +1881,9 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.stop()
 
 # ===================================================================
-# ✅ PLAYER DISPLAY
+# ✅ PLAYER DISPLAY — only shown when the global gate allows it
 # ===================================================================
-if st.session_state.game_started:
+if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
 
     if st.session_state.current_user:
@@ -1853,7 +1902,7 @@ if st.session_state.game_started:
 
     st.markdown(f"""
     <div style="background:rgba(46,125,50,0.1);border:1px solid rgba(255,215,0,0.05);padding:8px 15px;border-radius:10px;text-align:center;margin-bottom:15px;font-size:0.9rem;color:rgba(255,255,255,0.8);">
-        🎯 Playing with {len(st.session_state.taken_cards)} Card(s) globally
+        🎯 Playing with {_g_count} Card(s) globally
         <span style="margin-left:12px;background:rgba(255,215,0,0.08);padding:2px 10px;border-radius:12px;">
             {len(st.session_state.called_numbers)}/75 Called
         </span>
@@ -1887,28 +1936,20 @@ if st.session_state.game_started:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    _ft, _, _, _ = load_global_cards()
-    _total = max(len(_ft), len(st.session_state.clicked_numbers))
-    _rem, _gstarted = get_global_remaining_time()
+    # ⛔ Not showing the game yet — force card selection.
+    #    The BINGO board and player cards will ONLY appear when
+    #    the global gate (3+ cards AND timer at 0:00) is satisfied.
+    st.session_state.game_started = False
+    st.session_state.winner_declared = False
+    st.session_state.game_over = False
 
-    if _gstarted or (_total >= 3 and _rem <= 0):
-        mark_game_started_globally()
-        st.session_state.game_started = True
-        st.session_state.auto_call_started = False
-        if len(st.session_state.clicked_numbers) > 0:
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0]
-        else:
-            st.session_state.selected_card = -1
-        save_game_state()
+    if st.session_state.game_started:
         st.rerun()
 
-    if not st.session_state.game_started:
-        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-        render_card_selection()
-        time.sleep(1)
-        st.rerun()
-    else:
-        st.rerun()
+    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
+    render_card_selection()
+    time.sleep(1)
+    st.rerun()
 
 # ===================================================================
 # FOOTER
@@ -1922,26 +1963,19 @@ st.markdown(f"""
 
 # ===================================================================
 # ✅ AUTO-CALL — stops the moment a winner exists
-#    ⚠️ CRITICAL: Always run winner detection BEFORE trying to call a new
-#    number, so a win is detected even after all 75 numbers are called.
 # ===================================================================
-if st.session_state.game_started and not st.session_state.winner_declared:
-    # First: re-check the DB for a winner that may have been declared elsewhere
+if st.session_state.game_started and not st.session_state.winner_declared and _show_game:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
     if _gd:
         sync_global_winners()
         st.rerun()
     else:
-        # ⚠️ ALWAYS run winner detection first — this is what fixes the
-        #    "board fully called but winner never declared" bug.
         sync_global_cards()
         check_for_winners(force_fresh=True)
 
-        # If the check just declared a winner, jump straight to the celebration
         if st.session_state.winner_declared:
             st.rerun()
 
-        # Otherwise try to call another number (will no-op if all 75 are called)
         just_called = try_global_call()
         load_game_state()
         if just_called is not None:
@@ -1955,7 +1989,6 @@ if st.session_state.game_started and not st.session_state.winner_declared:
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
-    maybe_start_game()
     time.sleep(0.5)
     st.rerun()
 else:
