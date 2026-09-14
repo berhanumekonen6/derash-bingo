@@ -19,7 +19,7 @@ BOT_TOKEN = "8976887607:AAHPLbIKWkSr0Yjbab_Ebhk6V--cRwNi4Eo"
 GAME_LINK = "https://tinyurl.com/4n6vkr6h"
 TELEBIRR_NUMBER = "0905527481"
 ADMIN_USERNAME = "@berhanumekonen6"
-BOT_USERNAME = "@DerashBingoPlayBot"
+BOT_USERNAME = "@DerashBingoPlayBot" 
 
 # === SUPABASE CONFIG (same values as your Streamlit app secrets) ===
 SUPABASE_URL = "https://uijiawsnwjxhkufyhnto.supabase.co"
