@@ -22,8 +22,8 @@ ADMIN_USERNAME = "@berhanumekonen6"
 BOT_USERNAME = "@DerashBingoPlayBot"
 
 # === SUPABASE CONFIG (same values as your Streamlit app secrets) ===
-SUPABASE_URL = "YOUR_SUPABASE_URL_HERE"
-SUPABASE_KEY = "YOUR_SUPABASE_SECRET_KEY_HERE"
+SUPABASE_URL = "https://uijiawsnwjxhkufyhnto.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpamlhd3Nud2p4aGt1ZnlobnRvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTI1NTg3NywiZXhwIjoyMTA0ODMxODc3fQ.20CQTfXHN0j9sm09TQv0dNilLU2a60v4rj4VvEzHQ8Y"
 
 # === ADMIN TELEGRAM CHAT ID ===
 # Get your numeric chat ID by messaging @userinfobot on Telegram
