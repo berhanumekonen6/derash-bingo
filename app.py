@@ -136,7 +136,6 @@ st.markdown("""
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
     .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
 
-    /* ✅ Smaller circles ONLY on display cards (player + winner cards) */
     .display-card-circle {
         display: inline-flex;
         align-items: center;
@@ -156,7 +155,6 @@ st.markdown("""
         .display-card-circle { width: 14px; height: 14px; font-size: 0.42rem; }
     }
 
-    /* ✅ Smaller BINGO master board numbers */
     .board-number {
         width: 22px;
         height: 22px;
@@ -1642,13 +1640,7 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# SYNC GLOBAL STATE
-# ===================================================================
-sync_global_cards()
-sync_global_winners()
-
-# ===================================================================
-# ✅ SESSION SELF-HEAL — force local state to match the shared DB row
+# ✅ SESSION SELF-HEAL — runs FIRST so no st.stop() can trap the session
 # ===================================================================
 try:
     _db_row = load_state_row(force=True)
@@ -1657,8 +1649,9 @@ try:
     _db_taken = list(_db_row.get("taken_cards") or [])
     _db_called = set(_db_row.get("called_numbers") or [])
     _db_owner = dict(_db_row.get("card_owner") or {})
+    _db_winners = _db_row.get("winners_list") or []
 
-    # CASE 1: DB says NOT started and NO winner -> everyone must be in card selection
+    # CASE 1: DB says NO game and NO winner → everyone must be in card selection
     if (not _db_gs) and (not _db_wd):
         if (st.session_state.get("game_started")
                 or st.session_state.get("winner_declared")
@@ -1692,28 +1685,46 @@ try:
                 st.session_state.clicked_numbers = set()
             st.rerun()
 
-    # CASE 2: DB says started but NO winner -> mirrors must reflect an in-progress game
+    # CASE 2: DB says started but NO winner → mirrors reflect in-progress game
     elif _db_gs and not _db_wd:
         st.session_state.game_started = True
         st.session_state.winner_declared = False
         st.session_state.game_over = False
         st.session_state.winners_list = []
+        st.session_state.winner_acknowledged = False
         if _db_called:
             st.session_state.called_numbers = _db_called
         st.session_state.taken_cards = _db_taken
         st.session_state.card_owner = _db_owner
+        _cu = st.session_state.current_user
+        if _cu:
+            _mine = set()
+            for _cid_s, _own in _db_owner.items():
+                if _own == _cu:
+                    try:
+                        _mine.add(int(_cid_s))
+                    except (ValueError, TypeError):
+                        pass
+            st.session_state.clicked_numbers = _mine
 
-    # CASE 3: DB says winner exists -> force celebration on every session
+    # CASE 3: DB says winner exists → force celebration on every session
     elif _db_wd:
         if not st.session_state.get("winner_declared"):
             st.session_state.winner_declared = True
             st.session_state.game_started = True
             st.session_state.game_over = True
+            st.session_state.winner_acknowledged = False
             if _db_called:
                 st.session_state.called_numbers = _db_called
-            st.session_state.winners_list = _db_row.get("winners_list") or []
+            st.session_state.winners_list = _db_winners
 except Exception:
     pass
+
+# ===================================================================
+# SYNC GLOBAL STATE
+# ===================================================================
+sync_global_cards()
+sync_global_winners()
 
 # ===================================================================
 # START THE GAME
