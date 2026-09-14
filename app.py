@@ -5,7 +5,7 @@ import time
 import hashlib
 import json
 import math
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta, timezone
 from supabase import create_client
 
 @st.cache_resource
@@ -522,7 +522,7 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
-# ✅ FAST USER BALANCE UPDATE
+# FAST USER BALANCE UPDATE
 # ===================================================================
 def update_user_balance(username, new_balance):
     try:
@@ -535,7 +535,7 @@ def update_user_balance(username, new_balance):
         return False
 
 # ===================================================================
-# ✅ FAST CARD SELECT — single atomic state write + single user write
+# FAST CARD SELECT
 # ===================================================================
 def fast_select_card(card_num, current_balance):
     row = load_state_row(force=True)
@@ -621,7 +621,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
-# ✅ GLOBAL TIMER — whole seconds only, driven by shared DB timestamp
+# GLOBAL TIMER
 # ===================================================================
 def load_global_timer():
     row = load_state_row()
@@ -649,15 +649,6 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    """
-    ✅ Returns WHOLE seconds remaining as an integer, driven by the shared DB
-    timer_start_time.  Every player sees the same countdown.
-    - Returns (seconds_remaining, game_started_flag)
-    - If the timer has expired AND 3+ cards are selected globally → returns (0, False)
-      and the caller should start the game.
-    - If the timer has expired but fewer than 3 cards are selected globally
-      → resets the shared timer to 60 and returns (60, False).
-    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -666,28 +657,20 @@ def get_global_remaining_time():
     remaining = duration - elapsed
 
     if remaining <= 0:
-        # Timer expired — check global card count
         file_taken, _, _, _ = load_global_cards()
         total_now = len(file_taken)
         if total_now >= MIN_CARDS_TO_START:
             return 0, False
         else:
-            # Reset to 1:00 and keep counting
             reset_global_timer(CARD_SELECTION_DURATION)
             return CARD_SELECTION_DURATION, False
 
     return int(math.ceil(remaining)), False
 
 # ===================================================================
-# ✅ GLOBAL START CONDITION
+# GLOBAL START CONDITION
 # ===================================================================
 def check_global_start_condition():
-    """
-    Returns (should_show_game, global_count, remaining_seconds).
-    should_show_game is True ONLY when:
-      • at least 3 cards are globally selected, AND
-      • global timer has reached 0:00 (OR game_started flag is set)
-    """
     row = load_state_row(force=True)
     global_taken = list(row.get("taken_cards") or [])
     global_count = len(global_taken)
@@ -953,94 +936,285 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL
+# ADMIN PANEL — WITH DEPOSIT / WITHDRAW APPROVALS
 # ===================================================================
+BOT_USERNAME_DISPLAY = "@DerashBingoPlayBot"
+
+def load_transactions(status_filter=None, tx_type=None):
+    try:
+        q = supabase.table("transactions").select("*").order("created_at", desc=True)
+        if status_filter:
+            q = q.eq("status", status_filter)
+        if tx_type:
+            q = q.eq("type", tx_type)
+        res = q.execute()
+        return res.data or []
+    except Exception as e:
+        st.warning(f"⚠️ Could not load transactions: {e}")
+        return []
+
+
+def update_transaction(tx_id, patch):
+    try:
+        supabase.table("transactions").update(patch).eq("id", tx_id).execute()
+        return True
+    except Exception as e:
+        st.error(f"⚠️ Update failed: {e}")
+        return False
+
+
+def approve_transaction(tx):
+    username = tx["username"]
+    amount = float(tx["amount"])
+    tx_type = tx["type"]
+
+    load_all_data()
+    if username not in st.session_state.user_db:
+        st.error(f"❌ User '{username}' not found in database.")
+        return False
+
+    current_balance = float(st.session_state.user_db[username].get("balance", 0))
+
+    if tx_type == "deposit":
+        new_balance = current_balance + amount
+    else:
+        if current_balance < amount:
+            st.error(
+                f"❌ Insufficient balance for {username}. "
+                f"Balance: {current_balance:.2f} ETB, Requested: {amount:.2f} ETB"
+            )
+            return False
+        new_balance = current_balance - amount
+
+    if not update_user_balance(username, new_balance):
+        st.error("❌ Failed to update user balance.")
+        return False
+
+    ok = update_transaction(tx["id"], {
+        "status": "approved",
+        "processed_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return ok
+
+
+def reject_transaction(tx, note=""):
+    ok = update_transaction(tx["id"], {
+        "status": "rejected",
+        "admin_note": note or "Rejected by admin",
+        "processed_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return ok
+
+
 def admin_panel():
     if st.session_state.get("admin_celebration_msg"):
         msg = st.session_state["admin_celebration_msg"]
         st.success(msg)
         st.balloons()
-        st.markdown("""
-        <div style="text-align:center;padding:10px 0;">
-            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
-            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
-            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">💰</span>
-            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">🏆</span>
-            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">✨</span>
-        </div>
-        """, unsafe_allow_html=True)
         st.session_state["admin_celebration_msg"] = None
 
     st.markdown("""
     <div class="glass-container">
         <h3 style="color:#FFD700;text-align:center;">🔧 Admin Panel</h3>
-        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances. No board or card list shown here.</p>
+        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage users, deposits & withdrawals.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    users = [u for u in st.session_state.user_db.keys() if u != "admin"]
-    if not users:
-        st.info("No users registered yet.")
-        return
+    tab_users, tab_deposits, tab_withdrawals, tab_history = st.tabs([
+        "👥 Users", "💰 Deposits", "💸 Withdrawals", "📜 History"
+    ])
 
-    selected_user = st.selectbox("Select User", users)
-    if selected_user:
-        ud = st.session_state.user_db.get(selected_user, {})
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,165,0,0.05));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.15);margin-bottom:15px;">
-            <p style="margin:0;font-weight:600;color:#FFD700;">👤 {ud.get('name', selected_user)}</p>
-            <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 {ud.get('phone', 'N/A')}</p>
-            <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {ud.get('balance', 0):.2f} ETB</p>
-            <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {ud.get('game_played', 0)} | 🏆 Wins: {ud.get('wins', 0)}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # ============================
+    # TAB 1: USERS
+    # ============================
+    with tab_users:
+        load_all_data()
+        users = [u for u in st.session_state.user_db.keys() if u != "admin"]
+        if not users:
+            st.info("No users registered yet.")
+        else:
+            selected_user = st.selectbox("Select User", users, key="admin_user_select")
+            if selected_user:
+                ud = st.session_state.user_db.get(selected_user, {})
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,165,0,0.05));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.15);margin-bottom:15px;">
+                    <p style="margin:0;font-weight:600;color:#FFD700;">👤 {ud.get('name', selected_user)}</p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 {ud.get('phone', 'N/A')}</p>
+                    <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {ud.get('balance', 0):.2f} ETB</p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {ud.get('game_played', 0)} | 🏆 Wins: {ud.get('wins', 0)}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-        custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100)
-        c1, c2, c3 = st.columns(3)
+                custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100, key="admin_amt")
+                c1, c2, c3 = st.columns(3)
 
-        with c1:
-            if st.button("➕ Add", use_container_width=True):
-                new_balance = ud.get("balance", 0) + custom_amount
-                st.session_state.user_db[selected_user]["balance"] = new_balance
-                save_local_users(st.session_state.user_db)
-                st.session_state["admin_celebration_msg"] = (
-                    f"🎉 ለ {selected_user} {custom_amount:.2f} ETB ተጨምሯል! "
-                    f"አዲስ ሂሳብ: {new_balance:.2f} ETB 💰🎊"
-                )
-                st.rerun()
+                with c1:
+                    if st.button("➕ Add", use_container_width=True, key="admin_add"):
+                        new_balance = ud.get("balance", 0) + custom_amount
+                        st.session_state.user_db[selected_user]["balance"] = new_balance
+                        save_local_users(st.session_state.user_db)
+                        st.session_state["admin_celebration_msg"] = (
+                            f"🎉 ለ {selected_user} {custom_amount:.2f} ETB ተጨምሯል! አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                        )
+                        st.rerun()
 
-        with c2:
-            if st.button("💰 Set", use_container_width=True):
-                st.session_state.user_db[selected_user]["balance"] = custom_amount
-                save_local_users(st.session_state.user_db)
-                st.session_state["admin_celebration_msg"] = (
-                    f"🎉 የ {selected_user} ሂሳብ {custom_amount:.2f} ETB ሆኖ ተቀናብሯል! 💰🎊"
-                )
-                st.rerun()
+                with c2:
+                    if st.button("💰 Set", use_container_width=True, key="admin_set"):
+                        st.session_state.user_db[selected_user]["balance"] = custom_amount
+                        save_local_users(st.session_state.user_db)
+                        st.session_state["admin_celebration_msg"] = (
+                            f"🎉 የ {selected_user} ሂሳብ {custom_amount:.2f} ETB ሆኖ ተቀናብሯል!"
+                        )
+                        st.rerun()
 
-        with c3:
-            if st.button("➖ Deduct", use_container_width=True):
-                cur = ud.get("balance", 0)
-                if cur >= custom_amount:
-                    new_balance = cur - custom_amount
-                    st.session_state.user_db[selected_user]["balance"] = new_balance
-                    save_local_users(st.session_state.user_db)
-                    st.session_state["admin_celebration_msg"] = (
-                        f"✅ ከ {selected_user} {custom_amount:.2f} ETB ተቀንሷል! "
-                        f"አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                with c3:
+                    if st.button("➖ Deduct", use_container_width=True, key="admin_deduct"):
+                        cur = ud.get("balance", 0)
+                        if cur >= custom_amount:
+                            new_balance = cur - custom_amount
+                            st.session_state.user_db[selected_user]["balance"] = new_balance
+                            save_local_users(st.session_state.user_db)
+                            st.session_state["admin_celebration_msg"] = (
+                                f"✅ ከ {selected_user} {custom_amount:.2f} ETB ተቀንሷል! አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                            )
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ በቂ ሂሳብ የለም")
+
+            st.markdown("---")
+            total_users = len(users)
+            total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
+            st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
+
+    # ============================
+    # TAB 2: DEPOSITS
+    # ============================
+    with tab_deposits:
+        st.markdown("### 💰 Pending Deposit Requests")
+        deposits = load_transactions(status_filter="pending", tx_type="deposit")
+
+        if not deposits:
+            st.info("✅ No pending deposit requests.")
+        else:
+            for tx in deposits:
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,rgba(76,175,80,0.12),rgba(76,175,80,0.05));
+                            padding:15px;border-radius:12px;border:1px solid rgba(76,175,80,0.25);margin-bottom:6px;">
+                    <p style="margin:0;font-weight:bold;color:#4CAF50;font-size:1.1rem;">
+                        💰 {float(tx['amount']):.2f} ETB — Deposit
+                    </p>
+                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{tx['username']}</b></p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
+                        📱 Telegram: {tx.get('telegram_name','N/A')} (ID: {tx.get('telegram_id','')})
+                    </p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
+                        📅 {tx.get('created_at','')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if tx.get("screenshot_url"):
+                    st.caption(f"🖼 Telegram file_id: `{tx['screenshot_url']}`")
+                    st.markdown(
+                        f"👉 [Open bot chat to view screenshot](https://t.me/{BOT_USERNAME_DISPLAY.replace('@','')})"
                     )
-                    st.rerun()
-                else:
-                    st.warning("⚠️ በቂ ሂሳብ የለም")
 
-    st.markdown("---")
-    st.markdown("### 📊 System Stats")
-    total_users = len([u for u in st.session_state.user_db.keys() if u != "admin"])
-    total_balance = sum(
-        float(d.get("balance", 0))
-        for u, d in st.session_state.user_db.items() if u != "admin"
-    )
-    st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(f"✅ Approve #{tx['id']}", key=f"app_dep_{tx['id']}", use_container_width=True):
+                        if approve_transaction(tx):
+                            st.success(f"✅ Deposit #{tx['id']} approved! {tx['username']} +{float(tx['amount']):.2f} ETB")
+                            st.balloons()
+                            time.sleep(1.2)
+                            st.rerun()
+                with col2:
+                    if st.button(f"❌ Reject #{tx['id']}", key=f"rej_dep_{tx['id']}", use_container_width=True):
+                        if reject_transaction(tx, "Deposit rejected by admin"):
+                            st.warning(f"❌ Deposit #{tx['id']} rejected.")
+                            time.sleep(0.8)
+                            st.rerun()
+                st.markdown("---")
+
+    # ============================
+    # TAB 3: WITHDRAWALS
+    # ============================
+    with tab_withdrawals:
+        st.markdown("### 💸 Pending Withdrawal Requests")
+        withdrawals = load_transactions(status_filter="pending", tx_type="withdraw")
+
+        if not withdrawals:
+            st.info("✅ No pending withdrawal requests.")
+        else:
+            for tx in withdrawals:
+                load_all_data()
+                user_info = st.session_state.user_db.get(tx["username"], {})
+                cur_balance = float(user_info.get("balance", 0))
+                amount = float(tx["amount"])
+                enough = cur_balance >= amount
+                color = "#FF9800" if enough else "#F44336"
+
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,rgba(255,152,0,0.12),rgba(255,152,0,0.05));
+                            padding:15px;border-radius:12px;border:1px solid {color}44;margin-bottom:6px;">
+                    <p style="margin:0;font-weight:bold;color:{color};font-size:1.1rem;">
+                        💸 {amount:.2f} ETB — Withdrawal
+                    </p>
+                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{tx['username']}</b></p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
+                        📞 Phone: {tx.get('phone','')} | 📱 TG: {tx.get('telegram_name','')}
+                    </p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.6);font-size:0.85rem;">
+                        💼 Current balance: <b>{cur_balance:.2f} ETB</b>
+                        {"✅ sufficient" if enough else "❌ INSUFFICIENT"}
+                    </p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
+                        📅 {tx.get('created_at','')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(f"✅ Approve #{tx['id']}", key=f"app_wd_{tx['id']}", use_container_width=True):
+                        if approve_transaction(tx):
+                            st.success(f"✅ Withdrawal #{tx['id']} approved! {tx['username']} -{amount:.2f} ETB")
+                            time.sleep(1.0)
+                            st.rerun()
+                with col2:
+                    if st.button(f"❌ Reject #{tx['id']}", key=f"rej_wd_{tx['id']}", use_container_width=True):
+                        if reject_transaction(tx, "Withdrawal rejected by admin"):
+                            st.warning(f"❌ Withdrawal #{tx['id']} rejected.")
+                            time.sleep(0.8)
+                            st.rerun()
+                st.markdown("---")
+
+    # ============================
+    # TAB 4: HISTORY
+    # ============================
+    with tab_history:
+        st.markdown("### 📜 Processed Transactions")
+        approved = load_transactions(status_filter="approved")
+        rejected = load_transactions(status_filter="rejected")
+        history = approved + rejected
+
+        if not history:
+            st.info("No processed transactions yet.")
+        else:
+            for tx in history[:100]:
+                icon = "✅" if tx["status"] == "approved" else "❌"
+                tcolor = "#4CAF50" if tx["status"] == "approved" else "#F44336"
+                st.markdown(f"""
+                <div style="background:rgba(0,0,0,0.2);padding:10px 14px;border-radius:10px;
+                            border-left:4px solid {tcolor};margin-bottom:6px;">
+                    <p style="margin:0;color:{tcolor};font-weight:bold;">
+                        {icon} {tx['type'].title()} — {float(tx['amount']):.2f} ETB
+                    </p>
+                    <p style="margin:3px 0;color:rgba(255,255,255,0.75);font-size:0.85rem;">
+                        👤 {tx['username']} | 📅 {tx.get('processed_at') or tx.get('created_at','')}
+                    </p>
+                    {f'<p style="margin:3px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">📝 {tx.get("admin_note","")}</p>' if tx.get("admin_note") else ""}
+                </div>
+                """, unsafe_allow_html=True)
 
 # ===================================================================
 # ALL 204 BINGO CARDS
@@ -1727,7 +1901,7 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# ✅ GLOBAL GATE — Display decision comes ONLY from the shared DB
+# GLOBAL GATE
 # ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
@@ -1834,7 +2008,7 @@ except Exception:
 maybe_start_game()
 
 # ===================================================================
-# ✅ GLOBAL WINNER OVERLAY
+# GLOBAL WINNER OVERLAY
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
@@ -1934,7 +2108,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.stop()
 
 # ===================================================================
-# ✅ PLAYER DISPLAY — only shown when the global gate allows it
+# PLAYER DISPLAY
 # ===================================================================
 if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
@@ -1965,12 +2139,9 @@ if st.session_state.game_started and _show_game:
     </div>
     """, unsafe_allow_html=True)
 
-       # ✅ Board on the left, player's cards on the right.
-    #    No card list is rendered below the board.
     board_col, cards_col = st.columns([2, 1], gap="large")
 
     with board_col:
-        # ✅ Only the BINGO board is rendered here.
         display_master_board()
 
     with cards_col:
@@ -1992,12 +2163,9 @@ if st.session_state.game_started and _show_game:
                 reset_for_next_round()
                 st.rerun()
 
-    # ✅ The auto-call status line — kept as a small info bar.
-    #    No card list is rendered here.
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ⛔ Not showing the game — force card selection.
     st.session_state.game_started = False
     st.session_state.winner_declared = False
     st.session_state.game_over = False
@@ -2018,7 +2186,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists
+# AUTO-CALL
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared and _show_game:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
@@ -2040,7 +2208,7 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         st.rerun()
 
 # ===================================================================
-# ✅ AUTO-RERUN
+# AUTO-RERUN
 # ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
