@@ -2139,18 +2139,29 @@ if st.session_state.winner_declared and st.session_state.game_started:
             ⏳ በራስ-ሰር ይመለሳል: <span style="font-size:1.5rem;color:#FFD700;">{seconds_left}</span> ሰከንድ
         </p>
         <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:4px 0 0 0;font-style:italic;">
-            ⏳ Auto-resume in {seconds_left}s (or click now to resume immediately)
+            ⏳ Auto-resume in {seconds_left}s
         </p>
     </div>
     """, unsafe_allow_html=True)
 
+    # ============================================================
+    # ✅ 40-SECOND CELEBRATION LOCK — Resume button disabled until timer hits 0
+    # ============================================================
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
-            st.session_state.winner_acknowledged = True
-            st.session_state.winner_screen_shown_at = None
-            reset_for_next_round()
-            st.rerun()
+        if seconds_left > 0:
+            st.button(
+                f"🎉 በድግሜ እየተከበረ ነው... ({seconds_left}s)",
+                use_container_width=True,
+                key="global_resume_btn_locked",
+                disabled=True,
+            )
+        else:
+            if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
+                st.session_state.winner_acknowledged = True
+                st.session_state.winner_screen_shown_at = None
+                reset_for_next_round()
+                st.rerun()
 
     time.sleep(1)
     st.rerun()
