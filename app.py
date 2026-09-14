@@ -305,6 +305,7 @@ def init_session_state():
         'admin_celebration_msg': None,
         '_local_balance': None,
         'winner_screen_shown_at': None,
+        'celebration_round': 1,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -810,6 +811,7 @@ def reset_for_next_round():
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
     st.session_state.winner_screen_shown_at = None
+    st.session_state.celebration_round = 1
 
 # ===================================================================
 # SYNC GLOBAL CARDS
@@ -1540,6 +1542,8 @@ def check_for_winners(force_fresh=False):
         st.session_state.game_over = True
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
+        st.session_state.celebration_round = 1
+        st.session_state.winner_screen_shown_at = None
 
         distribute_prizes(winners_found)
 
@@ -2037,21 +2041,30 @@ if st.session_state.winner_declared and st.session_state.game_started:
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
     # ============================================================
-    # ✅ AUTO-RESUME TIMER — 60 seconds countdown
+    # ✅ AUTO-RESUME TIMER — 40 seconds × 3 rounds celebration
     # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
 
     elapsed_w = time.time() - st.session_state.winner_screen_shown_at
-    remaining_w = 60 - elapsed_w
+    remaining_w = 40 - elapsed_w
 
     if remaining_w <= 0:
-        st.session_state.winner_acknowledged = True
-        st.session_state.winner_screen_shown_at = None
-        reset_for_next_round()
-        st.rerun()
+        current_round_check = st.session_state.get("celebration_round", 1)
+        if current_round_check < 3:
+            st.session_state.celebration_round = current_round_check + 1
+            st.session_state.winner_screen_shown_at = time.time()
+            st.session_state.celebration_start_time = time.time()
+            st.rerun()
+        else:
+            st.session_state.winner_acknowledged = True
+            st.session_state.winner_screen_shown_at = None
+            st.session_state.celebration_round = 1
+            reset_for_next_round()
+            st.rerun()
 
     seconds_left = int(math.ceil(remaining_w))
+    current_round = st.session_state.get("celebration_round", 1)
 
     winning_patterns = []
     winner_names = []
@@ -2136,30 +2149,33 @@ if st.session_state.winner_declared and st.session_state.game_started:
         </p>
         <p style="color:#FF9800;font-size:1rem;font-weight:bold;margin:10px 0 0 0;
                   animation: celebrationPulse 1s ease-in-out infinite alternate;">
-            ⏳ በራስ-ሰር ይመለሳል: <span style="font-size:1.5rem;color:#FFD700;">{seconds_left}</span> ሰከንድ
+            🎉 የክብረ በዓል ዙር: <span style="font-size:1.5rem;color:#FFD700;">{current_round}/3</span>
+            &nbsp;|&nbsp;
+            ⏳ ቀጣይ ዙር: <span style="font-size:1.3rem;color:#FFD700;">{seconds_left}</span> ሰከንድ
         </p>
         <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:4px 0 0 0;font-style:italic;">
-            ⏳ Auto-resume in {seconds_left}s
+            🎉 Celebration Round {current_round}/3 — next in {seconds_left}s
         </p>
     </div>
     """, unsafe_allow_html=True)
 
     # ============================================================
-    # ✅ 40-SECOND CELEBRATION LOCK — Resume button disabled until timer hits 0
+    # ✅ 3-ROUND CELEBRATION LOCK — Resume button disabled until all rounds done
     # ============================================================
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         if seconds_left > 0:
             st.button(
-                f"🎉 በድግሜ እየተከበረ ነው... ({seconds_left}s)",
+                f"🎉 ክብረ በዓል ዙር {current_round}/3 — ({seconds_left}s)",
                 use_container_width=True,
-                key="global_resume_btn_locked",
+                key=f"global_resume_btn_locked_{current_round}",
                 disabled=True,
             )
         else:
             if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
                 st.session_state.winner_acknowledged = True
                 st.session_state.winner_screen_shown_at = None
+                st.session_state.celebration_round = 1
                 reset_for_next_round()
                 st.rerun()
 
