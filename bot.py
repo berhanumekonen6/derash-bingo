@@ -510,7 +510,7 @@ async def withdraw_phone_input(update: Update, context: ContextTypes.DEFAULT_TYP
 💰 Amount: {amount:.2f} ETB
 
 ⏳ Admin will verify and process shortly.
-💡 Check balance after 24 hours.
+💡 Refresh your page & check balance after 5 minutes.
 
 ✅ Thank you!
 """,
