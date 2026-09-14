@@ -1922,13 +1922,26 @@ st.markdown(f"""
 
 # ===================================================================
 # ✅ AUTO-CALL — stops the moment a winner exists
+#    ⚠️ CRITICAL: Always run winner detection BEFORE trying to call a new
+#    number, so a win is detected even after all 75 numbers are called.
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
+    # First: re-check the DB for a winner that may have been declared elsewhere
     _, _gd, _, _, _, _, _, _ = load_global_winners()
     if _gd:
         sync_global_winners()
         st.rerun()
     else:
+        # ⚠️ ALWAYS run winner detection first — this is what fixes the
+        #    "board fully called but winner never declared" bug.
+        sync_global_cards()
+        check_for_winners(force_fresh=True)
+
+        # If the check just declared a winner, jump straight to the celebration
+        if st.session_state.winner_declared:
+            st.rerun()
+
+        # Otherwise try to call another number (will no-op if all 75 are called)
         just_called = try_global_call()
         load_game_state()
         if just_called is not None:
