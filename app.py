@@ -122,7 +122,7 @@ st.markdown("""
         border: none !important;
         border-radius: 12px !important;
         padding: 10px 20px !important;
-        transition: transform 0.1s ease, box-shadow 0.15s ease !important;
+        transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease !important;
         box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
     }
     .stButton > button:hover {
@@ -130,7 +130,7 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
     }
     .stButton > button:active {
-        transform: translateY(0px) scale(0.97) !important;
+        transform: translateY(0px) scale(0.95) !important;
         box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
     }
     .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
@@ -303,6 +303,7 @@ def init_session_state():
         '_state_cache_at': 0.0,
         '_state_err_count': 0,
         'admin_celebration_msg': None,
+        '_local_balance': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -311,7 +312,7 @@ def init_session_state():
 init_session_state()
 
 # ===================================================================
-# SUPABASE — GAME STATE (single row, id=1)
+# SUPABASE — GAME STATE
 # ===================================================================
 def _default_state():
     return {
@@ -335,7 +336,6 @@ def _default_state():
     }
 
 def load_state_row(force=False):
-    """✅ Silent, resilient read of the shared game_state row."""
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
@@ -374,7 +374,6 @@ def load_state_row(force=False):
     return _default_state()
 
 def update_state(patch: dict):
-    """✅ Silent write. Invalidates the read cache."""
     for attempt in range(2):
         try:
             supabase.table("game_state").update(patch).eq("id", 1).execute()
@@ -421,7 +420,6 @@ def load_global_winners():
     )
 
 def sync_global_winners():
-    """✅ Sync winner state — skip if this player already acknowledged."""
     if st.session_state.get("winner_acknowledged", False):
         return False
     
@@ -448,6 +446,7 @@ PRIZE_PER_CARD = 8
 CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
+CARD_SELECTION_DURATION = 60
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -523,6 +522,81 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
+# ✅ FAST USER BALANCE UPDATE
+# ===================================================================
+def update_user_balance(username, new_balance):
+    try:
+        supabase.table("users").update({"balance": float(new_balance)}).eq("username", username).execute()
+        if username in st.session_state.user_db:
+            st.session_state.user_db[username]["balance"] = float(new_balance)
+        st.session_state["_local_balance"] = float(new_balance)
+        return True
+    except Exception:
+        return False
+
+# ===================================================================
+# ✅ FAST CARD SELECT — single atomic state write + single user write
+# ===================================================================
+def fast_select_card(card_num, current_balance):
+    row = load_state_row(force=True)
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+    user = st.session_state.current_user
+
+    if str(card_num) in owner and owner[str(card_num)] != user:
+        return False, "taken"
+    if card_num in taken and owner.get(str(card_num)) != user:
+        return False, "taken"
+    user_card_count = sum(1 for o in owner.values() if o == user)
+    if user_card_count >= MAX_CARDS_PER_PLAYER:
+        return False, "max"
+    if current_balance < CARD_PRICE:
+        return False, "balance"
+
+    if card_num not in taken:
+        taken.append(card_num)
+    owner[str(card_num)] = user
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+    update_user_balance(user, current_balance - CARD_PRICE)
+
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+    st.session_state.clicked_numbers = set(
+        int(k) for k, v in owner.items() if v == user
+    )
+    return True, "selected"
+
+def fast_deselect_card(card_num, current_balance):
+    row = load_state_row(force=True)
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+    user = st.session_state.current_user
+
+    if str(card_num) not in owner or owner[str(card_num)] != user:
+        return False, "not_owner"
+
+    if card_num in taken:
+        taken.remove(card_num)
+    del owner[str(card_num)]
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+    update_user_balance(user, current_balance + CARD_PRICE)
+
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+    st.session_state.clicked_numbers = set(
+        int(k) for k, v in owner.items() if v == user
+    )
+    return True, "deselected"
+
+# ===================================================================
 # GLOBAL CARD TRACKING
 # ===================================================================
 def load_global_cards():
@@ -531,7 +605,7 @@ def load_global_cards():
         row.get("taken_cards") or [],
         row.get("card_owner") or {},
         row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", 60),
+        row.get("card_selection_time", CARD_SELECTION_DURATION),
     )
 
 def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selection_time=None):
@@ -547,17 +621,17 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
-# GLOBAL TIMER
+# ✅ GLOBAL TIMER — whole seconds only, driven by shared DB timestamp
 # ===================================================================
 def load_global_timer():
     row = load_state_row()
     return (
         row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", 60),
+        row.get("card_selection_time", CARD_SELECTION_DURATION),
         row.get("game_started", False),
     )
 
-def save_global_timer(timer_start, duration=60, game_started=False):
+def save_global_timer(timer_start, duration=CARD_SELECTION_DURATION, game_started=False):
     update_state({
         "timer_start_time": timer_start,
         "card_selection_time": duration,
@@ -565,7 +639,7 @@ def save_global_timer(timer_start, duration=60, game_started=False):
     })
     return True
 
-def reset_global_timer(duration=60):
+def reset_global_timer(duration=CARD_SELECTION_DURATION):
     new_start = time.time()
     save_global_timer(new_start, duration, False)
     return new_start
@@ -575,44 +649,58 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
+    """
+    ✅ Returns WHOLE seconds remaining as an integer, driven by the shared DB
+    timer_start_time.  Every player sees the same countdown.
+    - Returns (seconds_remaining, game_started_flag)
+    - If the timer has expired AND 3+ cards are selected globally → returns (0, False)
+      and the caller should start the game.
+    - If the timer has expired but fewer than 3 cards are selected globally
+      → resets the shared timer to 60 and returns (60, False).
+    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
+
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
+
     if remaining <= 0:
+        # Timer expired — check global card count
         file_taken, _, _, _ = load_global_cards()
-        total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
+        total_now = len(file_taken)
         if total_now >= MIN_CARDS_TO_START:
             return 0, False
         else:
-            reset_global_timer(60)
-            return 60, False
+            # Reset to 1:00 and keep counting
+            reset_global_timer(CARD_SELECTION_DURATION)
+            return CARD_SELECTION_DURATION, False
+
     return int(math.ceil(remaining)), False
 
 # ===================================================================
-# ✅ GLOBAL START CONDITION — the single source of truth
-#    Returns (should_show_game, global_card_count, global_remaining_sec)
-#    should_show_game is True ONLY if:
-#       • at least 3 cards globally selected, AND
-#       • global timer has reached 0:00
+# ✅ GLOBAL START CONDITION
 # ===================================================================
 def check_global_start_condition():
+    """
+    Returns (should_show_game, global_count, remaining_seconds).
+    should_show_game is True ONLY when:
+      • at least 3 cards are globally selected, AND
+      • global timer has reached 0:00 (OR game_started flag is set)
+    """
     row = load_state_row(force=True)
     global_taken = list(row.get("taken_cards") or [])
     global_count = len(global_taken)
 
     timer_start = row.get("timer_start_time", time.time())
-    duration = row.get("card_selection_time", 60)
+    duration = row.get("card_selection_time", CARD_SELECTION_DURATION)
     game_started = bool(row.get("game_started", False))
 
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
 
-    # Both conditions must be satisfied
-    if global_count >= MIN_CARDS_TO_START and remaining <= 0:
+    if global_count >= MIN_CARDS_TO_START and (remaining <= 0 or game_started):
         return True, global_count, 0
-    # Also honor an explicit server-side start flag
     if game_started and global_count >= MIN_CARDS_TO_START:
         return True, global_count, max(0, int(math.ceil(remaining)))
     return False, global_count, max(0, int(math.ceil(remaining)))
@@ -715,7 +803,7 @@ def reset_for_next_round():
         "taken_cards": [],
         "card_owner": {},
         "timer_start_time": time.time(),
-        "card_selection_time": 60,
+        "card_selection_time": CARD_SELECTION_DURATION,
     })
 
     st.session_state.selected_card = None
@@ -729,7 +817,7 @@ def reset_for_next_round():
     st.session_state.game_over = False
     st.session_state.winners_list = []
     st.session_state.prize_distributed = False
-    st.session_state.card_selection_time = 60
+    st.session_state.card_selection_time = CARD_SELECTION_DURATION
     st.session_state.timer_start_time = time.time()
     st.session_state.taken_cards = []
     st.session_state.card_owner = {}
@@ -763,7 +851,7 @@ def sync_global_cards():
                     user_cards.add(int(card_id_str))
                 except (ValueError, TypeError):
                     pass
-        st.session_state.clicked_numbers = st.session_state.clicked_numbers | user_cards
+        st.session_state.clicked_numbers = user_cards
 
 # ===================================================================
 # START-THE-GAME CHECK
@@ -772,7 +860,7 @@ def maybe_start_game():
     if st.session_state.game_started:
         return
     file_taken, _, _, _ = load_global_cards()
-    total_now = max(len(file_taken), len(st.session_state.clicked_numbers))
+    total_now = len(file_taken)
     if total_now < MIN_CARDS_TO_START:
         return
     remaining, _ = get_global_remaining_time()
@@ -865,7 +953,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL — no board, no card lists
+# ADMIN PANEL
 # ===================================================================
 def admin_panel():
     if st.session_state.get("admin_celebration_msg"):
@@ -1422,19 +1510,6 @@ def render_card_selection():
         st.rerun()
         return
 
-    if not st.session_state.game_started:
-        _ft, _, _, _ = load_global_cards()
-        _tn = max(len(_ft), len(st.session_state.clicked_numbers))
-        _rem, _ = get_global_remaining_time()
-        if _tn >= MIN_CARDS_TO_START and _rem <= 0:
-            mark_game_started_globally()
-            st.session_state.game_started = True
-            st.session_state.auto_call_started = False
-            st.session_state.selected_card = list(st.session_state.clicked_numbers)[0] if len(st.session_state.clicked_numbers) > 0 else -1
-            save_game_state()
-            st.rerun()
-            return
-
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play.")
         return
@@ -1456,7 +1531,7 @@ def render_card_selection():
     balance = user.get("balance", 0)
 
     file_taken, _, _, _ = load_global_cards()
-    total_selected = max(len(file_taken), len(st.session_state.clicked_numbers))
+    total_selected = len(file_taken)
     your_cards = len(st.session_state.clicked_numbers)
     available = 204 - total_selected
     enough_cards = total_selected >= MIN_CARDS_TO_START
@@ -1519,18 +1594,11 @@ def render_card_selection():
                 if is_mine:
                     if st.button(f"✅{card_num}", key=f"card_{card_num}", use_container_width=True, type="primary"):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        st.session_state.clicked_numbers.discard(card_num)
-                        if card_num in st.session_state.taken_cards:
-                            st.session_state.taken_cards.remove(card_num)
-                        if str(card_num) in st.session_state.card_owner:
-                            del st.session_state.card_owner[str(card_num)]
-                        st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance + 10
-                        save_all_data()
-                        save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                          st.session_state.timer_start_time, st.session_state.card_selection_time)
-                        st.session_state.rejected_card_num = None
-                        st.session_state.insufficient_balance_card_num = None
-                        st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
+                        ok, reason = fast_deselect_card(card_num, user_balance)
+                        if ok:
+                            st.session_state.rejected_card_num = None
+                            st.session_state.insufficient_balance_card_num = None
+                            st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
                         st.rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
@@ -1545,30 +1613,23 @@ def render_card_selection():
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
-                        has_max = len(st.session_state.clicked_numbers) >= MAX_CARDS_PER_PLAYER
-                        if has_max:
-                            st.session_state.rejected_card_num = card_num
-                            st.session_state.insufficient_balance_card_num = None
-                            st.session_state.flash_msg = ""
-                        elif user_balance < 10:
-                            st.session_state.insufficient_balance_card_num = card_num
-                            st.session_state.rejected_card_num = None
-                            st.session_state.flash_msg = ""
-                        else:
-                            st.session_state.user_db[st.session_state.current_user]["balance"] = user_balance - 10
-                            save_all_data()
-                            st.session_state.clicked_numbers.add(card_num)
-                            if card_num not in st.session_state.taken_cards:
-                                st.session_state.taken_cards.append(card_num)
-                            st.session_state.card_owner[str(card_num)] = st.session_state.current_user
-                            save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                                              st.session_state.timer_start_time, st.session_state.card_selection_time)
+                        ok, reason = fast_select_card(card_num, user_balance)
+                        if ok:
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} selected! -10 ETB"
+                        else:
+                            if reason == "max":
+                                st.session_state.rejected_card_num = card_num
+                                st.session_state.insufficient_balance_card_num = None
+                            elif reason == "balance":
+                                st.session_state.insufficient_balance_card_num = card_num
+                                st.session_state.rejected_card_num = None
+                            else:
+                                st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
                         st.rerun()
 
-    st.progress(1 - (remaining / 60) if remaining > 0 else 0)
+    st.progress(1 - (remaining / CARD_SELECTION_DURATION) if remaining > 0 else 0)
 
 # ===================================================================
 # MAIN APP
@@ -1666,16 +1727,11 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
 # ===================================================================
-# ✅ GLOBAL GATE — Display decision comes ONLY from the shared DB.
-#    The BINGO board + player cards are shown ONLY when:
-#      • at least 3 cards are globally selected, AND
-#      • the global timer has reached 0:00
-#    Otherwise, force every player back to card selection.
+# ✅ GLOBAL GATE — Display decision comes ONLY from the shared DB
 # ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
 if not _show_game:
-    # Force local state to card-selection mode
     if (st.session_state.game_started
             or st.session_state.winner_declared
             or st.session_state.winners_list):
@@ -1695,7 +1751,7 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# ✅ SESSION SELF-HEAL — runs FIRST so no st.stop() can trap the session
+# SESSION SELF-HEAL
 # ===================================================================
 try:
     _db_row = load_state_row(force=True)
@@ -1706,7 +1762,6 @@ try:
     _db_owner = dict(_db_row.get("card_owner") or {})
     _db_winners = _db_row.get("winners_list") or []
 
-    # CASE 1: DB says NO game and NO winner → everyone must be in card selection
     if (not _db_gs) and (not _db_wd):
         if (st.session_state.get("game_started")
                 or st.session_state.get("winner_declared")
@@ -1740,7 +1795,6 @@ try:
                 st.session_state.clicked_numbers = set()
             st.rerun()
 
-    # CASE 2: DB says started but NO winner → mirrors reflect in-progress game
     elif _db_gs and not _db_wd:
         st.session_state.game_started = True
         st.session_state.winner_declared = False
@@ -1762,7 +1816,6 @@ try:
                         pass
             st.session_state.clicked_numbers = _mine
 
-    # CASE 3: DB says winner exists → force celebration on every session
     elif _db_wd:
         if not st.session_state.get("winner_declared"):
             st.session_state.winner_declared = True
@@ -1936,19 +1989,14 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ⛔ Not showing the game yet — force card selection.
-    #    The BINGO board and player cards will ONLY appear when
-    #    the global gate (3+ cards AND timer at 0:00) is satisfied.
+    # ⛔ Not showing the game — force card selection.
     st.session_state.game_started = False
     st.session_state.winner_declared = False
     st.session_state.game_over = False
 
-    if st.session_state.game_started:
-        st.rerun()
-
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
-    time.sleep(1)
+    time.sleep(0.5)
     st.rerun()
 
 # ===================================================================
