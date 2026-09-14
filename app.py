@@ -301,6 +301,10 @@ def init_session_state():
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
+        # ✅ Silent read/write resilience
+        '_state_cache': None,
+        '_state_cache_at': 0.0,
+        '_state_err_count': 0,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -332,27 +336,78 @@ def _default_state():
         "last_called_by": None,
     }
 
-def load_state_row():
-    try:
-        res = supabase.table("game_state").select("*").eq("id", 1).execute()
-        if res.data and len(res.data) > 0:
-            return res.data[0]
-    except Exception as e:
-        st.error(f"⚠️ State read error: {e}")
-    default = _default_state()
-    try:
-        supabase.table("game_state").upsert(default).execute()
-    except Exception:
-        pass
-    return default
+def load_state_row(force=False):
+    """
+    ✅ Silent, resilient read of the shared game_state row.
+    - Serves from a 0.3s local cache to reduce DB hammering
+    - Retries 3 times on transient failure
+    - Falls back to the last good cached row instead of erroring
+    - Never shows a red error banner for transient network issues
+    """
+    now = time.time()
+    cached = st.session_state.get("_state_cache")
+    cached_at = st.session_state.get("_state_cache_at", 0.0)
+
+    # Serve from short-lived cache
+    if not force and cached is not None and (now - cached_at) < 0.3:
+        return cached
+
+    last_err = None
+    for attempt in range(3):
+        try:
+            res = supabase.table("game_state").select("*").eq("id", 1).execute()
+            if res.data and len(res.data) > 0:
+                row = res.data[0]
+                st.session_state["_state_cache"] = row
+                st.session_state["_state_cache_at"] = time.time()
+                st.session_state["_state_err_count"] = 0
+                return row
+            # Row doesn't exist yet — create it
+            default = _default_state()
+            supabase.table("game_state").upsert(default).execute()
+            st.session_state["_state_cache"] = default
+            st.session_state["_state_cache_at"] = time.time()
+            st.session_state["_state_err_count"] = 0
+            return default
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(0.2)
+
+    # All 3 attempts failed — bump error counter, show warning only once
+    err_count = st.session_state.get("_state_err_count", 0) + 1
+    st.session_state["_state_err_count"] = err_count
+    if err_count == 3:
+        st.warning(f"⚠️ ግንኙነት ችግር — በራስ-ሰር እየተስተካከለ ነው... ({last_err})")
+
+    # Return last good cached row if we have one
+    if cached is not None:
+        return cached
+    return _default_state()
 
 def update_state(patch: dict):
-    try:
-        supabase.table("game_state").update(patch).eq("id", 1).execute()
-        return True
-    except Exception as e:
-        st.error(f"⚠️ State write error: {e}")
-        return False
+    """
+    ✅ Silent write. Invalidates the read cache so subsequent reads
+    get the freshly written data. Never shows a red error banner
+    unless the write truly and repeatedly fails.
+    """
+    for attempt in range(2):
+        try:
+            supabase.table("game_state").update(patch).eq("id", 1).execute()
+            # Invalidate read cache so next read is fresh
+            st.session_state["_state_cache"] = None
+            st.session_state["_state_cache_at"] = 0.0
+            st.session_state["_state_err_count"] = 0
+            return True
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(0.15)
+                continue
+            err_count = st.session_state.get("_state_err_count", 0) + 1
+            st.session_state["_state_err_count"] = err_count
+            if err_count == 5:
+                st.warning(f"⚠️ የማስቀመጥ ችግር — እንደገና ይሞክሩ ({e})")
+            return False
 
 # ===================================================================
 # GLOBAL WINNER TRACKING (Supabase-backed)
@@ -461,7 +516,6 @@ def load_local_users():
         res = supabase.table("users").select("*").execute()
         return {r["username"]: r for r in (res.data or [])}
     except Exception as e:
-        st.error(f"⚠️ Database read error: {e}")
         return {}
 
 def save_local_users(users):
@@ -479,7 +533,6 @@ def save_local_users(users):
             }).execute()
         return True
     except Exception as e:
-        st.error(f"⚠️ Database write error: {e}")
         return False
 
 def load_all_data():
@@ -562,7 +615,7 @@ def get_global_remaining_time():
 # GLOBAL CALLER LOCK (Supabase-backed)
 # ===================================================================
 def try_global_call():
-    row = load_state_row()
+    row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
 
@@ -1110,8 +1163,8 @@ def check_winning_pattern(card_data, called_numbers):
 # ===================================================================
 def check_for_winners():
     """
-    ✅ FIXED: Reads FRESH authoritative state from Supabase instead of stale
-    local session. This guarantees winners are detected regardless of which
+    ✅ Reads FRESH authoritative state from Supabase instead of stale
+    local session. Guarantees winners are detected regardless of which
     session triggered the call, stops the calling loop immediately, and
     persists the final state so every player sees the celebration.
     """
@@ -1119,7 +1172,7 @@ def check_for_winners():
         return
 
     # 🔑 Read authoritative state from the shared DB row
-    row = load_state_row()
+    row = load_state_row(force=True)
 
     called_numbers = list(row.get("called_numbers") or [])
     taken_cards = list(row.get("taken_cards") or [])
@@ -1149,7 +1202,6 @@ def check_for_winners():
                 })
 
     if winners_found:
-        # Mirror fresh state locally so this session updates instantly
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
         st.session_state.card_owner = card_owner
@@ -1160,12 +1212,8 @@ def check_for_winners():
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
 
-        # Distribute prizes (guarded by global flag so it pays once)
         distribute_prizes(winners_found)
 
-        # ⚠️ CRITICAL: persist the FULL final state in ONE atomic update,
-        # including called_numbers, so all other sessions catch up on
-        # their next rerun and see the celebration globally.
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
