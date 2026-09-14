@@ -2047,11 +2047,11 @@ if st.session_state.winner_declared and st.session_state.game_started:
         st.session_state.winner_screen_shown_at = time.time()
 
     elapsed_w = time.time() - st.session_state.winner_screen_shown_at
-    remaining_w = 40 - elapsed_w
+    remaining_w = 10 - elapsed_w
 
     if remaining_w <= 0:
         current_round_check = st.session_state.get("celebration_round", 1)
-        if current_round_check < 3:
+        if current_round_check < 2:
             st.session_state.celebration_round = current_round_check + 1
             st.session_state.winner_screen_shown_at = time.time()
             st.session_state.celebration_start_time = time.time()
