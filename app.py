@@ -2149,7 +2149,7 @@ if st.session_state.game_started and _show_game:
         if all_player_cards:
             for cid in all_player_cards:
                 display_selected_card(cid, list(st.session_state.called_numbers), False)
-                else:
+        else:
             st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
             st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
             st.markdown("""
