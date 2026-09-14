@@ -2149,19 +2149,33 @@ if st.session_state.game_started and _show_game:
         if all_player_cards:
             for cid in all_player_cards:
                 display_selected_card(cid, list(st.session_state.called_numbers), False)
-        else:
+                else:
             st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
             st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
             st.markdown("""
+<div style="text-align:center;margin:15px 0 5px 0;">
+    <p style="color:#FF9800;font-size:1.1rem;font-weight:bold;margin:0;">
+        ⏳ አሸናፊ እስኪታወቅ ይጠብቁ...
+    </p>
+    <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:6px 0 0 0;">
+        🎯 ጨዋታው በመካሄድ ላይ ነው
+    </p>
+    <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:4px 0 0 0;font-style:italic;">
+        ⏳ Waiting for winner to be declared...
+    </p>
+</div>
+""", unsafe_allow_html=True)
+            if st.session_state.get("winner_declared", False):
+                st.markdown("""
 <div style="text-align:center;margin:15px 0 5px 0;">
     <p style="color:#FFD700;font-size:1rem;font-weight:bold;margin:0;">
         ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
     </p>
 </div>
 """, unsafe_allow_html=True)
-            if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
-                reset_for_next_round()
-                st.rerun()
+                if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
+                    reset_for_next_round()
+                    st.rerun()
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
