@@ -2229,7 +2229,7 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    st.session_state.game_started = False
+    st.session_state.game_started = False 
     st.session_state.winner_declared = False
     st.session_state.game_over = False
 
