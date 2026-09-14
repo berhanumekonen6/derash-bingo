@@ -1,7 +1,11 @@
 import logging
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
-from datetime import datetime
+from telegram.ext import (
+    Application, CommandHandler, CallbackQueryHandler,
+    ContextTypes, MessageHandler, filters, ConversationHandler
+)
+from datetime import datetime, timezone
 
 # Enable logging
 logging.basicConfig(
@@ -17,10 +21,75 @@ TELEBIRR_NUMBER = "0905527481"
 ADMIN_USERNAME = "@berhanumekonen6"
 BOT_USERNAME = "@DerashBingoPlayBot"
 
-# === CONVERSATION STATES ===
-WITHDRAW_AMOUNT, WITHDRAW_USERNAME, WITHDRAW_PHONE = range(3)
+# === SUPABASE CONFIG (same values as your Streamlit app secrets) ===
+SUPABASE_URL = "YOUR_SUPABASE_URL_HERE"
+SUPABASE_KEY = "YOUR_SUPABASE_SECRET_KEY_HERE"
 
-# === MAIN MENU ===
+# === ADMIN TELEGRAM CHAT ID ===
+# Get your numeric chat ID by messaging @userinfobot on Telegram
+ADMIN_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID_HERE"
+
+# === CONVERSATION STATES ===
+(WITHDRAW_AMOUNT, WITHDRAW_USERNAME, WITHDRAW_PHONE,
+ DEPOSIT_AMOUNT, DEPOSIT_USERNAME, DEPOSIT_SCREENSHOT) = range(6)
+
+
+# ===================================================================
+# SUPABASE HELPERS
+# ===================================================================
+def supabase_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+
+
+def sb_get(table, query=""):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/{table}?{query}"
+        r = requests.get(url, headers=supabase_headers(), timeout=10)
+        return r.json() if r.status_code == 200 else []
+    except Exception as e:
+        logger.error(f"sb_get error: {e}")
+        return []
+
+
+def sb_post(table, data):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/{table}"
+        r = requests.post(url, headers=supabase_headers(), json=data, timeout=10)
+        return r.status_code in (200, 201)
+    except Exception as e:
+        logger.error(f"sb_post error: {e}")
+        return False
+
+
+def get_user(username):
+    rows = sb_get("users", f"username=eq.{username}&select=*")
+    return rows[0] if rows else None
+
+
+def create_request(req_type, username, amount, phone, telegram_id,
+                   telegram_name, screenshot_url=""):
+    data = {
+        "type": req_type,
+        "username": username,
+        "amount": float(amount),
+        "phone": phone or "",
+        "telegram_id": str(telegram_id),
+        "telegram_name": telegram_name or "",
+        "screenshot_url": screenshot_url or "",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return sb_post("transactions", data)
+
+
+# ===================================================================
+# MENUS
+# ===================================================================
 def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("📝 Register", callback_data="register")],
@@ -32,7 +101,7 @@ def get_main_menu():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# === WITHDRAW MENU ===
+
 def get_withdraw_menu():
     keyboard = [
         [InlineKeyboardButton("💰 Start Withdrawal", callback_data="withdraw_start")],
@@ -40,7 +109,18 @@ def get_withdraw_menu():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# === /start COMMAND ===
+
+def get_deposit_menu():
+    keyboard = [
+        [InlineKeyboardButton("✅ I Have Paid — Send Screenshot", callback_data="deposit_start")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ===================================================================
+# COMMANDS
+# ===================================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     welcome_text = f"""
@@ -60,104 +140,91 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(welcome_text, reply_markup=get_main_menu())
 
-# === /help COMMAND ===
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = f"""
 ❓ How can I help you?
 
 📋 FAQ:
 ━━━━━━━━━━━━━━━━━━━
-📝 How to register?
-   → Click "📝 Register" button
-
-💰 How to add balance?
-   → Click "💰 Deposit / Pay" button
-   → Send money via Telebirr to {TELEBIRR_NUMBER}
-
-💸 How to withdraw?
-   → Click "💸 Withdraw (ወጪ)" button
-   → Enter the amount you want to withdraw
-   → Enter your registered username
-   → Enter your registered phone number
-
-🎯 How to play?
-   → Click "🎯 Play Game" button
-
-🆘 Need more help?
-   → Click "Support / መረጃ" or contact {ADMIN_USERNAME}
+📝 Register → Click "📝 Register"
+💰 Deposit  → Click "💰 Deposit / Pay"
+💸 Withdraw → Click "💸 Withdraw (ወጪ)"
+🎯 Play     → Click "🎯 Play Game"
+🆘 Support  → {ADMIN_USERNAME}
 ━━━━━━━━━━━━━━━━━━━
 """
     await update.message.reply_text(help_text)
 
-# === HOW TO PLAY ===
+
+# ===================================================================
+# CALLBACK BUTTON HANDLERS
+# ===================================================================
 async def how_to_play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 🎯 HOW TO PLAY DERASH BINGO
-
 ━━━━━━━━━━━━━━━━━━━
 📝 STEP 1: REGISTER
-   → Click "📝 Register" button
-
-━━━━━━━━━━━━━━━━━━━
-💰 STEP 2: DEPOSIT
-   → Click "💰 Deposit / Pay"
-   → Send money via Telebirr: {TELEBIRR_NUMBER}
-   → Send payment screenshot to this bot
-   → Your balance will be updated!
-
-━━━━━━━━━━━━━━━━━━━
+💰 STEP 2: DEPOSIT → Telebirr: {TELEBIRR_NUMBER}
 💸 STEP 3: WITHDRAW
-   → Click "💸 Withdraw (ወጪ)"
-   → Enter the amount you want to withdraw
-   → Enter your registered username
-   → Enter your registered phone number
-   → Money will be sent to your Telebirr
-
-━━━━━━━━━━━━━━━━━━━
 🎯 STEP 4: PLAY
-   → Click "🎯 Play Game" to start playing!
-   → Login with your username and password
-   → Select 1-2 cards (10 ETB each)
-   → Wait for numbers to be called
-   → Get BINGO and WIN! 🎉
-
 ━━━━━━━━━━━━━━━━━━━
 📌 RULES:
 ✅ Max 2 cards per player
 ✅ Card price: 10 ETB
 ✅ Prize: 8 ETB per card
-✅ 201 cards available
 ✅ Auto-call every 2 seconds
-
 🔗 PLAY NOW: {GAME_LINK}
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
 
-# === REGISTER BUTTON ===
+
 async def register_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 📝 REGISTER TO PLAY
 
-Click "📝 Register" to create your account.
-
-━━━━━━━━━━━━━━━━━━━
-✅ After registration:
-1️⃣ Click "💰 Deposit / Pay" to add balance
-2️⃣ Click "💸 Withdraw (ወጪ)" to withdraw funds
-3️⃣ Click "🎯 Play Game" to start playing!
+Open the game link below and create your account with a username and password.
 
 🔗 GAME LINK: {GAME_LINK}
 📞 Telebirr: {TELEBIRR_NUMBER}
+
+After registering, come back here to deposit funds.
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
 
-# === DEPOSIT BUTTON ===
+
+async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = f"""
+🆘 መረጃ እና ድጋፍ (Information & Support)
+━━━━━━━━━━━━━━━━━━━
+📌 ለመረጃ: {BOT_USERNAME}
+📞 ቴሌብር: {TELEBIRR_NUMBER}
+🤖 ቻትቦት: {BOT_USERNAME}
+👤 አስተዳዳሪ: {ADMIN_USERNAME}
+🎯 ጨዋታ: {GAME_LINK}
+━━━━━━━━━━━━━━━━━━━
+💬 ማንኛውም ጥያቄ ካለዎት እዚህ ይጠይቁ! 😊
+"""
+    await update.callback_query.answer()
+    await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
+
+
+async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    await update.callback_query.edit_message_text(
+        "🔙 Main Menu\n\n👇 Select an option:",
+        reply_markup=get_main_menu()
+    )
+
+
+# ===================================================================
+# DEPOSIT FLOW
+# ===================================================================
 async def deposit_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 💰 HOW TO DEPOSIT / PAY
-
 ━━━━━━━━━━━━━━━━━━━
 📞 Telebirr Number: {TELEBIRR_NUMBER}
 
@@ -166,373 +233,342 @@ async def deposit_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 2️⃣ Send money to {TELEBIRR_NUMBER}
 3️⃣ Write your username in the memo
 4️⃣ Take a screenshot of the payment
-5️⃣ Send the screenshot to this bot
-6️⃣ Your balance will be updated!
+5️⃣ Click "I Have Paid" below and send the screenshot
+6️⃣ Wait for admin approval
+7️⃣ Balance updates automatically
 
 ━━━━━━━━━━━━━━━━━━━
-💳 PAYMENT AMOUNTS:
-20 ETB  |  50 ETB  |  100 ETB
-200 ETB |  300 ETB |  500 ETB
-1000 ETB
-
-━━━━━━━━━━━━━━━━━━━
-📸 After payment, send screenshot here:
-👉 {BOT_USERNAME}
+💳 SUGGESTED AMOUNTS:
+20 ETB | 50 ETB | 100 ETB | 200 ETB | 500 ETB
 """
     await update.callback_query.answer()
-    await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
+    await update.callback_query.edit_message_text(text, reply_markup=get_deposit_menu())
 
-# === WITHDRAW BUTTON ===
+
+async def deposit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = f"""
+💰 DEPOSIT — STEP 1 OF 3
+━━━━━━━━━━━━━━━━━━━
+📝 Enter the amount you deposited (ETB):
+Example: 100
+"""
+    await update.callback_query.answer()
+    await update.callback_query.edit_message_text(text)
+    return DEPOSIT_AMOUNT
+
+
+async def deposit_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        amount = float(update.message.text.strip())
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Enter a number. Example: 100")
+        return DEPOSIT_AMOUNT
+
+    if amount < 10:
+        await update.message.reply_text("❌ Minimum deposit is 10 ETB.")
+        return DEPOSIT_AMOUNT
+
+    context.user_data['deposit_amount'] = amount
+    text = f"""
+💰 DEPOSIT — STEP 2 OF 3
+━━━━━━━━━━━━━━━━━━━
+💰 Amount: {amount:.2f} ETB
+
+📝 Enter your registered username:
+Example: john
+"""
+    await update.message.reply_text(text)
+    return DEPOSIT_USERNAME
+
+
+async def deposit_username_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    username = update.message.text.strip()
+    if len(username) < 2:
+        await update.message.reply_text("❌ Username too short. Try again:")
+        return DEPOSIT_USERNAME
+
+    context.user_data['deposit_username'] = username
+    text = f"""
+💰 DEPOSIT — STEP 3 OF 3
+━━━━━━━━━━━━━━━━━━━
+💰 Amount: {context.user_data['deposit_amount']:.2f} ETB
+👤 Username: {username}
+
+📸 Now send the payment SCREENSHOT (photo).
+"""
+    await update.message.reply_text(text)
+    return DEPOSIT_SCREENSHOT
+
+
+async def deposit_screenshot_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.photo:
+        await update.message.reply_text("❌ Please send a PHOTO of your payment screenshot.")
+        return DEPOSIT_SCREENSHOT
+
+    photo = update.message.photo[-1]
+    file_id = photo.file_id
+
+    amount = context.user_data['deposit_amount']
+    username = context.user_data['deposit_username']
+    user = update.effective_user
+    telegram_id = user.id
+    telegram_name = user.full_name or user.username or f"User_{telegram_id}"
+
+    ok = create_request(
+        "deposit", username, amount,
+        phone="", telegram_id=telegram_id,
+        telegram_name=telegram_name,
+        screenshot_url=file_id,
+    )
+
+    admin_msg = (
+        f"🔔 NEW DEPOSIT REQUEST!\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Username: {username}\n"
+        f"👤 Telegram: {telegram_name}\n"
+        f"📱 Telegram ID: {telegram_id}\n"
+        f"💰 Amount: {amount:.2f} ETB\n"
+        f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"✅ Approve from Admin Panel."
+    )
+    try:
+        await context.bot.send_photo(chat_id=ADMIN_CHAT_ID, photo=file_id, caption=admin_msg)
+    except Exception as e:
+        logger.error(f"Admin notify failed: {e}")
+        try:
+            await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_msg)
+        except Exception as e2:
+            logger.error(f"Admin text notify failed: {e2}")
+
+    if ok:
+        await update.message.reply_text(
+            f"""
+✅ DEPOSIT REQUEST SENT!
+━━━━━━━━━━━━━━━━━━━
+👤 Username: {username}
+💰 Amount: {amount:.2f} ETB
+
+⏳ Admin will verify and approve shortly.
+💡 Your balance will update automatically.
+
+✅ Thank you!
+""",
+            reply_markup=get_main_menu()
+        )
+    else:
+        await update.message.reply_text("⚠️ Failed to save request. Try again later.")
+
+    context.user_data.clear()
+    return ConversationHandler.END
+
+
+# ===================================================================
+# WITHDRAW FLOW
+# ===================================================================
 async def withdraw_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 💸 WITHDRAW (ወጪ)
-
 ━━━━━━━━━━━━━━━━━━━
-📝 TO WITHDRAW:
-
-1️⃣ Click "💰 Start Withdrawal"
-2️⃣ Enter the amount you want to withdraw
+📝 STEPS:
+1️⃣ Click "Start Withdrawal"
+2️⃣ Enter amount (min 20 ETB)
 3️⃣ Enter your registered username
-4️⃣ Enter your registered phone number
+4️⃣ Enter your registered phone
+5️⃣ Wait for admin approval
 
 ━━━━━━━━━━━━━━━━━━━
-📞 Telebirr Number: {TELEBIRR_NUMBER}
-
-━━━━━━━━━━━━━━━━━━━
-💳 MINIMUM WITHDRAWAL: 20 ETB
-💳 MAXIMUM WITHDRAWAL: Your balance
-
-━━━━━━━━━━━━━━━━━━━
-📞 For support: {ADMIN_USERNAME}
-
-🔙 Click "Back to Menu" to return
+📞 Telebirr: {TELEBIRR_NUMBER}
+👤 Support: {ADMIN_USERNAME}
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text, reply_markup=get_withdraw_menu())
 
-# === START WITHDRAWAL CONVERSATION ===
+
 async def withdraw_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
-💸 WITHDRAWAL - STEP 1 OF 3
-
+💸 WITHDRAWAL — STEP 1 OF 3
 ━━━━━━━━━━━━━━━━━━━
-📝 Please enter the amount you want to withdraw:
-
+📝 Enter the amount to withdraw:
 💰 MINIMUM: 20 ETB
-💰 MAXIMUM: Your balance
-
-━━━━━━━━━━━━━━━━━━━
-📌 Send the amount as a number:
 Example: 50
 """
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(text)
     return WITHDRAW_AMOUNT
 
-# === HANDLE WITHDRAW AMOUNT ===
+
 async def withdraw_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount = float(update.message.text.strip())
     except ValueError:
-        await update.message.reply_text(
-            f"❌ Invalid amount! Please enter a valid number.\n\n"
-            f"📌 Example: 50\n\n"
-            f"💰 Minimum: 20 ETB"
-        )
+        await update.message.reply_text("❌ Invalid amount. Example: 50")
         return WITHDRAW_AMOUNT
-    
-    if amount < 20:
-        await update.message.reply_text(
-            f"❌ Minimum withdrawal is 20 ETB!\n\n"
-            f"📌 Please enter a larger amount."
-        )
-        return WITHDRAW_AMOUNT
-    
-    # Store the amount in context
-    context.user_data['withdraw_amount'] = amount
-    
-    text = f"""
-💸 WITHDRAWAL - STEP 2 OF 3
 
+    if amount < 20:
+        await update.message.reply_text("❌ Minimum withdrawal is 20 ETB.")
+        return WITHDRAW_AMOUNT
+
+    context.user_data['withdraw_amount'] = amount
+    text = f"""
+💸 WITHDRAWAL — STEP 2 OF 3
 ━━━━━━━━━━━━━━━━━━━
 💰 Amount: {amount:.2f} ETB
 
-━━━━━━━━━━━━━━━━━━━
-📝 Please enter your registered username:
-
-📌 Example: john
+📝 Enter your registered username:
+Example: john
 """
     await update.message.reply_text(text)
     return WITHDRAW_USERNAME
 
-# === HANDLE WITHDRAW USERNAME ===
+
 async def withdraw_username_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.text.strip()
-    
     if len(username) < 2:
-        await update.message.reply_text(
-            f"❌ Username must be at least 2 characters!\n\n"
-            f"📌 Please enter your registered username."
-        )
+        await update.message.reply_text("❌ Username too short. Try again:")
         return WITHDRAW_USERNAME
-    
-    # Store the username in context
-    context.user_data['withdraw_username'] = username
-    
-    text = f"""
-💸 WITHDRAWAL - STEP 3 OF 3
 
+    context.user_data['withdraw_username'] = username
+    text = f"""
+💸 WITHDRAWAL — STEP 3 OF 3
 ━━━━━━━━━━━━━━━━━━━
 💰 Amount: {context.user_data['withdraw_amount']:.2f} ETB
 👤 Username: {username}
 
-━━━━━━━━━━━━━━━━━━━
-📝 Please enter your registered phone number:
-
-📌 Example: 0912345678
+📱 Enter your registered phone number:
+Example: 0912345678
 """
     await update.message.reply_text(text)
     return WITHDRAW_PHONE
 
-# === HANDLE WITHDRAW PHONE ===
+
 async def withdraw_phone_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
-    
-    # Simple phone validation (remove any spaces and check length)
     phone_clean = phone.replace(" ", "").replace("-", "")
-    
+
     if len(phone_clean) < 9 or not phone_clean.isdigit():
-        await update.message.reply_text(
-            f"❌ Invalid phone number!\n\n"
-            f"📌 Please enter a valid phone number.\n"
-            f"Example: 0912345678"
-        )
+        await update.message.reply_text("❌ Invalid phone. Example: 0912345678")
         return WITHDRAW_PHONE
-    
-    # Get all info
+
     amount = context.user_data['withdraw_amount']
     username = context.user_data['withdraw_username']
-    
-    # Get user info
     user = update.effective_user
-    user_id = user.id
-    user_full_name = user.full_name if user.full_name else user.username
-    telegram_username = user.username if user.username else f"User_{user_id}"
-    
-    # Create confirmation message
-    confirmation_text = f"""
-✅ WITHDRAWAL REQUEST RECEIVED! 🎉
+    telegram_id = user.id
+    telegram_name = user.full_name or user.username or f"User_{telegram_id}"
 
-━━━━━━━━━━━━━━━━━━━
-📋 WITHDRAWAL DETAILS:
-━━━━━━━━━━━━━━━━━━━
-👤 Username: {username}
-👤 Full Name: {user_full_name}
-📱 Phone: {phone}
-💸 Amount: {amount:.2f} ETB
-📱 Telegram ID: {user_id}
-📅 Requested: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-━━━━━━━━━━━━━━━━━━━
-📝 NEXT STEPS:
-1️⃣ Admin will verify your balance
-2️⃣ Money will be sent to your Telebirr
-3️⃣ You will receive confirmation
-
-━━━━━━━━━━━━━━━━━━━
-📞 Telebirr: {TELEBIRR_NUMBER}
-👤 Admin: {ADMIN_USERNAME}
-
-⏳ Please wait for admin to process your request.
-💡 Check your balance after 24 hours.
-
-✅ Thank you for using Derash BINGO!
-"""
-    
-    # Send confirmation to user
-    await update.message.reply_text(confirmation_text, reply_markup=get_main_menu())
-    
-    # Send notification to admin
-    admin_notification = f"""
-🔔 NEW WITHDRAWAL REQUEST!
-
-━━━━━━━━━━━━━━━━━━━
-📋 DETAILS:
-━━━━━━━━━━━━━━━━━━━
-👤 Username: {username}
-👤 Full Name: {user_full_name}
-📱 Phone: {phone}
-💸 Amount: {amount:.2f} ETB
-📱 Telegram ID: {user_id}
-📅 Requested: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-━━━━━━━━━━━━━━━━━━━
-📞 Process this request:
-- Verify user balance: {username}
-- Verify phone number: {phone}
-- Send money to Telebirr: {TELEBIRR_NUMBER}
-- Confirm completion
-"""
-    
-    # Uncomment the lines below to send admin notification
-    # try:
-    #     await context.bot.send_message(chat_id="YOUR_ADMIN_CHAT_ID", text=admin_notification)
-    # except:
-    #     pass
-    
-    logger.info(f"Withdrawal request: {username} - {amount} ETB - Phone: {phone}")
-    
-    # Clear conversation data
-    context.user_data.clear()
-    
-    # End conversation
-    return ConversationHandler.END
-
-# === CANCEL WITHDRAWAL ===
-async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "❌ Withdrawal cancelled.\n\n"
-        "🔙 To start again, click '💸 Withdraw (ወጪ)'",
-        reply_markup=get_main_menu()
-    )
-    return ConversationHandler.END
-
-# === BACK TO MENU ===
-async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.answer()
-    await update.callback_query.edit_message_text(
-        "🔙 Back to Main Menu\n\n👇 Select an option below:",
-        reply_markup=get_main_menu()
-    )
-
-# === SUPPORT BUTTON - UPDATED WITH FULL AMHARIC INFORMATION ===
-async def support_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = f"""
-🆘 መረጃ እና ድጋፍ (Information & Support)
-
-━━━━━━━━━━━━━━━━━━━
-📌 ለመረጃ (ለምሳሌ ለመመዝገብ፤ ለመጫዎት፤ ወጭና ገቢ): {BOT_USERNAME}
-
-━━━━━━━━━━━━━━━━━━━
-📋 አጭር መመሪያ:
-
-📝 ለመመዝገብ:
-   → "📝 Register" ይጫኑ
-
-💰 ገንዘብ ለመጨመር (Deposit):
-   → "💰 Deposit / Pay" ይጫኑ
-   → በቴሌብር ወደ {TELEBIRR_NUMBER} ይላኩ
-   → ማረጋገጫ ስክሪንሾት ይላኩ
-
-💸 ገንዘብ ለማውጣት (Withdraw):
-   → "💸 Withdraw (ወጪ)" ይጫኑ
-   → መጠኑን ያስገቡ
-   → የተመዘገቡበትን ስም ያስገቡ
-   → የተመዘገቡበትን ስልክ ቁጥር ያስገቡ
-
-🎯 ለመጫወት:
-   → "🎯 Play Game" ይጫኑ
-   → በስምዎ እና ይለፍቃድዎ ይግቡ
-   → ካርድ ይምረጡ (እስከ 2)
-   → ቁጥሮች ሲጠሩ ይጠብቁ
-   → ቢንጎ ሲሆን ያሸንፉ! 🎉
-
-━━━━━━━━━━━━━━━━━━━
-📌 ህጎች:
-✅ በአንድ ተጫዋች እስከ 2 ካርዶች
-✅ አንድ ካርድ: 10 ETB
-✅ ሽልማት: 8 ETB በአንድ ካርድ
-✅ 201 ካርዶች ይገኛሉ
-✅ በየ2 ሰከንድ አውቶማቲክ ቁጥር ይጠራል
-
-━━━━━━━━━━━━━━━━━━━
-📞 ቴሌብር: {TELEBIRR_NUMBER}
-🤖 ቻትቦት: {BOT_USERNAME}
-👤 አስተዳዳሪ: {ADMIN_USERNAME}
-🎯 ጨዋታ: {GAME_LINK}
-
-━━━━━━━━━━━━━━━━━━━
-💬 ማንኛውም ጥያቄ ካለዎት እዚህ ይጠይቁ! 😊
-"""
-    await update.callback_query.answer()
-    await update.callback_query.edit_message_text(text, reply_markup=get_main_menu())
-
-# === /register COMMAND ===
-async def register_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    args = context.args
-    if len(args) < 4:
+    user_row = get_user(username)
+    if not user_row:
         await update.message.reply_text(
-            f"❌ Please provide all required information!\n\n"
-            f"📝 Format: /register username FullName Phone Password\n"
-            f"📌 Example: /register john 'John Doe' 0912345678 mypassword\n\n"
-            f"💰 After registration, deposit to get balance!\n"
-            f"📞 Telebirr: {TELEBIRR_NUMBER}\n\n"
-            f"📌 ለመረጃ: {BOT_USERNAME}"
+            f"❌ Username '{username}' not found. Please register first.",
+            reply_markup=get_main_menu()
         )
-        return
-    
-    if len(args) >= 5:
-        username = args[0]
-        full_name = " ".join(args[1:-2])
-        phone = args[-2]
-        password = args[-1]
-    else:
-        username = args[0]
-        full_name = args[1]
-        phone = args[2]
-        password = args[3]
-    
-    await update.message.reply_text(
-        f"""
-✅ REGISTRATION SUCCESSFUL! 🎉
+        context.user_data.clear()
+        return ConversationHandler.END
 
-━━━━━━━━━━━━━━━━━━━
-👤 Username: {username}
-👤 Full Name: {full_name}
-📱 Phone: {phone}
+    balance = float(user_row.get("balance", 0))
+    if balance < amount:
+        await update.message.reply_text(
+            f"❌ Insufficient balance!\n\n"
+            f"💰 Your balance: {balance:.2f} ETB\n"
+            f"💸 Requested: {amount:.2f} ETB",
+            reply_markup=get_main_menu()
+        )
+        context.user_data.clear()
+        return ConversationHandler.END
 
-━━━━━━━━━━━━━━━━━━━
-🎯 NEXT STEPS:
-1️⃣ Click "💰 Deposit / Pay" to add balance
-2️⃣ Click "💸 Withdraw (ወጪ)" to withdraw funds
-3️⃣ Click "🎯 Play Game" to start playing!
-
-🔗 GAME LINK: {GAME_LINK}
-💰 Telebirr: {TELEBIRR_NUMBER}
-
-🎉 Welcome to Derash BINGO! 🎉
-
-📌 ለመረጃ: {BOT_USERNAME}
-""",
-        reply_markup=get_main_menu()
+    ok = create_request(
+        "withdraw", username, amount,
+        phone=phone, telegram_id=telegram_id,
+        telegram_name=telegram_name,
     )
 
-# === BUTTON HANDLER ===
+    admin_msg = (
+        f"🔔 NEW WITHDRAWAL REQUEST!\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Username: {username}\n"
+        f"👤 Telegram: {telegram_name}\n"
+        f"📱 Telegram ID: {telegram_id}\n"
+        f"📞 Phone: {phone}\n"
+        f"💰 Amount: {amount:.2f} ETB\n"
+        f"💼 Current Balance: {balance:.2f} ETB\n"
+        f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"✅ Approve from Admin Panel."
+    )
+    try:
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_msg)
+    except Exception as e:
+        logger.error(f"Admin notify failed: {e}")
+
+    if ok:
+        await update.message.reply_text(
+            f"""
+✅ WITHDRAWAL REQUEST SENT!
+━━━━━━━━━━━━━━━━━━━
+👤 Username: {username}
+📱 Phone: {phone}
+💰 Amount: {amount:.2f} ETB
+
+⏳ Admin will verify and process shortly.
+💡 Check balance after 24 hours.
+
+✅ Thank you!
+""",
+            reply_markup=get_main_menu()
+        )
+    else:
+        await update.message.reply_text("⚠️ Failed to save request. Try again.")
+
+    context.user_data.clear()
+    return ConversationHandler.END
+
+
+async def cancel_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ Cancelled.", reply_markup=get_main_menu())
+    context.user_data.clear()
+    return ConversationHandler.END
+
+
+# ===================================================================
+# BUTTON ROUTER
+# ===================================================================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
-    if query.data == "register":
+
+    data = query.data
+    if data == "register":
         await register_button(update, context)
-    elif query.data == "deposit":
+    elif data == "deposit":
         await deposit_button(update, context)
-    elif query.data == "withdraw":
+    elif data == "withdraw":
         await withdraw_button(update, context)
-    elif query.data == "withdraw_start":
-        await withdraw_start(update, context)
-    elif query.data == "howto":
+    elif data == "howto":
         await how_to_play(update, context)
-    elif query.data == "support":
+    elif data == "support":
         await support_button(update, context)
-    elif query.data == "back_to_menu":
+    elif data == "back_to_menu":
         await back_to_menu(update, context)
 
-# === MAIN FUNCTION ===
+
+# ===================================================================
+# MAIN
+# ===================================================================
 def main():
-    """Start the bot."""
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # === CONVERSATION HANDLER FOR WITHDRAWAL ===
+    deposit_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(deposit_start, pattern="^deposit_start$")],
+        states={
+            DEPOSIT_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, deposit_amount_input)],
+            DEPOSIT_USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, deposit_username_input)],
+            DEPOSIT_SCREENSHOT: [MessageHandler(filters.PHOTO, deposit_screenshot_input)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel_flow)],
+        name="deposit_conversation",
+        persistent=False,
+    )
+
     withdraw_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(withdraw_start, pattern="^withdraw_start$")],
         states={
@@ -540,31 +576,27 @@ def main():
             WITHDRAW_USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_username_input)],
             WITHDRAW_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_phone_input)],
         },
-        fallbacks=[CommandHandler("cancel", cancel_withdraw)],
+        fallbacks=[CommandHandler("cancel", cancel_flow)],
         name="withdraw_conversation",
         persistent=False,
     )
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("register", register_command))
+    application.add_handler(deposit_conv)
     application.add_handler(withdraw_conv)
     application.add_handler(CallbackQueryHandler(button_handler))
 
     print("=" * 50)
     print("✅ BOT IS RUNNING!")
     print("=" * 50)
-    print(f"🤖 Bot: @DerashBingoPlayBot")
-    print(f"🔗 Link: https://t.me/DerashBingoPlayBot")
+    print(f"🤖 Bot: {BOT_USERNAME}")
     print(f"🎯 Game: {GAME_LINK}")
     print(f"📞 Telebirr: {TELEBIRR_NUMBER}")
-    print(f"💸 Withdraw: Conversation flow (amount, username, phone)")
     print("=" * 50)
-    print("Send /start on Telegram to test!")
-    print("Press Ctrl+C to stop the bot.")
-    print("=" * 50)
-    
+
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 if __name__ == "__main__":
     main()
