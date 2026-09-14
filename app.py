@@ -301,10 +301,11 @@ def init_session_state():
         'rejected_card_num': None,
         'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
-        # ✅ Silent read/write resilience
         '_state_cache': None,
         '_state_cache_at': 0.0,
         '_state_err_count': 0,
+        # ✅ admin balance-added celebration
+        'admin_celebration_msg': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -337,18 +338,11 @@ def _default_state():
     }
 
 def load_state_row(force=False):
-    """
-    ✅ Silent, resilient read of the shared game_state row.
-    - Serves from a 0.3s local cache to reduce DB hammering
-    - Retries 3 times on transient failure
-    - Falls back to the last good cached row instead of erroring
-    - Never shows a red error banner for transient network issues
-    """
+    """✅ Silent, resilient read of the shared game_state row."""
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
 
-    # Serve from short-lived cache
     if not force and cached is not None and (now - cached_at) < 0.3:
         return cached
 
@@ -362,7 +356,6 @@ def load_state_row(force=False):
                 st.session_state["_state_cache_at"] = time.time()
                 st.session_state["_state_err_count"] = 0
                 return row
-            # Row doesn't exist yet — create it
             default = _default_state()
             supabase.table("game_state").upsert(default).execute()
             st.session_state["_state_cache"] = default
@@ -374,27 +367,20 @@ def load_state_row(force=False):
             if attempt < 2:
                 time.sleep(0.2)
 
-    # All 3 attempts failed — bump error counter, show warning only once
     err_count = st.session_state.get("_state_err_count", 0) + 1
     st.session_state["_state_err_count"] = err_count
     if err_count == 3:
         st.warning(f"⚠️ ግንኙነት ችግር — በራስ-ሰር እየተስተካከለ ነው... ({last_err})")
 
-    # Return last good cached row if we have one
     if cached is not None:
         return cached
     return _default_state()
 
 def update_state(patch: dict):
-    """
-    ✅ Silent write. Invalidates the read cache so subsequent reads
-    get the freshly written data. Never shows a red error banner
-    unless the write truly and repeatedly fails.
-    """
+    """✅ Silent write. Invalidates the read cache."""
     for attempt in range(2):
         try:
             supabase.table("game_state").update(patch).eq("id", 1).execute()
-            # Invalidate read cache so next read is fresh
             st.session_state["_state_cache"] = None
             st.session_state["_state_cache_at"] = 0.0
             st.session_state["_state_err_count"] = 0
@@ -436,10 +422,6 @@ def load_global_winners():
         row.get("prize_distributed", False),
         row.get("last_call_time", 0),
     )
-
-def clear_global_winners():
-    update_state({"winners_list": [], "winner_declared": False})
-    return True
 
 def sync_global_winners():
     """✅ Sync winner state — skip if this player already acknowledged."""
@@ -515,7 +497,7 @@ def load_local_users():
     try:
         res = supabase.table("users").select("*").execute()
         return {r["username"]: r for r in (res.data or [])}
-    except Exception as e:
+    except Exception:
         return {}
 
 def save_local_users(users):
@@ -532,7 +514,7 @@ def save_local_users(users):
                 "wins": int(d.get("wins", 0)),
             }).execute()
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 def load_all_data():
@@ -543,7 +525,7 @@ def save_all_data():
         save_local_users(st.session_state.user_db)
 
 # ===================================================================
-# GLOBAL CARD TRACKING (Supabase-backed)
+# GLOBAL CARD TRACKING
 # ===================================================================
 def load_global_cards():
     row = load_state_row()
@@ -567,7 +549,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
-# GLOBAL TIMER (Supabase-backed)
+# GLOBAL TIMER
 # ===================================================================
 def load_global_timer():
     row = load_state_row()
@@ -595,7 +577,6 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    """✅ Clean 1-second countdown: 60 → 59 → 58 → … → 0"""
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -612,9 +593,10 @@ def get_global_remaining_time():
     return int(math.ceil(remaining)), False
 
 # ===================================================================
-# GLOBAL CALLER LOCK (Supabase-backed)
+# GLOBAL CALLER LOCK
 # ===================================================================
 def try_global_call():
+    # ✅ Force fresh read before deciding whether to call
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
@@ -646,11 +628,12 @@ def try_global_call():
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(current_called)
 
-    check_for_winners()
+    # ✅ Check winners with fresh data
+    check_for_winners(force_fresh=True)
     return called_num
 
 # ===================================================================
-# GAME STATE (Supabase-backed)
+# GAME STATE
 # ===================================================================
 def save_game_state():
     update_state({
@@ -733,7 +716,7 @@ def reset_for_next_round():
     st.session_state.winner_acknowledged = False
 
 # ===================================================================
-# SYNC GLOBAL CARDS — NO AUTO-RESET (winner state preserved)
+# SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
     global_taken, global_owner, _, _ = load_global_cards()
@@ -860,24 +843,37 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL (unchanged)
+# ADMIN PANEL — simplified (no board, no card lists)
 # ===================================================================
 def admin_panel():
+    # ✅ Admin celebration for balance changes
+    if st.session_state.get("admin_celebration_msg"):
+        msg = st.session_state["admin_celebration_msg"]
+        st.success(msg)
+        st.balloons()
+        st.markdown("""
+        <div style="text-align:center;padding:10px 0;">
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite;">🎉</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.2s;">🎊</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.4s;">💰</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.6s;">🏆</span>
+            <span style="font-size:2rem;display:inline-block;animation:emojiFloat 2s ease-in-out infinite 0.8s;">✨</span>
+        </div>
+        """, unsafe_allow_html=True)
+        st.session_state["admin_celebration_msg"] = None
+
     st.markdown("""
     <div class="glass-container">
         <h3 style="color:#FFD700;text-align:center;">🔧 Admin Panel</h3>
-        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances, view all users.</p>
+        <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage user balances. No board or card list shown here.</p>
     </div>
     """, unsafe_allow_html=True)
-    if st.session_state.show_deposit_msg:
-        st.success(st.session_state.deposit_msg_text)
-        st.balloons()
-        st.session_state.show_deposit_msg = False
-        st.session_state.deposit_msg_text = ""
+
     users = [u for u in st.session_state.user_db.keys() if u != "admin"]
     if not users:
         st.info("No users registered yet.")
         return
+
     selected_user = st.selectbox("Select User", users)
     if selected_user:
         ud = st.session_state.user_db.get(selected_user, {})
@@ -889,28 +885,57 @@ def admin_panel():
             <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {ud.get('game_played', 0)} | 🏆 Wins: {ud.get('wins', 0)}</p>
         </div>
         """, unsafe_allow_html=True)
+
         custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100)
         c1, c2, c3 = st.columns(3)
+
         with c1:
             if st.button("➕ Add", use_container_width=True):
-                st.session_state.user_db[selected_user]["balance"] = ud.get("balance", 0) + custom_amount
+                new_balance = ud.get("balance", 0) + custom_amount
+                st.session_state.user_db[selected_user]["balance"] = new_balance
                 save_local_users(st.session_state.user_db)
+                st.session_state["admin_celebration_msg"] = (
+                    f"🎉 ለ {selected_user} {custom_amount:.2f} ETB ተጨምሯል! "
+                    f"አዲስ ሂሳብ: {new_balance:.2f} ETB 💰🎊"
+                )
                 st.rerun()
+
         with c2:
             if st.button("💰 Set", use_container_width=True):
                 st.session_state.user_db[selected_user]["balance"] = custom_amount
                 save_local_users(st.session_state.user_db)
+                st.session_state["admin_celebration_msg"] = (
+                    f"🎉 የ {selected_user} ሂሳብ {custom_amount:.2f} ETB ሆኖ ተቀናብሯል! 💰🎊"
+                )
                 st.rerun()
+
         with c3:
             if st.button("➖ Deduct", use_container_width=True):
                 cur = ud.get("balance", 0)
                 if cur >= custom_amount:
-                    st.session_state.user_db[selected_user]["balance"] = cur - custom_amount
+                    new_balance = cur - custom_amount
+                    st.session_state.user_db[selected_user]["balance"] = new_balance
                     save_local_users(st.session_state.user_db)
+                    st.session_state["admin_celebration_msg"] = (
+                        f"✅ ከ {selected_user} {custom_amount:.2f} ETB ተቀንሷል! "
+                        f"አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                    )
                     st.rerun()
+                else:
+                    st.warning("⚠️ በቂ ሂሳብ የለም")
+
+    # ✅ Admin does NOT see any board or card list. Just stats.
+    st.markdown("---")
+    st.markdown("### 📊 System Stats")
+    total_users = len([u for u in st.session_state.user_db.keys() if u != "admin"])
+    total_balance = sum(
+        float(d.get("balance", 0))
+        for u, d in st.session_state.user_db.items() if u != "admin"
+    )
+    st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
 
 # ===================================================================
-# ALL 204 BINGO CARDS - FULL LIST
+# ALL 204 BINGO CARDS
 # ===================================================================
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
@@ -1161,22 +1186,33 @@ def check_winning_pattern(card_data, called_numbers):
 # ===================================================================
 # GAME FUNCTIONS
 # ===================================================================
-def check_for_winners():
+def check_for_winners(force_fresh=False):
     """
-    ✅ Reads FRESH authoritative state from Supabase instead of stale
-    local session. Guarantees winners are detected regardless of which
-    session triggered the call, stops the calling loop immediately, and
-    persists the final state so every player sees the celebration.
+    ✅ Bulletproof winner detection.
+    - Always reads the freshest DB state (called_numbers, taken_cards, card_owner)
+    - Uses OR-logic: uses whichever of (session, DB) has more called numbers
+    - Detects ALL winners, groups by player
+    - Persists winner state atomically so every session sees the celebration
+    - Stops the calling loop globally by setting winner_declared=True
     """
-    if st.session_state.winner_declared:
+    if st.session_state.winner_declared and not force_fresh:
         return
 
-    # 🔑 Read authoritative state from the shared DB row
+    # 🔑 Force fresh read from DB — never trust stale local session
     row = load_state_row(force=True)
 
-    called_numbers = list(row.get("called_numbers") or [])
+    db_called = set(row.get("called_numbers") or [])
+    session_called = set(st.session_state.called_numbers or set())
+    # Use whichever has more called numbers (safer against race conditions)
+    called_numbers = list(db_called if len(db_called) >= len(session_called) else session_called)
+
     taken_cards = list(row.get("taken_cards") or [])
+    if not taken_cards:
+        taken_cards = list(st.session_state.taken_cards or [])
+
     card_owner = dict(row.get("card_owner") or {})
+    if not card_owner:
+        card_owner = dict(st.session_state.card_owner or {})
 
     if not called_numbers or not taken_cards:
         return
@@ -1202,6 +1238,7 @@ def check_for_winners():
                 })
 
     if winners_found:
+        # Mirror fresh state locally so this session updates instantly
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
         st.session_state.card_owner = card_owner
@@ -1212,8 +1249,10 @@ def check_for_winners():
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
 
+        # Distribute prizes (guarded by global flag so it pays once)
         distribute_prizes(winners_found)
 
+        # ⚠️ Persist the FULL final state in ONE atomic update
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1239,15 +1278,18 @@ def distribute_prizes(winners):
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
 
+    # Reload users from DB fresh to avoid races
+    load_all_data()
+
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
             st.session_state.user_db[username]["balance"] = \
-                st.session_state.user_db[username].get("balance", 0) + prize_per_winner
+                float(st.session_state.user_db[username].get("balance", 0)) + prize_per_winner
             st.session_state.user_db[username]["wins"] = \
-                st.session_state.user_db[username].get("wins", 0) + 1
+                int(st.session_state.user_db[username].get("wins", 0)) + 1
             st.session_state.user_db[username]["game_played"] = \
-                st.session_state.user_db[username].get("game_played", 0) + 1
+                int(st.session_state.user_db[username].get("game_played", 0)) + 1
 
     save_all_data()
     st.session_state.prize_distributed = True
@@ -1371,7 +1413,6 @@ def display_master_board():
 # CARD SELECTION
 # ===================================================================
 def render_card_selection():
-    # 🛡️ Absolute guard: never render the grid once the game is running
     if st.session_state.game_started or st.session_state.winner_declared:
         st.rerun()
         return
@@ -1397,7 +1438,6 @@ def render_card_selection():
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
 
-    # ✅ 1-second-step countdown
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
         st.rerun()
@@ -1592,23 +1632,17 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ===================================================================
-# ADMIN PANEL
+# ADMIN PANEL — no board, no card lists
 # ===================================================================
 if st.session_state.current_role == "admin":
     admin_panel()
-    st.markdown("---")
+    st.stop()
 
 # ===================================================================
 # USER INFO
 # ===================================================================
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
-
-if st.session_state.current_user == "admin":
-    balance = 0.0
-    if "admin" in st.session_state.user_db:
-        st.session_state.user_db["admin"]["balance"] = 0.0
-        save_all_data()
 
 st.sidebar.markdown(f"""
 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
@@ -1636,21 +1670,6 @@ sync_global_winners()
 # START THE GAME
 # ===================================================================
 maybe_start_game()
-
-# ===================================================================
-# ADMIN VIEW
-# ===================================================================
-if st.session_state.current_role == "admin":
-    st.info("🔧 Admin Mode")
-    if st.session_state.game_started:
-        display_master_board()
-        if st.session_state.winner_declared and st.session_state.winners_list:
-            st.markdown("### 🏆 Winners")
-            for idx, w in enumerate(st.session_state.winners_list, 1):
-                st.success(f"🎉 Winner {idx}: {w.get('username')} - Cards: {w.get('cards')} - {', '.join(w.get('patterns', []))}")
-    else:
-        st.info("⏳ Waiting for game to start...")
-    st.stop()
 
 # ===================================================================
 # ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
@@ -1736,7 +1755,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
             cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
             st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
 
-    # ✅ RESUME BUTTON — visible to EVERY logged-in player
     st.markdown("""
     <div style="text-align:center;margin:25px 0 10px 0;">
         <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
@@ -1843,7 +1861,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists
+# ✅ AUTO-CALL — stops the moment a winner exists globally
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
