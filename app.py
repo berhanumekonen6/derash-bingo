@@ -2024,7 +2024,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
         st.session_state.winner_screen_shown_at = time.time()
 
     elapsed_w = time.time() - st.session_state.winner_screen_shown_at
-    remaining_w = 5 - elapsed_w
+    remaining_w = 10 - elapsed_w
 
     if remaining_w <= 0:
         st.session_state.winner_acknowledged = True
