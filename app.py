@@ -1965,9 +1965,14 @@ if st.session_state.game_started and _show_game:
     </div>
     """, unsafe_allow_html=True)
 
+       # ✅ Board on the left, player's cards on the right.
+    #    No card list is rendered below the board.
     board_col, cards_col = st.columns([2, 1], gap="large")
+
     with board_col:
+        # ✅ Only the BINGO board is rendered here.
         display_master_board()
+
     with cards_col:
         st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
         if all_player_cards:
@@ -1986,6 +1991,9 @@ if st.session_state.game_started and _show_game:
             if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
                 reset_for_next_round()
                 st.rerun()
+
+    # ✅ The auto-call status line — kept as a small info bar.
+    #    No card list is rendered here.
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
