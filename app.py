@@ -2037,13 +2037,13 @@ if st.session_state.winner_declared and st.session_state.game_started:
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
     # ============================================================
-    # ✅ AUTO-RESUME TIMER — 40 seconds countdown
+    # ✅ AUTO-RESUME TIMER — 60 seconds countdown
     # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
 
     elapsed_w = time.time() - st.session_state.winner_screen_shown_at
-    remaining_w = 40 - elapsed_w
+    remaining_w = 60 - elapsed_w
 
     if remaining_w <= 0:
         st.session_state.winner_acknowledged = True
