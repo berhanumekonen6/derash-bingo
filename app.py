@@ -304,6 +304,7 @@ def init_session_state():
         '_state_err_count': 0,
         'admin_celebration_msg': None,
         '_local_balance': None,
+        'winner_screen_shown_at': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -808,6 +809,7 @@ def reset_for_next_round():
     st.session_state.rejected_card_num = None
     st.session_state.insufficient_balance_card_num = None
     st.session_state.winner_acknowledged = False
+    st.session_state.winner_screen_shown_at = None
 
 # ===================================================================
 # SYNC GLOBAL CARDS
@@ -1019,6 +1021,25 @@ def admin_panel():
         <p style="color:rgba(255,255,255,0.7);text-align:center;">Manage users, deposits & withdrawals.</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # ============================================================
+    # ✅ ADMIN INFO + LOGOUT (sidebar, matching player style)
+    # ============================================================
+    st.sidebar.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
+        <p style="margin:0;font-weight:600;color:#FFD700;">👤 Admin</p>
+        <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">🔧 Administrator</p>
+        <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">⭐ Full Access</p>
+        <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">🎯 Derash BINGO Admin Panel</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.sidebar.button("🚪 Logout", use_container_width=True, key="admin_logout_btn"):
+        logout_user()
+        st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.info("🔧 Admin Mode — Manage users & transactions")
 
     tab_users, tab_deposits, tab_withdrawals, tab_history = st.tabs([
         "👥 Users", "💰 Deposits", "💸 Withdrawals", "📜 History"
@@ -2015,6 +2036,23 @@ if st.session_state.winner_declared and st.session_state.game_started:
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
+    # ============================================================
+    # ✅ AUTO-RESUME TIMER — 10 seconds countdown
+    # ============================================================
+    if st.session_state.get("winner_screen_shown_at") is None:
+        st.session_state.winner_screen_shown_at = time.time()
+
+    elapsed_w = time.time() - st.session_state.winner_screen_shown_at
+    remaining_w = 10 - elapsed_w
+
+    if remaining_w <= 0:
+        st.session_state.winner_acknowledged = True
+        st.session_state.winner_screen_shown_at = None
+        reset_for_next_round()
+        st.rerun()
+
+    seconds_left = int(math.ceil(remaining_w))
+
     winning_patterns = []
     winner_names = []
     all_winner_cards = []
@@ -2091,10 +2129,17 @@ if st.session_state.winner_declared and st.session_state.game_started:
             cards = ", ".join([f"#{c}" for c in winner.get("cards", [])])
             st.success(f"🎉 {winner.get('username')} - Card(s): {cards} - {patterns} 🎉")
 
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align:center;margin:25px 0 10px 0;">
         <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
             ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+        </p>
+        <p style="color:#FF9800;font-size:1rem;font-weight:bold;margin:10px 0 0 0;
+                  animation: celebrationPulse 1s ease-in-out infinite alternate;">
+            ⏳ በራስ-ሰር ይመለሳል: <span style="font-size:1.5rem;color:#FFD700;">{seconds_left}</span> ሰከንድ
+        </p>
+        <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:4px 0 0 0;font-style:italic;">
+            ⏳ Auto-resume in {seconds_left}s (or click now to resume immediately)
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -2103,8 +2148,12 @@ if st.session_state.winner_declared and st.session_state.game_started:
     with col_b:
         if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
             st.session_state.winner_acknowledged = True
+            st.session_state.winner_screen_shown_at = None
             reset_for_next_round()
             st.rerun()
+
+    time.sleep(1)
+    st.rerun()
     st.stop()
 
 # ===================================================================
@@ -2154,14 +2203,28 @@ if st.session_state.game_started and _show_game:
             st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
             st.markdown("""
 <div style="text-align:center;margin:15px 0 5px 0;">
+    <p style="color:#FF9800;font-size:1.1rem;font-weight:bold;margin:0;">
+        ⏳ አሸናፊ እስኪታወቅ ይጠብቁ...
+    </p>
+    <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:6px 0 0 0;">
+        🎯 ጨዋታው በመካሄድ ላይ ነው
+    </p>
+    <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:4px 0 0 0;font-style:italic;">
+        ⏳ Waiting for winner to be declared...
+    </p>
+</div>
+""", unsafe_allow_html=True)
+            if st.session_state.get("winner_declared", False):
+                st.markdown("""
+<div style="text-align:center;margin:15px 0 5px 0;">
     <p style="color:#FFD700;font-size:1rem;font-weight:bold;margin:0;">
         ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
     </p>
 </div>
 """, unsafe_allow_html=True)
-            if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
-                reset_for_next_round()
-                st.rerun()
+                if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
+                    reset_for_next_round()
+                    st.rerun()
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
