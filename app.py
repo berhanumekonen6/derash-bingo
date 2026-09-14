@@ -304,7 +304,6 @@ def init_session_state():
         '_state_cache': None,
         '_state_cache_at': 0.0,
         '_state_err_count': 0,
-        # ✅ admin balance-added celebration
         'admin_celebration_msg': None,
     }
     for k, v in defaults.items():
@@ -396,7 +395,7 @@ def update_state(patch: dict):
             return False
 
 # ===================================================================
-# GLOBAL WINNER TRACKING (Supabase-backed)
+# GLOBAL WINNER TRACKING
 # ===================================================================
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     update_state({
@@ -596,7 +595,6 @@ def get_global_remaining_time():
 # GLOBAL CALLER LOCK
 # ===================================================================
 def try_global_call():
-    # ✅ Force fresh read before deciding whether to call
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
@@ -628,7 +626,6 @@ def try_global_call():
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(current_called)
 
-    # ✅ Check winners with fresh data
     check_for_winners(force_fresh=True)
     return called_num
 
@@ -843,10 +840,9 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# ADMIN PANEL — simplified (no board, no card lists)
+# ADMIN PANEL — no board, no card lists
 # ===================================================================
 def admin_panel():
-    # ✅ Admin celebration for balance changes
     if st.session_state.get("admin_celebration_msg"):
         msg = st.session_state["admin_celebration_msg"]
         st.success(msg)
@@ -924,7 +920,6 @@ def admin_panel():
                 else:
                     st.warning("⚠️ በቂ ሂሳብ የለም")
 
-    # ✅ Admin does NOT see any board or card list. Just stats.
     st.markdown("---")
     st.markdown("### 📊 System Stats")
     total_users = len([u for u in st.session_state.user_db.keys() if u != "admin"])
@@ -1187,23 +1182,14 @@ def check_winning_pattern(card_data, called_numbers):
 # GAME FUNCTIONS
 # ===================================================================
 def check_for_winners(force_fresh=False):
-    """
-    ✅ Bulletproof winner detection.
-    - Always reads the freshest DB state (called_numbers, taken_cards, card_owner)
-    - Uses OR-logic: uses whichever of (session, DB) has more called numbers
-    - Detects ALL winners, groups by player
-    - Persists winner state atomically so every session sees the celebration
-    - Stops the calling loop globally by setting winner_declared=True
-    """
+    """✅ Bulletproof winner detection."""
     if st.session_state.winner_declared and not force_fresh:
         return
 
-    # 🔑 Force fresh read from DB — never trust stale local session
     row = load_state_row(force=True)
 
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
-    # Use whichever has more called numbers (safer against race conditions)
     called_numbers = list(db_called if len(db_called) >= len(session_called) else session_called)
 
     taken_cards = list(row.get("taken_cards") or [])
@@ -1238,7 +1224,6 @@ def check_for_winners(force_fresh=False):
                 })
 
     if winners_found:
-        # Mirror fresh state locally so this session updates instantly
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
         st.session_state.card_owner = card_owner
@@ -1249,10 +1234,8 @@ def check_for_winners(force_fresh=False):
         st.session_state.auto_call_started = False
         st.session_state.celebration_start_time = time.time()
 
-        # Distribute prizes (guarded by global flag so it pays once)
         distribute_prizes(winners_found)
 
-        # ⚠️ Persist the FULL final state in ONE atomic update
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1265,7 +1248,6 @@ def check_for_winners(force_fresh=False):
         })
 
 def distribute_prizes(winners):
-    """✅ Pay ALL winners exactly once — guarded by the shared global flag."""
     _, _, _, _, _, _, global_paid, _ = load_global_winners()
     if global_paid:
         st.session_state.prize_distributed = True
@@ -1278,7 +1260,6 @@ def distribute_prizes(winners):
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
 
-    # Reload users from DB fresh to avoid races
     load_all_data()
 
     for winner in winners:
@@ -1632,7 +1613,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ===================================================================
-# ADMIN PANEL — no board, no card lists
+# ADMIN PANEL
 # ===================================================================
 if st.session_state.current_role == "admin":
     admin_panel()
@@ -1667,10 +1648,7 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# ✅ SESSION SELF-HEAL — force local state to match the shared DB row.
-#    Unsticks any player whose screen is still showing a BINGO board,
-#    called numbers, or winner celebration after the round was reset
-#    globally by another session.
+# ✅ SESSION SELF-HEAL — force local state to match the shared DB row
 # ===================================================================
 try:
     _db_row = load_state_row(force=True)
@@ -1680,12 +1658,11 @@ try:
     _db_called = set(_db_row.get("called_numbers") or [])
     _db_owner = dict(_db_row.get("card_owner") or {})
 
-    # CASE 1: DB says NOT started and NO winner -> everyone must be in card selection.
+    # CASE 1: DB says NOT started and NO winner -> everyone must be in card selection
     if (not _db_gs) and (not _db_wd):
         if (st.session_state.get("game_started")
                 or st.session_state.get("winner_declared")
                 or st.session_state.get("winners_list")):
-            # Wipe local mirrors to match DB
             st.session_state.game_started = False
             st.session_state.winner_declared = False
             st.session_state.game_over = False
@@ -1701,7 +1678,6 @@ try:
             st.session_state.prize_distributed = False
             st.session_state.winner_acknowledged = False
             st.session_state.flash_msg = ""
-            # Rebuild the player's own card set from DB ownership
             _cu = st.session_state.current_user
             if _cu:
                 _mine = set()
@@ -1716,7 +1692,7 @@ try:
                 st.session_state.clicked_numbers = set()
             st.rerun()
 
-    # CASE 2: DB says started but NO winner -> mirrors must reflect an in-progress game.
+    # CASE 2: DB says started but NO winner -> mirrors must reflect an in-progress game
     elif _db_gs and not _db_wd:
         st.session_state.game_started = True
         st.session_state.winner_declared = False
@@ -1727,7 +1703,7 @@ try:
         st.session_state.taken_cards = _db_taken
         st.session_state.card_owner = _db_owner
 
-    # CASE 3: DB says winner exists -> force celebration on every session.
+    # CASE 3: DB says winner exists -> force celebration on every session
     elif _db_wd:
         if not st.session_state.get("winner_declared"):
             st.session_state.winner_declared = True
@@ -1737,7 +1713,6 @@ try:
                 st.session_state.called_numbers = _db_called
             st.session_state.winners_list = _db_row.get("winners_list") or []
 except Exception:
-    # Never crash the whole page on a transient read issue
     pass
 
 # ===================================================================
@@ -1746,7 +1721,7 @@ except Exception:
 maybe_start_game()
 
 # ===================================================================
-# ✅ GLOBAL WINNER OVERLAY — shows for EVERY logged-in player
+# ✅ GLOBAL WINNER OVERLAY
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
@@ -1839,11 +1814,12 @@ if st.session_state.winner_declared and st.session_state.game_started:
 
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        if st.button("🔄 ወደ ካርቴላ ምርጫ ይመለሱ🎉 (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
+        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
             st.session_state.winner_acknowledged = True
             reset_for_next_round()
             st.rerun()
     st.stop()
+
 # ===================================================================
 # ✅ PLAYER DISPLAY
 # ===================================================================
@@ -1934,7 +1910,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# ✅ AUTO-CALL — stops the moment a winner exists globally
+# ✅ AUTO-CALL — stops the moment a winner exists
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
