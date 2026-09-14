@@ -1022,6 +1022,25 @@ def admin_panel():
     </div>
     """, unsafe_allow_html=True)
 
+    # ============================================================
+    # ✅ ADMIN INFO + LOGOUT (sidebar, matching player style)
+    # ============================================================
+    st.sidebar.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
+        <p style="margin:0;font-weight:600;color:#FFD700;">👤 Admin</p>
+        <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">🔧 Administrator</p>
+        <p style="margin:5px 0;font-size:1.1rem;font-weight:bold;color:#FFD700;">⭐ Full Access</p>
+        <p style="margin:3px 0;color:rgba(255,255,255,0.3);font-size:0.7rem;">🎯 Derash BINGO Admin Panel</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.sidebar.button("🚪 Logout", use_container_width=True, key="admin_logout_btn"):
+        logout_user()
+        st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.info("🔧 Admin Mode — Manage users & transactions")
+
     tab_users, tab_deposits, tab_withdrawals, tab_history = st.tabs([
         "👥 Users", "💰 Deposits", "💸 Withdrawals", "📜 History"
     ])
@@ -2018,7 +2037,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
     # ============================================================
-    # ✅ AUTO-RESUME TIMER — 5 seconds countdown
+    # ✅ AUTO-RESUME TIMER — 10 seconds countdown
     # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
