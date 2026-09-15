@@ -92,12 +92,12 @@ def create_request(req_type, username, amount, phone, telegram_id,
 # ===================================================================
 def get_main_menu():
     keyboard = [
-        [InlineKeyboardButton("📝 Register", callback_data="register")],
-        [InlineKeyboardButton("💰 Deposit / Pay", callback_data="deposit")],
+        [InlineKeyboardButton("📝 Register (ይመዝገቡ)", callback_data="register")],
+        [InlineKeyboardButton("💰 Deposit /Pay (ገቢ)", callback_data="deposit")],
         [InlineKeyboardButton("💸 Withdraw (ወጪ)", callback_data="withdraw")],
-        [InlineKeyboardButton("🎯 Play Game", url=GAME_LINK)],
-        [InlineKeyboardButton("❓ How to Play", callback_data="howto")],
-        [InlineKeyboardButton("🆘 Support / መረጃ", callback_data="support")],
+        [InlineKeyboardButton("🎯 Play Game (ተጫዎት)", url=GAME_LINK)],
+        [InlineKeyboardButton("❓ What's needed to play (ለመጫወት ምን ያስፈልጋል?)", callback_data="howto")],
+        [InlineKeyboardButton("🆘 Support (ተጨማሪ መረጃ)", callback_data="support")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
