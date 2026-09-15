@@ -7,26 +7,26 @@ from telegram.ext import (
 )
 from datetime import datetime, timezone
 
-# Enable logging
+# === LOGGING ===
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# === YOUR BOT INFORMATION ===
+# === BOT CONFIG ===
 BOT_TOKEN = "8976887607:AAHPLbIKWkSr0Yjbab_Ebhk6V--cRwNi4Eo"
 GAME_LINK = "https://tinyurl.com/4n6vkr6h"
 TELEBIRR_NUMBER = "0905527481"
 ADMIN_USERNAME = "@berhanumekonen6"
-BOT_USERNAME = "@DerashBingoPlayBot" 
+BOT_USERNAME = "@DerashBingoPlayBot"
 
-# === SUPABASE CONFIG (same values as your Streamlit app secrets) ===
+# === SUPABASE CONFIG ===
 SUPABASE_URL = "https://uijiawsnwjxhkufyhnto.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpamlhd3Nud2p4aGt1ZnlobnRvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTI1NTg3NywiZXhwIjoyMTA0ODMxODc3fQ.20CQTfXHN0j9sm09TQv0dNilLU2a60v4rj4VvEzHQ8Y"
 
-# === ADMIN TELEGRAM CHAT ID ===
-# Get your numeric chat ID by messaging @userinfobot on Telegram
+# === ADMIN TELEGRAM CHAT ID (numeric) ===
+# Send /start to @userinfobot on Telegram to get your numeric ID.
 ADMIN_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID_HERE"
 
 # === CONVERSATION STATES ===
@@ -50,7 +50,10 @@ def sb_get(table, query=""):
     try:
         url = f"{SUPABASE_URL}/rest/v1/{table}?{query}"
         r = requests.get(url, headers=supabase_headers(), timeout=10)
-        return r.json() if r.status_code == 200 else []
+        if r.status_code == 200:
+            return r.json()
+        logger.error(f"sb_get {table} failed: {r.status_code} {r.text}")
+        return []
     except Exception as e:
         logger.error(f"sb_get error: {e}")
         return []
@@ -60,14 +63,43 @@ def sb_post(table, data):
     try:
         url = f"{SUPABASE_URL}/rest/v1/{table}"
         r = requests.post(url, headers=supabase_headers(), json=data, timeout=10)
-        return r.status_code in (200, 201)
+        if r.status_code in (200, 201):
+            return r.json() if r.text else []
+        logger.error(f"sb_post {table} failed: {r.status_code} {r.text}")
+        return None
     except Exception as e:
         logger.error(f"sb_post error: {e}")
+        return None
+
+
+def sb_patch(table, query, data):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/{table}?{query}"
+        r = requests.patch(url, headers=supabase_headers(), json=data, timeout=10)
+        if r.status_code in (200, 204):
+            return True
+        logger.error(f"sb_patch {table} failed: {r.status_code} {r.text}")
+        return False
+    except Exception as e:
+        logger.error(f"sb_patch error: {e}")
         return False
 
 
 def get_user(username):
     rows = sb_get("users", f"username=eq.{username}&select=*")
+    return rows[0] if rows else None
+
+
+def update_user_balance(username, new_balance):
+    return sb_patch("users", f"username=eq.{username}", {"balance": float(new_balance)})
+
+
+def update_transaction_status(tx_id, status):
+    return sb_patch("transactions", f"id=eq.{tx_id}", {"status": status})
+
+
+def get_transaction(tx_id):
+    rows = sb_get("transactions", f"id=eq.{tx_id}&select=*")
     return rows[0] if rows else None
 
 
@@ -84,7 +116,10 @@ def create_request(req_type, username, amount, phone, telegram_id,
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    return sb_post("transactions", data)
+    result = sb_post("transactions", data)
+    if isinstance(result, list) and result:
+        return result[0]
+    return None
 
 
 # ===================================================================
@@ -114,6 +149,16 @@ def get_deposit_menu():
     keyboard = [
         [InlineKeyboardButton("✅ I Have Paid — Send Screenshot", callback_data="deposit_start")],
         [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_admin_action_menu(tx_id):
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Approve", callback_data=f"approve_{tx_id}"),
+            InlineKeyboardButton("❌ Reject", callback_data=f"reject_{tx_id}"),
+        ]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -246,7 +291,7 @@ async def deposit_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def deposit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = f"""
+    text = """
 💰 DEPOSIT — STEP 1 OF 3
 ━━━━━━━━━━━━━━━━━━━
 📝 Enter the amount you deposited (ETB):
@@ -314,34 +359,44 @@ async def deposit_screenshot_input(update: Update, context: ContextTypes.DEFAULT
     telegram_id = user.id
     telegram_name = user.full_name or user.username or f"User_{telegram_id}"
 
-    ok = create_request(
+    tx = create_request(
         "deposit", username, amount,
         phone="", telegram_id=telegram_id,
         telegram_name=telegram_name,
         screenshot_url=file_id,
     )
 
-    admin_msg = (
-        f"🔔 NEW DEPOSIT REQUEST!\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 Username: {username}\n"
-        f"👤 Telegram: {telegram_name}\n"
-        f"📱 Telegram ID: {telegram_id}\n"
-        f"💰 Amount: {amount:.2f} ETB\n"
-        f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"✅ Approve from Admin Panel."
-    )
-    try:
-        await context.bot.send_photo(chat_id=ADMIN_CHAT_ID, photo=file_id, caption=admin_msg)
-    except Exception as e:
-        logger.error(f"Admin notify failed: {e}")
+    if tx and tx.get("id"):
+        tx_id = tx["id"]
+        admin_msg = (
+            f"🔔 NEW DEPOSIT REQUEST!\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Username: {username}\n"
+            f"👤 Telegram: {telegram_name}\n"
+            f"📱 Telegram ID: {telegram_id}\n"
+            f"💰 Amount: {amount:.2f} ETB\n"
+            f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👉 Tap Approve / Reject below."
+        )
         try:
-            await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_msg)
-        except Exception as e2:
-            logger.error(f"Admin text notify failed: {e2}")
+            await context.bot.send_photo(
+                chat_id=ADMIN_CHAT_ID,
+                photo=file_id,
+                caption=admin_msg,
+                reply_markup=get_admin_action_menu(tx_id),
+            )
+        except Exception as e:
+            logger.error(f"Admin photo notify failed: {e}")
+            try:
+                await context.bot.send_message(
+                    chat_id=ADMIN_CHAT_ID,
+                    text=admin_msg,
+                    reply_markup=get_admin_action_menu(tx_id),
+                )
+            except Exception as e2:
+                logger.error(f"Admin text notify failed: {e2}")
 
-    if ok:
         await update.message.reply_text(
             f"""
 ✅ DEPOSIT REQUEST SENT!
@@ -386,7 +441,7 @@ async def withdraw_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def withdraw_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = f"""
+    text = """
 💸 WITHDRAWAL — STEP 1 OF 3
 ━━━━━━━━━━━━━━━━━━━
 📝 Enter the amount to withdraw:
@@ -444,7 +499,9 @@ Example: 0912345678
 
 async def withdraw_phone_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
-    phone_clean = phone.replace(" ", "").replace("-", "")
+    phone_clean = phone.replace(" ", "").replace("-", "").replace("+", "")
+    if phone_clean.startswith("251") and len(phone_clean) > 9:
+        phone_clean = "0" + phone_clean[3:]
 
     if len(phone_clean) < 9 or not phone_clean.isdigit():
         await update.message.reply_text("❌ Invalid phone. Example: 0912345678")
@@ -476,31 +533,36 @@ async def withdraw_phone_input(update: Update, context: ContextTypes.DEFAULT_TYP
         context.user_data.clear()
         return ConversationHandler.END
 
-    ok = create_request(
+    tx = create_request(
         "withdraw", username, amount,
         phone=phone, telegram_id=telegram_id,
         telegram_name=telegram_name,
     )
 
-    admin_msg = (
-        f"🔔 NEW WITHDRAWAL REQUEST!\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 Username: {username}\n"
-        f"👤 Telegram: {telegram_name}\n"
-        f"📱 Telegram ID: {telegram_id}\n"
-        f"📞 Phone: {phone}\n"
-        f"💰 Amount: {amount:.2f} ETB\n"
-        f"💼 Current Balance: {balance:.2f} ETB\n"
-        f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"✅ Approve from Admin Panel."
-    )
-    try:
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_msg)
-    except Exception as e:
-        logger.error(f"Admin notify failed: {e}")
+    if tx and tx.get("id"):
+        tx_id = tx["id"]
+        admin_msg = (
+            f"🔔 NEW WITHDRAWAL REQUEST!\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Username: {username}\n"
+            f"👤 Telegram: {telegram_name}\n"
+            f"📱 Telegram ID: {telegram_id}\n"
+            f"📞 Phone: {phone}\n"
+            f"💰 Amount: {amount:.2f} ETB\n"
+            f"💼 Current Balance: {balance:.2f} ETB\n"
+            f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👉 Tap Approve / Reject below."
+        )
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=admin_msg,
+                reply_markup=get_admin_action_menu(tx_id),
+            )
+        except Exception as e:
+            logger.error(f"Admin notify failed: {e}")
 
-    if ok:
         await update.message.reply_text(
             f"""
 ✅ WITHDRAWAL REQUEST SENT!
@@ -530,6 +592,110 @@ async def cancel_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ===================================================================
+# ADMIN APPROVE / REJECT
+# ===================================================================
+async def handle_admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # Only admin allowed
+    if str(query.from_user.id) != str(ADMIN_CHAT_ID):
+        await query.answer("⛔ Not authorized.", show_alert=True)
+        return
+
+    data = query.data
+    if not (data.startswith("approve_") or data.startswith("reject_")):
+        return
+
+    action, tx_id = data.split("_", 1)
+    tx = get_transaction(tx_id)
+    if not tx:
+        await query.edit_message_caption(caption="⚠️ Transaction not found.")
+        return
+
+    if tx.get("status") != "pending":
+        await query.edit_message_caption(
+            caption=f"ℹ️ Already {tx.get('status')}. No action taken."
+        )
+        return
+
+    username = tx.get("username")
+    amount = float(tx.get("amount", 0))
+    tx_type = tx.get("type")
+    telegram_id = tx.get("telegram_id")
+
+    # === REJECT ===
+    if action == "reject":
+        update_transaction_status(tx_id, "rejected")
+        await query.edit_message_caption(
+            caption=f"❌ REJECTED\n👤 {username}\n💰 {amount:.2f} ETB\n({tx_type})"
+        )
+        if telegram_id:
+            try:
+                await context.bot.send_message(
+                    chat_id=int(telegram_id),
+                    text=(
+                        f"❌ Your {tx_type} request was REJECTED.\n"
+                        f"💰 Amount: {amount:.2f} ETB\n"
+                        f"📞 Contact: {ADMIN_USERNAME}"
+                    ),
+                )
+            except Exception as e:
+                logger.error(f"User notify failed: {e}")
+        return
+
+    # === APPROVE ===
+    user_row = get_user(username)
+    if not user_row:
+        await query.edit_message_caption(caption=f"⚠️ User '{username}' not found.")
+        return
+
+    balance = float(user_row.get("balance", 0))
+
+    if tx_type == "deposit":
+        new_balance = balance + amount
+    elif tx_type == "withdraw":
+        if balance < amount:
+            await query.edit_message_caption(
+                caption=f"⚠️ Insufficient balance now.\n👤 {username}\n"
+                        f"💼 Balance: {balance:.2f}\n💸 Request: {amount:.2f}"
+            )
+            return
+        new_balance = balance - amount
+    else:
+        await query.edit_message_caption(caption=f"⚠️ Unknown type: {tx_type}")
+        return
+
+    ok_bal = update_user_balance(username, new_balance)
+    ok_tx = update_transaction_status(tx_id, "approved")
+
+    if ok_bal and ok_tx:
+        await query.edit_message_caption(
+            caption=(
+                f"✅ APPROVED\n"
+                f"👤 {username}\n"
+                f"💰 {amount:.2f} ETB ({tx_type})\n"
+                f"💼 New Balance: {new_balance:.2f} ETB"
+            )
+        )
+        if telegram_id:
+            try:
+                await context.bot.send_message(
+                    chat_id=int(telegram_id),
+                    text=(
+                        f"✅ Your {tx_type} was APPROVED!\n"
+                        f"💰 Amount: {amount:.2f} ETB\n"
+                        f"💼 New Balance: {new_balance:.2f} ETB\n"
+                        f"🎯 Continue playing: {GAME_LINK}"
+                    ),
+                )
+            except Exception as e:
+                logger.error(f"User notify failed: {e}")
+    else:
+        await query.edit_message_caption(caption="⚠️ Failed to update. Check logs.")
+
+
+# ===================================================================
 # BUTTON ROUTER
 # ===================================================================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -537,6 +703,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     data = query.data
+    if data.startswith("approve_") or data.startswith("reject_"):
+        await handle_admin_action(update, context)
+        return
+
     if data == "register":
         await register_button(update, context)
     elif data == "deposit":
