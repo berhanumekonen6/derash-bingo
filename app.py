@@ -335,6 +335,7 @@ def _default_state():
         "card_selection_time": 60,
         "last_called_at": 0,
         "last_called_by": None,
+        "bot_cards_injected": False,   # ✅ NEW
     }
 
 def load_state_row(force=False):
@@ -449,6 +450,8 @@ CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
+BOT_USERNAME = "🤖 Derash Bot"        # ✅ NEW
+BOT_CARDS_COUNT = 140                 # ✅ CHANGED — was 25
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -670,6 +673,67 @@ def get_global_remaining_time():
     return int(math.ceil(remaining)), False
 
 # ===================================================================
+# ✅ NEW — BOT CARD INJECTION (140 random cards when time expires)
+# ===================================================================
+def inject_bot_cards_if_needed():
+    """
+    When the card-selection timer reaches 0 AND at least MIN_CARDS_TO_START
+    real player cards exist, automatically add BOT_CARDS_COUNT (140) random
+    cards from the remaining unselected pool, owned by BOT_USERNAME.
+    Runs only ONCE per round (guarded by `bot_cards_injected` in game_state).
+    Returns True if cards were injected.
+    """
+    row = load_state_row(force=True)
+
+    # Already injected this round?
+    if row.get("bot_cards_injected", False):
+        return False
+
+    # Game must not have started yet
+    if row.get("game_started", False) or row.get("winner_declared", False):
+        return False
+
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+
+    # Only inject if minimum real-player cards exist
+    if len(taken) < MIN_CARDS_TO_START:
+        return False
+
+    # Timer must have expired
+    timer_start = row.get("timer_start_time", time.time())
+    duration = row.get("card_selection_time", CARD_SELECTION_DURATION)
+    if (time.time() - timer_start) < duration:
+        return False
+
+    # Build pool of unselected card IDs
+    taken_set = set(taken)
+    available = [c for c in range(1, 205) if c not in taken_set]
+
+    if not available:
+        update_state({"bot_cards_injected": True})
+        return False
+
+    n_pick = min(BOT_CARDS_COUNT, len(available))
+    bot_cards = random.sample(available, n_pick)
+
+    for cid in bot_cards:
+        taken.append(cid)
+        owner[str(cid)] = BOT_USERNAME
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+        "bot_cards_injected": True,
+    })
+
+    # Update session cache immediately
+    st.session_state.taken_cards = list(taken)
+    st.session_state.card_owner = dict(owner)
+
+    return True
+
+# ===================================================================
 # GLOBAL START CONDITION
 # ===================================================================
 def check_global_start_condition():
@@ -789,6 +853,7 @@ def reset_for_next_round():
         "card_owner": {},
         "timer_start_time": time.time(),
         "card_selection_time": CARD_SELECTION_DURATION,
+        "bot_cards_injected": False,   # ✅ NEW — reset flag for next round
     })
 
     st.session_state.selected_card = None
@@ -852,6 +917,9 @@ def maybe_start_game():
         return
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
+        # ✅ Inject 140 bot cards BEFORE marking game as started
+        inject_bot_cards_if_needed()
+
         mark_game_started_globally()
         st.session_state.game_started = True
         st.session_state.auto_call_started = False
@@ -1024,9 +1092,6 @@ def admin_panel():
     </div>
     """, unsafe_allow_html=True)
 
-    # ============================================================
-    # ✅ ADMIN INFO + LOGOUT (sidebar, matching player style)
-    # ============================================================
     st.sidebar.markdown(f"""
     <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
         <p style="margin:0;font-weight:600;color:#FFD700;">👤 Admin</p>
@@ -1047,9 +1112,6 @@ def admin_panel():
         "👥 Users", "💰 Deposits", "💸 Withdrawals", "📜 History"
     ])
 
-    # ============================
-    # TAB 1: USERS
-    # ============================
     with tab_users:
         load_all_data()
         users = [u for u in st.session_state.user_db.keys() if u != "admin"]
@@ -1109,9 +1171,6 @@ def admin_panel():
             total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
             st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
 
-    # ============================
-    # TAB 2: DEPOSITS
-    # ============================
     with tab_deposits:
         st.markdown("### 💰 Pending Deposit Requests")
         deposits = load_transactions(status_filter="pending", tx_type="deposit")
@@ -1158,9 +1217,6 @@ def admin_panel():
                             st.rerun()
                 st.markdown("---")
 
-    # ============================
-    # TAB 3: WITHDRAWALS
-    # ============================
     with tab_withdrawals:
         st.markdown("### 💸 Pending Withdrawal Requests")
         withdrawals = load_transactions(status_filter="pending", tx_type="withdraw")
@@ -1211,9 +1267,6 @@ def admin_panel():
                             st.rerun()
                 st.markdown("---")
 
-    # ============================
-    # TAB 4: HISTORY
-    # ============================
     with tab_history:
         st.markdown("### 📜 Processed Transactions")
         approved = load_transactions(status_filter="approved")
@@ -1575,6 +1628,9 @@ def distribute_prizes(winners):
 
     for winner in winners:
         username = winner.get("username")
+        # ✅ Skip the bot — it never gets paid and never counts as a "real" win
+        if username == BOT_USERNAME:
+            continue
         if username in st.session_state.user_db:
             st.session_state.user_db[username]["balance"] = \
                 float(st.session_state.user_db[username].get("balance", 0)) + prize_per_winner
@@ -1713,7 +1769,6 @@ def render_card_selection():
         st.warning("⚠️ Admin cannot play.")
         return
 
-    # ✅ HARD GUARD — Check Supabase directly before rendering any card
     _row_guard = load_state_row(force=True)
     if _row_guard.get("game_started", False) or _row_guard.get("winner_declared", False):
         st.session_state.game_started = True
@@ -1937,8 +1992,6 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
-# ✅ Also check the shared DB: if timer expired AND ≥3 cards globally →
-#    force the game to start, so players NEVER see card selection.
 _gate_row = load_state_row(force=True)
 _gate_taken = list(_gate_row.get("taken_cards") or [])
 _gate_timer_start = _gate_row.get("timer_start_time", time.time())
@@ -1947,14 +2000,18 @@ _gate_gs = bool(_gate_row.get("game_started", False))
 _gate_elapsed = time.time() - _gate_timer_start
 _gate_remaining = _gate_duration - _gate_elapsed
 
-# Force-start the game in Supabase if the condition is met
+# ✅ Force-start the game in Supabase if the condition is met
+#    AND inject 140 bot cards BEFORE marking game started
 if (not _gate_gs
         and len(_gate_taken) >= MIN_CARDS_TO_START
         and _gate_remaining <= 0):
+    inject_bot_cards_if_needed()                       # ✅ NEW
     mark_game_started_globally()
     st.session_state.game_started = True
     _show_game = True
-    _g_count = len(_gate_taken)
+    # refresh count after injection
+    _gate_taken_after = list(load_state_row(force=True).get("taken_cards") or [])
+    _g_count = len(_gate_taken_after)
 
 if not _show_game:
     if (st.session_state.game_started
@@ -2066,9 +2123,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
-    # ============================================================
-    # ✅ AUTO-RESUME TIMER — 10 seconds × 2 rounds celebration
-    # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
 
@@ -2185,9 +2239,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
-    # ============================================================
-    # ✅ 2-ROUND CELEBRATION LOCK — Resume button disabled until all rounds done
-    # ============================================================
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         if seconds_left > 0:
@@ -2282,7 +2333,6 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ✅ FINAL GUARD — NEVER show card selection if the game is live
     _final_row = load_state_row(force=True)
     _final_taken = list(_final_row.get("taken_cards") or [])
     _final_gs = bool(_final_row.get("game_started", False))
@@ -2291,21 +2341,20 @@ else:
     _final_duration = _final_row.get("card_selection_time", CARD_SELECTION_DURATION)
     _final_remaining = _final_duration - (time.time() - _final_start)
 
-    # If the game is live in Supabase OR session → never show the card list
     if _final_gs or _final_wd or st.session_state.game_started:
         st.session_state.game_started = True
         st.rerun()
 
-    # If timer expired AND ≥3 cards → force-start in Supabase and rerun
+    # ✅ If timer expired AND ≥3 cards → inject bot cards, force-start, rerun
     if (not _final_gs
             and not _final_wd
             and len(_final_taken) >= MIN_CARDS_TO_START
             and _final_remaining <= 0):
+        inject_bot_cards_if_needed()                    # ✅ NEW
         mark_game_started_globally()
         st.session_state.game_started = True
         st.rerun()
 
-    # Only reached when the game is truly NOT started anywhere
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
     time.sleep(0.5)
