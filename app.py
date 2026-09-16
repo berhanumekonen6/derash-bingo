@@ -1930,6 +1930,25 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
+# ✅ Also check the shared DB: if timer expired AND ≥3 cards globally →
+#    force the game to start, so players NEVER see card selection.
+_gate_row = load_state_row(force=True)
+_gate_taken = list(_gate_row.get("taken_cards") or [])
+_gate_timer_start = _gate_row.get("timer_start_time", time.time())
+_gate_duration = _gate_row.get("card_selection_time", CARD_SELECTION_DURATION)
+_gate_gs = bool(_gate_row.get("game_started", False))
+_gate_elapsed = time.time() - _gate_timer_start
+_gate_remaining = _gate_duration - _gate_elapsed
+
+# Force-start the game in Supabase if the condition is met
+if (not _gate_gs
+        and len(_gate_taken) >= MIN_CARDS_TO_START
+        and _gate_remaining <= 0):
+    mark_game_started_globally()
+    st.session_state.game_started = True
+    _show_game = True
+    _g_count = len(_gate_taken)
+
 if not _show_game:
     if (st.session_state.game_started
             or st.session_state.winner_declared
@@ -2256,14 +2275,31 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    st.session_state.game_started = False
-    st.session_state.winner_declared = False
-    st.session_state.game_over = False
+    # ✅ One final guard: if timer expired AND ≥3 cards globally → skip card list
+    _final_row = load_state_row(force=True)
+    _final_taken = list(_final_row.get("taken_cards") or [])
+    _final_gs = bool(_final_row.get("game_started", False))
+    _final_start = _final_row.get("timer_start_time", time.time())
+    _final_duration = _final_row.get("card_selection_time", CARD_SELECTION_DURATION)
+    _final_remaining = _final_duration - (time.time() - _final_start)
 
-    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-    render_card_selection()
-    time.sleep(0.5)
-    st.rerun()
+    if (not _final_gs
+            and len(_final_taken) >= MIN_CARDS_TO_START
+            and _final_remaining <= 0):
+        # Force-start game globally and re-run — user will see the game next rerun
+        mark_game_started_globally()
+        st.session_state.game_started = True
+        st.rerun()
+
+    # Show card selection only if the game hasn't started
+    if not st.session_state.game_started:
+        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
+        render_card_selection()
+        time.sleep(0.5)
+        st.rerun()
+    else:
+        # Game has started → just rerun so the gate switches to player display
+        st.rerun()
 
 # ===================================================================
 # FOOTER
