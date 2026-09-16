@@ -335,7 +335,7 @@ def _default_state():
         "card_selection_time": 60,
         "last_called_at": 0,
         "last_called_by": None,
-        "bot_cards_injected": False,   # ✅ NEW
+        "bot_cards_injected": False,
     }
 
 def load_state_row(force=False):
@@ -450,8 +450,8 @@ CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
-BOT_USERNAME = "🤖 Derash Bot"        # ✅ NEW
-BOT_CARDS_COUNT = 140                 # ✅ CHANGED — was 25
+BOT_USERNAME = "🤖 Derash Bot"
+BOT_CARDS_COUNT = 140
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -673,13 +673,16 @@ def get_global_remaining_time():
     return int(math.ceil(remaining)), False
 
 # ===================================================================
-# ✅ NEW — BOT CARD INJECTION (140 random cards when time expires)
+# ✅ CHANGED — BOT CARD INJECTION (runs at round start OR at timeout)
 # ===================================================================
-def inject_bot_cards_if_needed():
+def inject_bot_cards_if_needed(force=False):
     """
-    When the card-selection timer reaches 0 AND at least MIN_CARDS_TO_START
-    real player cards exist, automatically add BOT_CARDS_COUNT (140) random
-    cards from the remaining unselected pool, owned by BOT_USERNAME.
+    Injects BOT_CARDS_COUNT (140) random bot cards from the unselected pool.
+    Two trigger modes:
+      1. force=True  — called at the START of a fresh round, so players SEE
+                       140 red (taken) cards during selection → creates urgency/FOMO.
+      2. force=False — safety net: called when the timer hits 0, in case the
+                       start-of-round injection hasn't happened yet.
     Runs only ONCE per round (guarded by `bot_cards_injected` in game_state).
     Returns True if cards were injected.
     """
@@ -693,18 +696,15 @@ def inject_bot_cards_if_needed():
     if row.get("game_started", False) or row.get("winner_declared", False):
         return False
 
+    # If not forced (timer-driven), require timer to be expired
+    if not force:
+        timer_start = row.get("timer_start_time", time.time())
+        duration = row.get("card_selection_time", CARD_SELECTION_DURATION)
+        if (time.time() - timer_start) < duration:
+            return False
+
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
-
-    # Only inject if minimum real-player cards exist
-    if len(taken) < MIN_CARDS_TO_START:
-        return False
-
-    # Timer must have expired
-    timer_start = row.get("timer_start_time", time.time())
-    duration = row.get("card_selection_time", CARD_SELECTION_DURATION)
-    if (time.time() - timer_start) < duration:
-        return False
 
     # Build pool of unselected card IDs
     taken_set = set(taken)
@@ -834,9 +834,10 @@ def clear_game_state():
     return True
 
 # ===================================================================
-# RESET FOR NEXT ROUND
+# ✅ CHANGED — RESET FOR NEXT ROUND (injects bot cards immediately)
 # ===================================================================
 def reset_for_next_round():
+    # 1. Reset everything
     update_state({
         "winners_list": [],
         "winner_declared": False,
@@ -853,7 +854,7 @@ def reset_for_next_round():
         "card_owner": {},
         "timer_start_time": time.time(),
         "card_selection_time": CARD_SELECTION_DURATION,
-        "bot_cards_injected": False,   # ✅ NEW — reset flag for next round
+        "bot_cards_injected": False,
     })
 
     st.session_state.selected_card = None
@@ -877,6 +878,9 @@ def reset_for_next_round():
     st.session_state.winner_acknowledged = False
     st.session_state.winner_screen_shown_at = None
     st.session_state.celebration_round = 1
+
+    # 2. ✅ Immediately inject 140 bot cards so users SEE them as 🔴 taken
+    inject_bot_cards_if_needed(force=True)
 
 # ===================================================================
 # SYNC GLOBAL CARDS
@@ -917,8 +921,18 @@ def maybe_start_game():
         return
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
-        # ✅ Inject 140 bot cards BEFORE marking game as started
-        inject_bot_cards_if_needed()
+        # Safety net: inject if the start-of-round injection didn't happen
+        inject_bot_cards_if_needed(force=True)
+
+        # Then check winners with the full board
+        check_for_winners(force_fresh=True)
+
+        if st.session_state.winner_declared:
+            mark_game_started_globally()
+            st.session_state.game_started = True
+            st.session_state.auto_call_started = False
+            save_game_state()
+            st.rerun()
 
         mark_game_started_globally()
         st.session_state.game_started = True
@@ -1628,7 +1642,6 @@ def distribute_prizes(winners):
 
     for winner in winners:
         username = winner.get("username")
-        # ✅ Skip the bot — it never gets paid and never counts as a "real" win
         if username == BOT_USERNAME:
             continue
         if username in st.session_state.user_db:
@@ -2000,16 +2013,15 @@ _gate_gs = bool(_gate_row.get("game_started", False))
 _gate_elapsed = time.time() - _gate_timer_start
 _gate_remaining = _gate_duration - _gate_elapsed
 
-# ✅ Force-start the game in Supabase if the condition is met
-#    AND inject 140 bot cards BEFORE marking game started
+# ✅ Safety net: inject bot cards if not already injected and timer expired
 if (not _gate_gs
         and len(_gate_taken) >= MIN_CARDS_TO_START
         and _gate_remaining <= 0):
-    inject_bot_cards_if_needed()                       # ✅ NEW
+    inject_bot_cards_if_needed(force=True)
+    check_for_winners(force_fresh=True)
     mark_game_started_globally()
     st.session_state.game_started = True
     _show_game = True
-    # refresh count after injection
     _gate_taken_after = list(load_state_row(force=True).get("taken_cards") or [])
     _g_count = len(_gate_taken_after)
 
@@ -2109,6 +2121,22 @@ try:
             st.session_state.winners_list = _db_winners
 except Exception:
     pass
+
+# ===================================================================
+# ✅ NEW — ENSURE BOT CARDS ARE INJECTED AT ROUND START
+# This runs on every refresh while in card selection, so the very first
+# fresh round after reset shows the 140 bot cards immediately.
+# ===================================================================
+if (not st.session_state.get("game_started", False)
+        and not st.session_state.get("winner_declared", False)):
+    _round_row = load_state_row()
+    if not _round_row.get("bot_cards_injected", False):
+        _taken_now = list(_round_row.get("taken_cards") or [])
+        _timer_start = _round_row.get("timer_start_time", time.time())
+        _duration = _round_row.get("card_selection_time", CARD_SELECTION_DURATION)
+        # Only auto-inject if the round has just begun (timer still counting)
+        if (time.time() - _timer_start) < _duration:
+            inject_bot_cards_if_needed(force=True)
 
 # ===================================================================
 # START THE GAME
@@ -2345,12 +2373,12 @@ else:
         st.session_state.game_started = True
         st.rerun()
 
-    # ✅ If timer expired AND ≥3 cards → inject bot cards, force-start, rerun
     if (not _final_gs
             and not _final_wd
             and len(_final_taken) >= MIN_CARDS_TO_START
             and _final_remaining <= 0):
-        inject_bot_cards_if_needed()                    # ✅ NEW
+        inject_bot_cards_if_needed(force=True)
+        check_for_winners(force_fresh=True)
         mark_game_started_globally()
         st.session_state.game_started = True
         st.rerun()
