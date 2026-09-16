@@ -1713,6 +1713,13 @@ def render_card_selection():
         st.warning("⚠️ Admin cannot play.")
         return
 
+    # ✅ HARD GUARD — Check Supabase directly before rendering any card
+    _row_guard = load_state_row(force=True)
+    if _row_guard.get("game_started", False) or _row_guard.get("winner_declared", False):
+        st.session_state.game_started = True
+        st.rerun()
+        return
+
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
@@ -2060,7 +2067,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
     # ============================================================
-    # ✅ AUTO-RESUME TIMER — 40 seconds × 3 rounds celebration
+    # ✅ AUTO-RESUME TIMER — 10 seconds × 2 rounds celebration
     # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
@@ -2168,24 +2175,24 @@ if st.session_state.winner_declared and st.session_state.game_started:
         </p>
         <p style="color:#FF9800;font-size:1rem;font-weight:bold;margin:10px 0 0 0;
                   animation: celebrationPulse 1s ease-in-out infinite alternate;">
-            🎉 የክብረ በዓል ዙር: <span style="font-size:1.5rem;color:#FFD700;">{current_round}/3</span>
+            🎉 የክብረ በዓል ዙር: <span style="font-size:1.5rem;color:#FFD700;">{current_round}/2</span>
             &nbsp;|&nbsp;
             ⏳ ቀጣይ ዙር: <span style="font-size:1.3rem;color:#FFD700;">{seconds_left}</span> ሰከንድ
         </p>
         <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:4px 0 0 0;font-style:italic;">
-            🎉 Celebration Round {current_round}/3 — next in {seconds_left}s
+            🎉 Celebration Round {current_round}/2 — next in {seconds_left}s
         </p>
     </div>
     """, unsafe_allow_html=True)
 
     # ============================================================
-    # ✅ 3-ROUND CELEBRATION LOCK — Resume button disabled until all rounds done
+    # ✅ 2-ROUND CELEBRATION LOCK — Resume button disabled until all rounds done
     # ============================================================
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         if seconds_left > 0:
             st.button(
-                f"🎉 ክብረ በዓል ዙር {current_round}/3 — ({seconds_left}s)",
+                f"🎉 ክብረ በዓል ዙር {current_round}/2 — ({seconds_left}s)",
                 use_container_width=True,
                 key=f"global_resume_btn_locked_{current_round}",
                 disabled=True,
@@ -2275,31 +2282,34 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ✅ One final guard: if timer expired AND ≥3 cards globally → skip card list
+    # ✅ FINAL GUARD — NEVER show card selection if the game is live
     _final_row = load_state_row(force=True)
     _final_taken = list(_final_row.get("taken_cards") or [])
     _final_gs = bool(_final_row.get("game_started", False))
+    _final_wd = bool(_final_row.get("winner_declared", False))
     _final_start = _final_row.get("timer_start_time", time.time())
     _final_duration = _final_row.get("card_selection_time", CARD_SELECTION_DURATION)
     _final_remaining = _final_duration - (time.time() - _final_start)
 
+    # If the game is live in Supabase OR session → never show the card list
+    if _final_gs or _final_wd or st.session_state.game_started:
+        st.session_state.game_started = True
+        st.rerun()
+
+    # If timer expired AND ≥3 cards → force-start in Supabase and rerun
     if (not _final_gs
+            and not _final_wd
             and len(_final_taken) >= MIN_CARDS_TO_START
             and _final_remaining <= 0):
-        # Force-start game globally and re-run — user will see the game next rerun
         mark_game_started_globally()
         st.session_state.game_started = True
         st.rerun()
 
-    # Show card selection only if the game hasn't started
-    if not st.session_state.game_started:
-        st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
-        render_card_selection()
-        time.sleep(0.5)
-        st.rerun()
-    else:
-        # Game has started → just rerun so the gate switches to player display
-        st.rerun()
+    # Only reached when the game is truly NOT started anywhere
+    st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
+    render_card_selection()
+    time.sleep(0.5)
+    st.rerun()
 
 # ===================================================================
 # FOOTER
