@@ -424,7 +424,7 @@ def load_global_winners():
 def sync_global_winners():
     if st.session_state.get("winner_acknowledged", False):
         return False
-    
+
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
@@ -817,8 +817,6 @@ def reset_for_next_round():
 # SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
-    # ✅ FORCE-fresh state so bot cards selected by the admin
-    #    appear IMMEDIATELY for all players (bypasses 0.3s cache).
     _fresh_row = load_state_row(force=True)
     global_taken = list(_fresh_row.get("taken_cards") or [])
     global_owner = dict(_fresh_row.get("card_owner") or {})
@@ -879,7 +877,7 @@ def login_user(username, password):
     username = username.strip()
     password = password.strip()
     load_all_data()
-    
+
     if username == "admin" and password == "admin123":
         if username not in st.session_state.user_db:
             st.session_state.user_db[username] = {
@@ -893,17 +891,17 @@ def login_user(username, password):
         else:
             st.session_state.user_db["admin"]["balance"] = 0.0
             save_local_users(st.session_state.user_db)
-        
+
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
         return True, "✅ Admin login successful!"
-    
+
     if username not in st.session_state.user_db:
         return False, "❌ Username not found"
-    
+
     if verify_password(password, st.session_state.user_db[username]["password"]):
         st.session_state.logged_in = True
         st.session_state.current_user = username
@@ -921,8 +919,7 @@ def register_user(username, password, name, phone=""):
         return False, "❌ Username must be at least 2 characters"
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
-    # ✅ Reserve bot names so real players can't hijack bot usernames
-    if username.endswith(BOT_SUFFIX) or username in BOT_NAMES:
+    if is_bot_username(username) or username in BOT_NAMES:
         return False, "❌ This username is reserved"
     load_all_data()
     if username in st.session_state.user_db:
@@ -952,7 +949,7 @@ def logout_user():
 BOT_USERNAME_DISPLAY = "@DerashBingoPlayBot"
 
 # ===================================================================
-# BOT NAMES — Ethiopian / Amharic names + "_b" suffix to mark them
+# BOT NAMES — Ethiopian names + varied suffixes (Yosef_b, Abebe_ad, …)
 # ===================================================================
 BOT_NAMES = [
     "Bekele", "Alemu", "Aster", "Yednekachew", "Tigist", "Getachew",
@@ -974,27 +971,48 @@ BOT_NAMES = [
     "Zerihun", "Aregash", "Mulugeta", "Tigabu", "Lulit", "Bonsa",
 ]
 
-# Suffix used to mark bot usernames (e.g., "Alemu_b")
+# ✅ Varied suffixes so bots look like real players:
+#    Yosef_b, Abebe_ad, Bekele_x7, Aster_z9, etc.
+BOT_SUFFIXES = [
+    "_b", "_ad", "_x7", "_z9", "_m2", "_k4", "_p5", "_t8",
+    "_g3", "_n6", "_r1", "_v0", "_w9", "_y5", "_q7", "_s4",
+    "_c8", "_d2", "_e6", "_f3", "_h1", "_j9", "_l0", "_u7",
+]
+
+# Base suffix reserved for legacy checks
 BOT_SUFFIX = "_b"
 
-def make_bot_username(base_name):
-    """Return the bot username with the _b suffix."""
-    return f"{base_name}{BOT_SUFFIX}"
+
+def make_bot_username(base_name, index=0):
+    """Return a bot username with a varied suffix from BOT_SUFFIXES.
+
+    Uses index % len(BOT_SUFFIXES) so the same bot slot always
+    gets the same suffix across re-runs (deterministic).
+    """
+    if not BOT_SUFFIXES:
+        return base_name + BOT_SUFFIX
+    suffix = BOT_SUFFIXES[index % len(BOT_SUFFIXES)]
+    return base_name + suffix
+
 
 def is_bot_username(username):
-    """Return True if this username belongs to a bot (ends with _b)."""
+    """Return True if this username ends with any known bot suffix."""
     if not username:
         return False
-    return str(username).endswith(BOT_SUFFIX)
+    name = str(username)
+    return any(name.endswith(sfx) for sfx in BOT_SUFFIXES)
+
 
 def get_bot_display_name(username):
-    """Strip the _b suffix for display, prefixed with 🤖."""
+    """Strip the bot suffix for display, prefixed with 🤖."""
     if not username:
         return "🤖 Bot"
     name = str(username)
-    if name.endswith(BOT_SUFFIX):
-        name = name[: -len(BOT_SUFFIX)]
-    return f"🤖 {name}"
+    for sfx in BOT_SUFFIXES:
+        if name.endswith(sfx):
+            name = name[: -len(sfx)]
+            break
+    return "🤖 " + name
 
 
 def load_transactions(status_filter=None, tx_type=None):
@@ -1067,7 +1085,7 @@ def reject_transaction(tx, note=""):
 # BOT CARDS — ADMIN FEATURE
 # ===================================================================
 def get_or_create_bot_users(count):
-    """Create/get bot users with Ethiopian names + '_b' suffix."""
+    """Create/get bot users with Ethiopian names + varied suffixes."""
     load_all_data()
     if count > len(BOT_NAMES):
         count = len(BOT_NAMES)
@@ -1079,14 +1097,15 @@ def get_or_create_bot_users(count):
     bot_users = []
     for i in range(count):
         base_name = available_names[i]
-        bot_username = make_bot_username(base_name)  # e.g., "Alemu_b"
+        # ✅ Varied suffix: Yosef_b, Abebe_ad, Bekele_x7, …
+        bot_username = make_bot_username(base_name, i)
 
         if bot_username not in st.session_state.user_db:
             st.session_state.user_db[bot_username] = {
-                "password": hash_password(f"{bot_username}_secret_{i}"),
+                "password": hash_password(bot_username + "_secret_" + str(i)),
                 "balance": 10000.0,
                 "role": "player",
-                "name": f"🤖 {base_name}",       # Display name without suffix
+                "name": "🤖 " + base_name,
                 "phone": "",
                 "game_played": 0,
                 "wins": 0,
@@ -1105,7 +1124,6 @@ def assign_bot_cards(bot_count):
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
 
-    # Remove any existing bot-owned cards first (idempotent re-apply)
     bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_owned:
         cid = int(k)
@@ -1175,10 +1193,7 @@ def admin_panel():
     </div>
     """, unsafe_allow_html=True)
 
-    # ============================================================
-    # ✅ ADMIN INFO + LOGOUT (sidebar, matching player style)
-    # ============================================================
-    st.sidebar.markdown(f"""
+    st.sidebar.markdown("""
     <div style="background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.03));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.1);margin-bottom:15px;">
         <p style="margin:0;font-weight:600;color:#FFD700;">👤 Admin</p>
         <p style="margin:3px 0;color:rgba(255,255,255,0.4);font-size:0.7rem;">🔧 Administrator</p>
@@ -1210,14 +1225,20 @@ def admin_panel():
             selected_user = st.selectbox("Select User", users, key="admin_user_select")
             if selected_user:
                 ud = st.session_state.user_db.get(selected_user, {})
-                st.markdown(f"""
+                st.markdown("""
                 <div style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,165,0,0.05));padding:1rem;border-radius:12px;border:1px solid rgba(255,215,0,0.15);margin-bottom:15px;">
-                    <p style="margin:0;font-weight:600;color:#FFD700;">👤 {ud.get('name', selected_user)}</p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 {ud.get('phone', 'N/A')}</p>
-                    <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {ud.get('balance', 0):.2f} ETB</p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {ud.get('game_played', 0)} | 🏆 Wins: {ud.get('wins', 0)}</p>
+                    <p style="margin:0;font-weight:600;color:#FFD700;">👤 {}</p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 {}</p>
+                    <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {:.2f} ETB</p>
+                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {} | 🏆 Wins: {}</p>
                 </div>
-                """, unsafe_allow_html=True)
+                """.format(
+                    ud.get('name', selected_user),
+                    ud.get('phone', 'N/A'),
+                    ud.get('balance', 0),
+                    ud.get('game_played', 0),
+                    ud.get('wins', 0)
+                ), unsafe_allow_html=True)
 
                 custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100, key="admin_amt")
                 c1, c2, c3 = st.columns(3)
@@ -1228,7 +1249,7 @@ def admin_panel():
                         st.session_state.user_db[selected_user]["balance"] = new_balance
                         save_local_users(st.session_state.user_db)
                         st.session_state["admin_celebration_msg"] = (
-                            f"🎉 ለ {selected_user} {custom_amount:.2f} ETB ተጨምሯል! አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                            "🎉 ለ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተጨምሯል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB"
                         )
                         st.rerun()
 
@@ -1237,7 +1258,7 @@ def admin_panel():
                         st.session_state.user_db[selected_user]["balance"] = custom_amount
                         save_local_users(st.session_state.user_db)
                         st.session_state["admin_celebration_msg"] = (
-                            f"🎉 የ {selected_user} ሂሳብ {custom_amount:.2f} ETB ሆኖ ተቀናብሯል!"
+                            "🎉 የ " + selected_user + " ሂሳብ " + f"{custom_amount:.2f}" + " ETB ሆኖ ተቀናብሯል!"
                         )
                         st.rerun()
 
@@ -1249,7 +1270,7 @@ def admin_panel():
                             st.session_state.user_db[selected_user]["balance"] = new_balance
                             save_local_users(st.session_state.user_db)
                             st.session_state["admin_celebration_msg"] = (
-                                f"✅ ከ {selected_user} {custom_amount:.2f} ETB ተቀንሷል! አዲስ ሂሳብ: {new_balance:.2f} ETB"
+                                "✅ ከ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተቀንሷል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB"
                             )
                             st.rerun()
                         else:
@@ -1258,7 +1279,7 @@ def admin_panel():
             st.markdown("---")
             total_users = len(users)
             total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
-            st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
+            st.info("👥 Users: " + str(total_users) + " | 💰 Total Balance: " + f"{total_balance:.2f}" + " ETB")
 
     # ============================
     # TAB 1b: BOT CARDS
@@ -1268,9 +1289,9 @@ def admin_panel():
         st.markdown(
             "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
             "Select how many bot cards to auto-assign. Each bot gets 1 card. "
-            "Bot usernames look like <b>Bekele_b</b>, <b>Alemu_b</b>, <b>Aster_b</b> — "
-            "the <b>_b</b> suffix marks them as bots. They will appear as "
-            "<b>🔴 selected</b> to all players, just like cards taken by real players.</p>",
+            "Bot usernames use Ethiopian names + varied suffixes — for example "
+            "<b>Yosef_b</b>, <b>Abebe_ad</b>, <b>Bekele_x7</b>, <b>Aster_z9</b>. "
+            "They appear as <b>🔴 selected</b> to all players, just like real players' cards.</p>",
             unsafe_allow_html=True,
         )
 
@@ -1281,17 +1302,17 @@ def admin_panel():
         )
         total_taken_b = len(row_b.get("taken_cards") or [])
 
-        st.markdown(f"""
+        st.markdown("""
         <div style="background:linear-gradient(135deg,rgba(33,150,243,0.12),rgba(33,150,243,0.05));
                     padding:14px;border-radius:12px;border:1px solid rgba(33,150,243,0.25);margin-bottom:12px;">
             <p style="margin:0;color:#2196F3;font-weight:bold;font-size:1.05rem;">
-                🤖 Active Bot Cards: {current_bot_cards}
+                🤖 Active Bot Cards: {}
             </p>
             <p style="margin:5px 0 0 0;color:rgba(255,255,255,0.65);font-size:0.85rem;">
-                📊 Total taken cards: {total_taken_b} / 204
+                📊 Total taken cards: {} / 204
             </p>
         </div>
-        """, unsafe_allow_html=True)
+        """.format(current_bot_cards, total_taken_b), unsafe_allow_html=True)
 
         bot_options = list(range(0, 101, 2))
         default_index = 0
@@ -1310,10 +1331,10 @@ def admin_panel():
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
-                    st.success(f"🗑️ Removed {removed} bot card(s).")
+                    st.success("🗑️ Removed " + str(removed) + " bot card(s).")
                 else:
                     assigned = assign_bot_cards(selected_bot_count)
-                    st.success(f"🤖 Assigned {assigned} bot card(s) — visible to all players as 🔴 selected")
+                    st.success("🤖 Assigned " + str(assigned) + " bot card(s) — visible to all players as 🔴 selected")
                 st.balloons()
                 time.sleep(1.0)
                 st.rerun()
@@ -1321,7 +1342,7 @@ def admin_panel():
         with col_b2:
             if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
                 removed = remove_bot_cards()
-                st.warning(f"🗑️ Removed {removed} bot card(s).")
+                st.warning("🗑️ Removed " + str(removed) + " bot card(s).")
                 time.sleep(0.8)
                 st.rerun()
 
@@ -1329,10 +1350,9 @@ def admin_panel():
         st.info(
             "💡 Bot cards count toward the 3-card minimum to start the game. "
             "Each bot has a 10,000 ETB balance and can win prizes like a normal player. "
-            "Bot usernames end with '_b' (e.g., Alemu_b, Bekele_b) so they are easy to identify."
+            "Bot usernames use varied suffixes (e.g., Yosef_b, Abebe_ad, Aster_x7) so they blend in."
         )
 
-        # Preview of current bot cards — shows Card# → Bot username (with _b)
         if current_bot_cards > 0:
             st.markdown("#### 👀 Current Bot Cards")
             owner_map = row_b.get("card_owner") or {}
@@ -1344,12 +1364,12 @@ def admin_panel():
                     except (ValueError, TypeError):
                         pass
             bot_entries.sort(key=lambda x: x[0])
-            preview = ", ".join(f"#{c}→{name}" for c, name in bot_entries[:30])
+            preview = ", ".join("#" + str(c) + "→" + str(name) for c, name in bot_entries[:30])
             if len(bot_entries) > 30:
-                preview += f" ... +{len(bot_entries) - 30} more"
+                preview += " ... +" + str(len(bot_entries) - 30) + " more"
             st.markdown(
-                f"<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"
-                f"color:rgba(255,255,255,0.75);font-size:0.85rem;'>{preview}</div>",
+                "<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"
+                "color:rgba(255,255,255,0.75);font-size:0.85rem;'>" + preview + "</div>",
                 unsafe_allow_html=True,
             )
 
@@ -1364,40 +1384,46 @@ def admin_panel():
             st.info("✅ No pending deposit requests.")
         else:
             for tx in deposits:
-                st.markdown(f"""
+                st.markdown("""
                 <div style="background:linear-gradient(135deg,rgba(76,175,80,0.12),rgba(76,175,80,0.05));
                             padding:15px;border-radius:12px;border:1px solid rgba(76,175,80,0.25);margin-bottom:6px;">
                     <p style="margin:0;font-weight:bold;color:#4CAF50;font-size:1.1rem;">
-                        💰 {float(tx['amount']):.2f} ETB — Deposit
+                        💰 {:.2f} ETB — Deposit
                     </p>
-                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{tx['username']}</b></p>
+                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{}</b></p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-                        📱 Telegram: {tx.get('telegram_name','N/A')} (ID: {tx.get('telegram_id','')})
+                        📱 Telegram: {} (ID: {})
                     </p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
-                        📅 {tx.get('created_at','')}
+                        📅 {}
                     </p>
                 </div>
-                """, unsafe_allow_html=True)
+                """.format(
+                    float(tx['amount']),
+                    tx['username'],
+                    tx.get('telegram_name', 'N/A'),
+                    tx.get('telegram_id', ''),
+                    tx.get('created_at', '')
+                ), unsafe_allow_html=True)
 
                 if tx.get("screenshot_url"):
-                    st.caption(f"🖼 Telegram file_id: `{tx['screenshot_url']}`")
+                    st.caption("🖼 Telegram file_id: `" + str(tx['screenshot_url']) + "`")
                     st.markdown(
-                        f"👉 [Open bot chat to view screenshot](https://t.me/{BOT_USERNAME_DISPLAY.replace('@','')})"
+                        "👉 [Open bot chat to view screenshot](https://t.me/" + BOT_USERNAME_DISPLAY.replace('@','') + ")"
                     )
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button(f"✅ Approve #{tx['id']}", key=f"app_dep_{tx['id']}", use_container_width=True):
+                    if st.button("✅ Approve #" + str(tx['id']), key="app_dep_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.success(f"✅ Deposit #{tx['id']} approved! {tx['username']} +{float(tx['amount']):.2f} ETB")
+                            st.success("✅ Deposit #" + str(tx['id']) + " approved! " + str(tx['username']) + " +" + f"{float(tx['amount']):.2f}" + " ETB")
                             st.balloons()
                             time.sleep(1.2)
                             st.rerun()
                 with col2:
-                    if st.button(f"❌ Reject #{tx['id']}", key=f"rej_dep_{tx['id']}", use_container_width=True):
+                    if st.button("❌ Reject #" + str(tx['id']), key="rej_dep_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Deposit rejected by admin"):
-                            st.warning(f"❌ Deposit #{tx['id']} rejected.")
+                            st.warning("❌ Deposit #" + str(tx['id']) + " rejected.")
                             time.sleep(0.8)
                             st.rerun()
                 st.markdown("---")
@@ -1420,37 +1446,41 @@ def admin_panel():
                 enough = cur_balance >= amount
                 color = "#FF9800" if enough else "#F44336"
 
-                st.markdown(f"""
+                st.markdown("""
                 <div style="background:linear-gradient(135deg,rgba(255,152,0,0.12),rgba(255,152,0,0.05));
-                            padding:15px;border-radius:12px;border:1px solid {color}44;margin-bottom:6px;">
-                    <p style="margin:0;font-weight:bold;color:{color};font-size:1.1rem;">
-                        💸 {amount:.2f} ETB — Withdrawal
+                            padding:15px;border-radius:12px;border:1px solid {c}44;margin-bottom:6px;">
+                    <p style="margin:0;font-weight:bold;color:{c};font-size:1.1rem;">
+                        💸 {amt:.2f} ETB — Withdrawal
                     </p>
-                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{tx['username']}</b></p>
+                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{u}</b></p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-                        📞 Phone: {tx.get('phone','')} | 📱 TG: {tx.get('telegram_name','')}
+                        📞 Phone: {p} | 📱 TG: {tg}
                     </p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.6);font-size:0.85rem;">
-                        💼 Current balance: <b>{cur_balance:.2f} ETB</b>
-                        {"✅ sufficient" if enough else "❌ INSUFFICIENT"}
+                        💼 Current balance: <b>{cb:.2f} ETB</b> {suf}
                     </p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
-                        📅 {tx.get('created_at','')}
+                        📅 {ca}
                     </p>
                 </div>
-                """, unsafe_allow_html=True)
+                """.format(
+                    c=color, amt=amount, u=tx['username'],
+                    p=tx.get('phone',''), tg=tx.get('telegram_name',''),
+                    cb=cur_balance, suf=("✅ sufficient" if enough else "❌ INSUFFICIENT"),
+                    ca=tx.get('created_at','')
+                ), unsafe_allow_html=True)
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button(f"✅ Approve #{tx['id']}", key=f"app_wd_{tx['id']}", use_container_width=True):
+                    if st.button("✅ Approve #" + str(tx['id']), key="app_wd_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.success(f"✅ Withdrawal #{tx['id']} approved! {tx['username']} -{amount:.2f} ETB")
+                            st.success("✅ Withdrawal #" + str(tx['id']) + " approved! " + str(tx['username']) + " -" + f"{amount:.2f}" + " ETB")
                             time.sleep(1.0)
                             st.rerun()
                 with col2:
-                    if st.button(f"❌ Reject #{tx['id']}", key=f"rej_wd_{tx['id']}", use_container_width=True):
+                    if st.button("❌ Reject #" + str(tx['id']), key="rej_wd_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Withdrawal rejected by admin"):
-                            st.warning(f"❌ Withdrawal #{tx['id']} rejected.")
+                            st.warning("❌ Withdrawal #" + str(tx['id']) + " rejected.")
                             time.sleep(0.8)
                             st.rerun()
                 st.markdown("---")
@@ -1470,18 +1500,26 @@ def admin_panel():
             for tx in history[:100]:
                 icon = "✅" if tx["status"] == "approved" else "❌"
                 tcolor = "#4CAF50" if tx["status"] == "approved" else "#F44336"
-                st.markdown(f"""
+                note_html = ""
+                if tx.get("admin_note"):
+                    note_html = "<p style='margin:3px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;'>📝 " + str(tx.get("admin_note","")) + "</p>"
+                st.markdown("""
                 <div style="background:rgba(0,0,0,0.2);padding:10px 14px;border-radius:10px;
-                            border-left:4px solid {tcolor};margin-bottom:6px;">
-                    <p style="margin:0;color:{tcolor};font-weight:bold;">
-                        {icon} {tx['type'].title()} — {float(tx['amount']):.2f} ETB
+                            border-left:4px solid {tc};margin-bottom:6px;">
+                    <p style="margin:0;color:{tc};font-weight:bold;">
+                        {ic} {ty} — {amt:.2f} ETB
                     </p>
                     <p style="margin:3px 0;color:rgba(255,255,255,0.75);font-size:0.85rem;">
-                        👤 {tx['username']} | 📅 {tx.get('processed_at') or tx.get('created_at','')}
+                        👤 {u} | 📅 {dt}
                     </p>
-                    {f'<p style="margin:3px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">📝 {tx.get("admin_note","")}</p>' if tx.get("admin_note") else ""}
+                    {note}
                 </div>
-                """, unsafe_allow_html=True)
+                """.format(
+                    tc=tcolor, ic=icon, ty=tx['type'].title(),
+                    amt=float(tx['amount']), u=tx['username'],
+                    dt=(tx.get('processed_at') or tx.get('created_at','')),
+                    note=note_html
+                ), unsafe_allow_html=True)
 
 # ===================================================================
 # ALL 204 BINGO CARDS
@@ -1898,8 +1936,6 @@ def display_master_board():
     if not st.session_state.winner_declared:
         sync_global_winners()
 
-    # ✅ FORCE-fresh card state so bot cards selected by admin
-    #    appear immediately in the selected-cards strip for all players.
     _fresh = load_state_row(force=True)
     fresh_taken = list(_fresh.get("taken_cards") or [])
     fresh_owner = dict(_fresh.get("card_owner") or {})
@@ -1911,77 +1947,78 @@ def display_master_board():
     }
     called_numbers = list(st.session_state.called_numbers)
 
-    # ================================================================
-    # ✅ SELECTED CARDS STRIP — shows every taken card (bots + players)
-    #    Bot cards appear exactly like real-player cards to players.
-    # ================================================================
+    # ---- Selected Cards strip ----
     if fresh_taken:
         sorted_taken = sorted(set(int(c) for c in fresh_taken))
         chips = []
         for c in sorted_taken:
             owner = fresh_owner.get(str(c), "")
             is_bot = is_bot_username(owner)
-            # Both bot and real-player cards are "taken" to the player.
-            # Color-code subtly: bot red, human orange.
             chip_bg = "rgba(229,57,53,0.18)" if is_bot else "rgba(255,152,0,0.18)"
             chip_border = "#E53935" if is_bot else "#FF9800"
             chip_color = "#FF6B6B" if is_bot else "#FFD700"
             chips.append(
-                f'<span style="display:inline-block;padding:2px 7px;margin:2px;'
-                f'border-radius:10px;background:{chip_bg};color:{chip_color};'
-                f'border:1px solid {chip_border};font-size:0.7rem;font-weight:bold;">'
-                f'#{c}</span>'
+                '<span style="display:inline-block;padding:2px 7px;margin:2px;'
+                'border-radius:10px;background:' + chip_bg + ';color:' + chip_color + ';'
+                'border:1px solid ' + chip_border + ';font-size:0.7rem;font-weight:bold;">'
+                '#' + str(c) + '</span>'
             )
         chips_html = "".join(chips)
-        selected_cards_html = f'''
-        <div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;
-                    background:rgba(0,0,0,0.2);border-radius:15px;
-                    border:1px solid rgba(229,57,53,0.15);">
-            <div style="text-align:center;font-size:0.85rem;font-weight:bold;
-                        color:#FF6B6B;margin-bottom:6px;letter-spacing:1px;">
-                🎴 Selected Cards ({len(sorted_taken)}/204)
-            </div>
-            <div style="text-align:center;line-height:1.9;">{chips_html}</div>
-        </div>
-        '''
+        selected_cards_html = (
+            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
+            'background:rgba(0,0,0,0.2);border-radius:15px;'
+            'border:1px solid rgba(229,57,53,0.15);">'
+            '<div style="text-align:center;font-size:0.85rem;font-weight:bold;'
+            'color:#FF6B6B;margin-bottom:6px;letter-spacing:1px;">'
+            '🎴 Selected Cards (' + str(len(sorted_taken)) + '/204)'
+            '</div>'
+            '<div style="text-align:center;line-height:1.9;">' + chips_html + '</div>'
+            '</div>'
+        )
     else:
-        selected_cards_html = '''
-        <div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;
-                    background:rgba(0,0,0,0.15);border-radius:15px;
-                    border:1px dashed rgba(255,255,255,0.1);text-align:center;">
-            <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);">
-                🎴 No cards selected yet
-            </div>
-        </div>
-        '''
+        selected_cards_html = (
+            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
+            'background:rgba(0,0,0,0.15);border-radius:15px;'
+            'border:1px dashed rgba(255,255,255,0.1);text-align:center;">'
+            '<div style="font-size:0.85rem;color:rgba(255,255,255,0.5);">'
+            '🎴 No cards selected yet'
+            '</div>'
+            '</div>'
+        )
 
-    html = '''
-    <style>
-        .board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }
-        .board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }
-        .board-table { width: 100%; border-collapse: collapse; }
-        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }
-        .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }
-        .board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }
-        .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
-        .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
-        .board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
-        .board-stats strong { color: #FFD700; }
-    </style>
-    '''
-    html += selected_cards_html
-    html += '''
-    <div class="board-container">
-        <div class="board-title">🎯 BINGO Board</div>
-    '''
+    html = (
+        '<style>'
+        '.board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }'
+        '.board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }'
+        '.board-table { width: 100%; border-collapse: collapse; }'
+        '.board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }'
+        '.board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }'
+        '.board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }'
+        '.board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }'
+        '.board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }'
+        '.board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }'
+        '.board-stats strong { color: #FFD700; }'
+        '</style>'
+        + selected_cards_html +
+        '<div class="board-container">'
+        '<div class="board-title">🎯 BINGO Board</div>'
+    )
+
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
+        html += (
+            '<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">'
+            '🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">'
+            + str(st.session_state.last_called_number) + ' (' + letter + ') - ' + amharic +
+            '</span></div>'
+        )
+
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
-        html += f'<td class="header-cell">{letter}</td>'
+        html += '<td class="header-cell">' + letter + '</td>'
     html += '</tr>'
+
     for row in range(15):
         html += '<tr>'
         for letter in ['B', 'I', 'N', 'G', 'O']:
@@ -1989,15 +2026,17 @@ def display_master_board():
             is_called = num in called_numbers
             is_last = num == st.session_state.last_called_number
             if is_last:
-                html += f'<td><div class="board-number last-called">{num}</div></td>'
+                html += '<td><div class="board-number last-called">' + str(num) + '</div></td>'
             elif is_called:
-                html += f'<td><div class="board-number called">{num}</div></td>'
+                html += '<td><div class="board-number called">' + str(num) + '</div></td>'
             else:
-                html += f'<td><div class="board-number">{num}</div></td>'
+                html += '<td><div class="board-number">' + str(num) + '</div></td>'
         html += '</tr>'
+
     html += '</table>'
-    html += f'<div class="board-stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
+    html += '<div class="board-stats">📊 Called: <strong>' + str(len(called_numbers)) + '</strong> / 75 numbers</div>'
     html += '</div>'
+
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
@@ -2012,7 +2051,6 @@ def render_card_selection():
         st.warning("⚠️ Admin cannot play.")
         return
 
-    # ✅ HARD GUARD — Check Supabase directly before rendering any card
     _row_guard = load_state_row(force=True)
     if _row_guard.get("game_started", False) or _row_guard.get("winner_declared", False):
         st.session_state.game_started = True
@@ -2236,8 +2274,6 @@ st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards
 # ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
-# ✅ Also check the shared DB: if timer expired AND ≥3 cards globally →
-#    force the game to start, so players NEVER see card selection.
 _gate_row = load_state_row(force=True)
 _gate_taken = list(_gate_row.get("taken_cards") or [])
 _gate_timer_start = _gate_row.get("timer_start_time", time.time())
@@ -2246,7 +2282,6 @@ _gate_gs = bool(_gate_row.get("game_started", False))
 _gate_elapsed = time.time() - _gate_timer_start
 _gate_remaining = _gate_duration - _gate_elapsed
 
-# Force-start the game in Supabase if the condition is met
 if (not _gate_gs
         and len(_gate_taken) >= MIN_CARDS_TO_START
         and _gate_remaining <= 0):
@@ -2365,9 +2400,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(st.session_state.winners_list) if st.session_state.winners_list else 0
 
-    # ============================================================
-    # ✅ AUTO-RESUME TIMER — 10 seconds × 2 rounds celebration
-    # ============================================================
     if st.session_state.get("winner_screen_shown_at") is None:
         st.session_state.winner_screen_shown_at = time.time()
 
@@ -2484,9 +2516,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     </div>
     """, unsafe_allow_html=True)
 
-    # ============================================================
-    # ✅ 2-ROUND CELEBRATION LOCK — Resume button disabled until all rounds done
-    # ============================================================
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         if seconds_left > 0:
@@ -2581,7 +2610,6 @@ if st.session_state.game_started and _show_game:
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
-    # ✅ FINAL GUARD — NEVER show card selection if the game is live
     _final_row = load_state_row(force=True)
     _final_taken = list(_final_row.get("taken_cards") or [])
     _final_gs = bool(_final_row.get("game_started", False))
@@ -2590,12 +2618,10 @@ else:
     _final_duration = _final_row.get("card_selection_time", CARD_SELECTION_DURATION)
     _final_remaining = _final_duration - (time.time() - _final_start)
 
-    # If the game is live in Supabase OR session → never show the card list
     if _final_gs or _final_wd or st.session_state.game_started:
         st.session_state.game_started = True
         st.rerun()
 
-    # If timer expired AND ≥3 cards → force-start in Supabase and rerun
     if (not _final_gs
             and not _final_wd
             and len(_final_taken) >= MIN_CARDS_TO_START
@@ -2604,7 +2630,6 @@ else:
         st.session_state.game_started = True
         st.rerun()
 
-    # Only reached when the game is truly NOT started anywhere
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
     time.sleep(0.5)
