@@ -2377,7 +2377,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.stop()
 
 # ===================================================================
-# PLAYER DISPLAY — Board only (no card list)
+# PLAYER DISPLAY — Board + player's own cards
 # ===================================================================
 if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
@@ -2408,8 +2408,35 @@ if st.session_state.game_started and _show_game:
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Board only — the player's card list on the right is hidden during gameplay.
-    display_master_board()
+    # ✅ Board on the left + player's OWN cards on the right.
+    # The card SELECTION grid (204 buttons) is NOT rendered here — it only
+    # appears before the game starts, inside render_card_selection().
+    board_col, cards_col = st.columns([2, 1], gap="large")
+
+    with board_col:
+        display_master_board()
+
+    with cards_col:
+        st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
+        if all_player_cards:
+            for cid in all_player_cards:
+                display_selected_card(cid, list(st.session_state.called_numbers), False)
+        else:
+            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
+            st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
+            st.markdown("""
+<div style="text-align:center;margin:15px 0 5px 0;">
+    <p style="color:#FF9800;font-size:1.1rem;font-weight:bold;margin:0;">
+        ⏳ አሸናፊ እስኪታወቅ ይጠብቁ...
+    </p>
+    <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:6px 0 0 0;">
+        🎯 ጨዋታው በመካሄድ ላይ ነው
+    </p>
+    <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:4px 0 0 0;font-style:italic;">
+        ⏳ Waiting for winner to be declared...
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
