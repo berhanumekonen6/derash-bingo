@@ -1936,10 +1936,6 @@ def display_master_board():
     if not st.session_state.winner_declared:
         sync_global_winners()
 
-    _fresh = load_state_row(force=True)
-    fresh_taken = list(_fresh.get("taken_cards") or [])
-    fresh_owner = dict(_fresh.get("card_owner") or {})
-
     master_board = {
         'B': list(range(1, 16)), 'I': list(range(16, 31)),
         'N': list(range(31, 46)), 'G': list(range(46, 61)),
@@ -1947,78 +1943,30 @@ def display_master_board():
     }
     called_numbers = list(st.session_state.called_numbers)
 
-    # ---- Selected Cards strip ----
-    if fresh_taken:
-        sorted_taken = sorted(set(int(c) for c in fresh_taken))
-        chips = []
-        for c in sorted_taken:
-            owner = fresh_owner.get(str(c), "")
-            is_bot = is_bot_username(owner)
-            chip_bg = "rgba(229,57,53,0.18)" if is_bot else "rgba(255,152,0,0.18)"
-            chip_border = "#E53935" if is_bot else "#FF9800"
-            chip_color = "#FF6B6B" if is_bot else "#FFD700"
-            chips.append(
-                '<span style="display:inline-block;padding:2px 7px;margin:2px;'
-                'border-radius:10px;background:' + chip_bg + ';color:' + chip_color + ';'
-                'border:1px solid ' + chip_border + ';font-size:0.7rem;font-weight:bold;">'
-                '#' + str(c) + '</span>'
-            )
-        chips_html = "".join(chips)
-        selected_cards_html = (
-            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
-            'background:rgba(0,0,0,0.2);border-radius:15px;'
-            'border:1px solid rgba(229,57,53,0.15);">'
-            '<div style="text-align:center;font-size:0.85rem;font-weight:bold;'
-            'color:#FF6B6B;margin-bottom:6px;letter-spacing:1px;">'
-            '🎴 Selected Cards (' + str(len(sorted_taken)) + '/204)'
-            '</div>'
-            '<div style="text-align:center;line-height:1.9;">' + chips_html + '</div>'
-            '</div>'
-        )
-    else:
-        selected_cards_html = (
-            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
-            'background:rgba(0,0,0,0.15);border-radius:15px;'
-            'border:1px dashed rgba(255,255,255,0.1);text-align:center;">'
-            '<div style="font-size:0.85rem;color:rgba(255,255,255,0.5);">'
-            '🎴 No cards selected yet'
-            '</div>'
-            '</div>'
-        )
-
-    html = (
-        '<style>'
-        '.board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }'
-        '.board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }'
-        '.board-table { width: 100%; border-collapse: collapse; }'
-        '.board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }'
-        '.board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }'
-        '.board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }'
-        '.board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }'
-        '.board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }'
-        '.board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }'
-        '.board-stats strong { color: #FFD700; }'
-        '</style>'
-        + selected_cards_html +
-        '<div class="board-container">'
-        '<div class="board-title">🎯 BINGO Board</div>'
-    )
-
+    html = '''
+    <style>
+        .board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }
+        .board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }
+        .board-table { width: 100%; border-collapse: collapse; }
+        .board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }
+        .board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }
+        .board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }
+        .board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }
+        .board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }
+        .board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
+        .board-stats strong { color: #FFD700; }
+    </style>
+    <div class="board-container">
+        <div class="board-title">🎯 BINGO Board</div>
+    '''
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
-        html += (
-            '<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">'
-            '🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">'
-            + str(st.session_state.last_called_number) + ' (' + letter + ') - ' + amharic +
-            '</span></div>'
-        )
-
+        html += f'<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amharic}</span></div>'
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
-        html += '<td class="header-cell">' + letter + '</td>'
+        html += f'<td class="header-cell">{letter}</td>'
     html += '</tr>'
-
     for row in range(15):
         html += '<tr>'
         for letter in ['B', 'I', 'N', 'G', 'O']:
@@ -2026,17 +1974,15 @@ def display_master_board():
             is_called = num in called_numbers
             is_last = num == st.session_state.last_called_number
             if is_last:
-                html += '<td><div class="board-number last-called">' + str(num) + '</div></td>'
+                html += f'<td><div class="board-number last-called">{num}</div></td>'
             elif is_called:
-                html += '<td><div class="board-number called">' + str(num) + '</div></td>'
+                html += f'<td><div class="board-number called">{num}</div></td>'
             else:
-                html += '<td><div class="board-number">' + str(num) + '</div></td>'
+                html += f'<td><div class="board-number">{num}</div></td>'
         html += '</tr>'
-
     html += '</table>'
-    html += '<div class="board-stats">📊 Called: <strong>' + str(len(called_numbers)) + '</strong> / 75 numbers</div>'
+    html += f'<div class="board-stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>'
     html += '</div>'
-
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
