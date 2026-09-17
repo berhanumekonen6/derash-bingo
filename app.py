@@ -1010,6 +1010,95 @@ def reject_transaction(tx, note=""):
     return ok
 
 
+# ===================================================================
+# BOT CARDS — ADMIN FEATURE
+# ===================================================================
+def get_or_create_bot_users(count):
+    """Create/get bot users for auto card selection."""
+    load_all_data()
+    bot_users = []
+    for i in range(1, count + 1):
+        bot_name = f"bot_{i:03d}"
+        if bot_name not in st.session_state.user_db:
+            st.session_state.user_db[bot_name] = {
+                "password": hash_password(f"bot_{i:03d}_secret"),
+                "balance": 10000.0,
+                "role": "player",
+                "name": f"🤖 Bot {i}",
+                "phone": "",
+                "game_played": 0,
+                "wins": 0,
+            }
+        bot_users.append(bot_name)
+    save_local_users(st.session_state.user_db)
+    return bot_users
+
+
+def assign_bot_cards(bot_count):
+    """Assign cards to bots. Each bot gets 1 card. Returns number of cards assigned."""
+    if bot_count <= 0:
+        return 0
+
+    row = load_state_row(force=True)
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+
+    # Remove any existing bot-owned cards first (idempotent re-apply)
+    bot_prefix_owners = [k for k, v in owner.items() if v and str(v).startswith("bot_")]
+    for k in bot_prefix_owners:
+        cid = int(k)
+        if cid in taken:
+            taken.remove(cid)
+        del owner[k]
+
+    bot_users = get_or_create_bot_users(bot_count)
+    available_cards = [i for i in range(1, 205) if i not in taken]
+    random.shuffle(available_cards)
+
+    assigned = 0
+    for i, bot_name in enumerate(bot_users):
+        if not available_cards:
+            break
+        card_num = available_cards.pop()
+        taken.append(card_num)
+        owner[str(card_num)] = bot_name
+        assigned += 1
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+
+    return assigned
+
+
+def remove_bot_cards():
+    """Remove all bot-owned cards."""
+    row = load_state_row(force=True)
+    taken = list(row.get("taken_cards") or [])
+    owner = dict(row.get("card_owner") or {})
+
+    bot_cards = [k for k, v in owner.items() if v and str(v).startswith("bot_")]
+    for k in bot_cards:
+        cid = int(k)
+        if cid in taken:
+            taken.remove(cid)
+        del owner[k]
+
+    update_state({
+        "taken_cards": list(taken),
+        "card_owner": dict(owner),
+    })
+
+    st.session_state.taken_cards = taken
+    st.session_state.card_owner = owner
+
+    return len(bot_cards)
+
+
 def admin_panel():
     if st.session_state.get("admin_celebration_msg"):
         msg = st.session_state["admin_celebration_msg"]
@@ -1043,8 +1132,8 @@ def admin_panel():
     st.sidebar.markdown("---")
     st.sidebar.info("🔧 Admin Mode — Manage users & transactions")
 
-    tab_users, tab_deposits, tab_withdrawals, tab_history = st.tabs([
-        "👥 Users", "💰 Deposits", "💸 Withdrawals", "📜 History"
+    tab_users, tab_bots, tab_deposits, tab_withdrawals, tab_history = st.tabs([
+        "👥 Users", "🤖 Bot Cards", "💰 Deposits", "💸 Withdrawals", "📜 History"
     ])
 
     # ============================
@@ -1108,6 +1197,91 @@ def admin_panel():
             total_users = len(users)
             total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
             st.info(f"👥 Users: {total_users} | 💰 Total Balance: {total_balance:.2f} ETB")
+
+    # ============================
+    # TAB 1b: BOT CARDS
+    # ============================
+    with tab_bots:
+        st.markdown("### 🤖 Bot Card Selection")
+        st.markdown(
+            "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
+            "Select how many bot cards to auto-assign. Each bot gets 1 card "
+            "(1 card = 1 bot user). Bots are labelled 🤖 Bot 1, Bot 2, ...</p>",
+            unsafe_allow_html=True,
+        )
+
+        row_b = load_state_row(force=True)
+        current_bot_cards = sum(
+            1 for v in (row_b.get("card_owner") or {}).values()
+            if v and str(v).startswith("bot_")
+        )
+        total_taken_b = len(row_b.get("taken_cards") or [])
+
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,rgba(33,150,243,0.12),rgba(33,150,243,0.05));
+                    padding:14px;border-radius:12px;border:1px solid rgba(33,150,243,0.25);margin-bottom:12px;">
+            <p style="margin:0;color:#2196F3;font-weight:bold;font-size:1.05rem;">
+                🤖 Active Bot Cards: {current_bot_cards}
+            </p>
+            <p style="margin:5px 0 0 0;color:rgba(255,255,255,0.65);font-size:0.85rem;">
+                📊 Total taken cards: {total_taken_b} / 204
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        bot_options = list(range(0, 101, 2))
+        default_index = 0
+        if current_bot_cards in bot_options:
+            default_index = bot_options.index(current_bot_cards)
+
+        selected_bot_count = st.selectbox(
+            "🔢 Select number of bot cards",
+            options=bot_options,
+            index=default_index,
+            key="admin_bot_card_count",
+        )
+
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
+                if selected_bot_count == 0:
+                    removed = remove_bot_cards()
+                    st.success(f"🗑️ Removed {removed} bot card(s).")
+                else:
+                    assigned = assign_bot_cards(selected_bot_count)
+                    st.success(f"🤖 Assigned {assigned} bot card(s)!")
+                st.balloons()
+                time.sleep(1.0)
+                st.rerun()
+
+        with col_b2:
+            if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
+                removed = remove_bot_cards()
+                st.warning(f"🗑️ Removed {removed} bot card(s).")
+                time.sleep(0.8)
+                st.rerun()
+
+        st.markdown("---")
+        st.info(
+            "💡 Bot cards count toward the 3-card minimum to start the game. "
+            "Each bot user has a 10,000 ETB balance and can win prizes like a normal player."
+        )
+
+        # Preview of current bot cards
+        if current_bot_cards > 0:
+            st.markdown("#### 👀 Current Bot Cards")
+            owner_map = row_b.get("card_owner") or {}
+            bot_card_list = sorted(
+                [int(k) for k, v in owner_map.items() if v and str(v).startswith("bot_")]
+            )
+            preview = ", ".join(f"#{c}" for c in bot_card_list[:40])
+            if len(bot_card_list) > 40:
+                preview += f" ... +{len(bot_card_list) - 40} more"
+            st.markdown(
+                f"<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"
+                f"color:rgba(255,255,255,0.75);font-size:0.85rem;'>{preview}</div>",
+                unsafe_allow_html=True,
+            )
 
     # ============================
     # TAB 2: DEPOSITS
