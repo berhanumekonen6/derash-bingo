@@ -1269,7 +1269,8 @@ def admin_panel():
             "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
             "Select how many bot cards to auto-assign. Each bot gets 1 card. "
             "Bot usernames look like <b>Bekele_b</b>, <b>Alemu_b</b>, <b>Aster_b</b> — "
-            "the <b>_b</b> suffix marks them as bots so they are easy to spot.</p>",
+            "the <b>_b</b> suffix marks them as bots. They will appear as "
+            "<b>🔴 selected</b> to all players, just like cards taken by real players.</p>",
             unsafe_allow_html=True,
         )
 
@@ -1312,7 +1313,7 @@ def admin_panel():
                     st.success(f"🗑️ Removed {removed} bot card(s).")
                 else:
                     assigned = assign_bot_cards(selected_bot_count)
-                    st.success(f"🤖 Assigned {assigned} bot card(s) — names like Bekele_b, Alemu_b, Aster_b")
+                    st.success(f"🤖 Assigned {assigned} bot card(s) — visible to all players as 🔴 selected")
                 st.balloons()
                 time.sleep(1.0)
                 st.rerun()
@@ -1896,12 +1897,64 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
 def display_master_board():
     if not st.session_state.winner_declared:
         sync_global_winners()
+
+    # ✅ FORCE-fresh card state so bot cards selected by admin
+    #    appear immediately in the selected-cards strip for all players.
+    _fresh = load_state_row(force=True)
+    fresh_taken = list(_fresh.get("taken_cards") or [])
+    fresh_owner = dict(_fresh.get("card_owner") or {})
+
     master_board = {
         'B': list(range(1, 16)), 'I': list(range(16, 31)),
         'N': list(range(31, 46)), 'G': list(range(46, 61)),
         'O': list(range(61, 76))
     }
     called_numbers = list(st.session_state.called_numbers)
+
+    # ================================================================
+    # ✅ SELECTED CARDS STRIP — shows every taken card (bots + players)
+    #    Bot cards appear exactly like real-player cards to players.
+    # ================================================================
+    if fresh_taken:
+        sorted_taken = sorted(set(int(c) for c in fresh_taken))
+        chips = []
+        for c in sorted_taken:
+            owner = fresh_owner.get(str(c), "")
+            is_bot = is_bot_username(owner)
+            # Both bot and real-player cards are "taken" to the player.
+            # Color-code subtly: bot red, human orange.
+            chip_bg = "rgba(229,57,53,0.18)" if is_bot else "rgba(255,152,0,0.18)"
+            chip_border = "#E53935" if is_bot else "#FF9800"
+            chip_color = "#FF6B6B" if is_bot else "#FFD700"
+            chips.append(
+                f'<span style="display:inline-block;padding:2px 7px;margin:2px;'
+                f'border-radius:10px;background:{chip_bg};color:{chip_color};'
+                f'border:1px solid {chip_border};font-size:0.7rem;font-weight:bold;">'
+                f'#{c}</span>'
+            )
+        chips_html = "".join(chips)
+        selected_cards_html = f'''
+        <div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;
+                    background:rgba(0,0,0,0.2);border-radius:15px;
+                    border:1px solid rgba(229,57,53,0.15);">
+            <div style="text-align:center;font-size:0.85rem;font-weight:bold;
+                        color:#FF6B6B;margin-bottom:6px;letter-spacing:1px;">
+                🎴 Selected Cards ({len(sorted_taken)}/204)
+            </div>
+            <div style="text-align:center;line-height:1.9;">{chips_html}</div>
+        </div>
+        '''
+    else:
+        selected_cards_html = '''
+        <div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;
+                    background:rgba(0,0,0,0.15);border-radius:15px;
+                    border:1px dashed rgba(255,255,255,0.1);text-align:center;">
+            <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);">
+                🎴 No cards selected yet
+            </div>
+        </div>
+        '''
+
     html = '''
     <style>
         .board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }
@@ -1915,6 +1968,9 @@ def display_master_board():
         .board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }
         .board-stats strong { color: #FFD700; }
     </style>
+    '''
+    html += selected_cards_html
+    html += '''
     <div class="board-container">
         <div class="board-title">🎯 BINGO Board</div>
     '''
