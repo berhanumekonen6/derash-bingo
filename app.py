@@ -307,7 +307,6 @@ def init_session_state():
         'winner_screen_shown_at': None,
         'celebration_round': 1,
         '_last_caller_retry': 0.0,
-        # Bot card admin selection
         'admin_bot_card_count': 0,
         '_bot_apply_pending': False,
     }
@@ -342,19 +341,9 @@ def _default_state():
     }
 
 def _sanitize_row(row):
-    """Repair any known bad values in a game_state row.
-
-    Fixes the '28/75 freeze' by:
-      • clamping last_called_at if it's in the future (clock skew)
-      • de-duping called_numbers so len() is always accurate
-      • clearing game_over when no winner is actually declared
-    """
     if not isinstance(row, dict):
         return _default_state()
-
     now = time.time()
-
-    # 1) De-dup called_numbers
     cn = row.get("called_numbers")
     if isinstance(cn, list):
         try:
@@ -368,8 +357,6 @@ def _sanitize_row(row):
             row["called_numbers"] = unique_cn
         except Exception:
             row["called_numbers"] = []
-
-    # 2) Clamp last_called_at
     try:
         lca = float(row.get("last_called_at") or 0)
     except Exception:
@@ -377,21 +364,16 @@ def _sanitize_row(row):
     if lca > now + 1.0:
         lca = 0.0
     row["last_called_at"] = lca
-
-    # 3) Clear game_over if no winner
     if row.get("game_over") and not row.get("winner_declared"):
         row["game_over"] = False
-
     return row
 
 def load_state_row(force=False):
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
-
     if not force and cached is not None and (now - cached_at) < 0.3:
         return cached
-
     last_err = None
     for attempt in range(3):
         try:
@@ -412,12 +394,10 @@ def load_state_row(force=False):
             last_err = e
             if attempt < 2:
                 time.sleep(0.2)
-
     err_count = st.session_state.get("_state_err_count", 0) + 1
     st.session_state["_state_err_count"] = err_count
     if err_count == 3:
         st.warning(f"⚠️ ግንኙነት ችግር — በራስ-ሰር እየተስተካከለ ነው... ({last_err})")
-
     if cached is not None:
         return cached
     return _default_state()
@@ -456,7 +436,7 @@ def save_global_winners(winners_list, winner_declared, called_numbers, last_call
     return True
 
 def load_global_winners():
-    row = load_state_row(force=True)  # ✅ ALWAYS fresh for winner visibility
+    row = load_state_row(force=True)
     return (
         row.get("winners_list") or [],
         row.get("winner_declared", False),
@@ -471,7 +451,6 @@ def load_global_winners():
 def sync_global_winners():
     if st.session_state.get("winner_acknowledged", False):
         return False
-
     winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed, ts = load_global_winners()
     if winner_declared:
         st.session_state.winners_list = winners_list
@@ -591,7 +570,6 @@ def fast_select_card(card_num, current_balance):
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
     user = st.session_state.current_user
-
     if str(card_num) in owner and owner[str(card_num)] != user:
         return False, "taken"
     if card_num in taken and owner.get(str(card_num)) != user:
@@ -601,17 +579,14 @@ def fast_select_card(card_num, current_balance):
         return False, "max"
     if current_balance < CARD_PRICE:
         return False, "balance"
-
     if card_num not in taken:
         taken.append(card_num)
     owner[str(card_num)] = user
-
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
     })
     update_user_balance(user, current_balance - CARD_PRICE)
-
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
     st.session_state.clicked_numbers = set(
@@ -624,20 +599,16 @@ def fast_deselect_card(card_num, current_balance):
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
     user = st.session_state.current_user
-
     if str(card_num) not in owner or owner[str(card_num)] != user:
         return False, "not_owner"
-
     if card_num in taken:
         taken.remove(card_num)
     del owner[str(card_num)]
-
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
     })
     update_user_balance(user, current_balance + CARD_PRICE)
-
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
     st.session_state.clicked_numbers = set(
@@ -698,17 +669,11 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    """Return remaining seconds, always fresh from DB.
-
-    ✅ FIX: Uses math.ceil so it counts 60 → 59 → 58 → ... → 1 → 0.
-    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
-
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
-
     if remaining <= 0:
         file_taken, _, _, _ = load_global_cards()
         total_now = len(file_taken)
@@ -717,7 +682,6 @@ def get_global_remaining_time():
         else:
             reset_global_timer(CARD_SELECTION_DURATION)
             return CARD_SELECTION_DURATION, False
-
     return int(math.ceil(remaining)), False
 
 # ===================================================================
@@ -727,14 +691,11 @@ def check_global_start_condition():
     row = load_state_row(force=True)
     global_taken = list(row.get("taken_cards") or [])
     global_count = len(global_taken)
-
     timer_start = row.get("timer_start_time", time.time())
     duration = row.get("card_selection_time", CARD_SELECTION_DURATION)
     game_started = bool(row.get("game_started", False))
-
     elapsed = time.time() - timer_start
     remaining = duration - elapsed
-
     if global_count >= MIN_CARDS_TO_START and (remaining <= 0 or game_started):
         return True, global_count, 0
     if game_started and global_count >= MIN_CARDS_TO_START:
@@ -742,33 +703,26 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.ceil(remaining)))
 
 # ===================================================================
-# GLOBAL CALLER LOCK  (✅ FIXED — never freezes at N/75)
+# GLOBAL CALLER LOCK
 # ===================================================================
 def try_global_call():
-    """Pick and publish ONE new called number."""
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
-
     now = time.time()
     last_at = row.get("last_called_at", 0) or 0
     lock_age = now - last_at if last_at > 0 else 999
-
     if lock_age < 1.5:
         return None
-
     current_called = set(row.get("called_numbers") or [])
     if len(current_called) >= 75:
         update_state({"game_over": True, "winner_declared": False})
         return None
-
     available = [i for i in range(1, 76) if i not in current_called]
     if not available:
         return None
-
     called_num = random.choice(available)
     current_called.add(called_num)
-
     ok = update_state({
         "last_called_at": now,
         "last_called_by": st.session_state.current_user,
@@ -778,11 +732,9 @@ def try_global_call():
     })
     if not ok:
         return None
-
     st.session_state.called_numbers = current_called
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(current_called)
-
     check_for_winners(force_fresh=True)
     return called_num
 
@@ -848,7 +800,6 @@ def reset_for_next_round():
         "timer_start_time": time.time(),
         "card_selection_time": CARD_SELECTION_DURATION,
     })
-
     st.session_state.selected_card = None
     st.session_state.clicked_numbers = set()
     st.session_state.called_numbers = set()
@@ -878,17 +829,13 @@ def sync_global_cards():
     _fresh_row = load_state_row(force=True)
     global_taken = list(_fresh_row.get("taken_cards") or [])
     global_owner = dict(_fresh_row.get("card_owner") or {})
-
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     if game_started:
         st.session_state.game_started = True
-
     load_game_state()
-
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
@@ -935,7 +882,6 @@ def login_user(username, password):
     username = username.strip()
     password = password.strip()
     load_all_data()
-
     if username == "admin" and password == "admin123":
         if username not in st.session_state.user_db:
             st.session_state.user_db[username] = {
@@ -949,17 +895,14 @@ def login_user(username, password):
         else:
             st.session_state.user_db["admin"]["balance"] = 0.0
             save_local_users(st.session_state.user_db)
-
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
         load_all_data()
         sync_global_cards()
         return True, "✅ Admin login successful!"
-
     if username not in st.session_state.user_db:
         return False, "❌ Username not found"
-
     if verify_password(password, st.session_state.user_db[username]["password"]):
         st.session_state.logged_in = True
         st.session_state.current_user = username
@@ -1002,7 +945,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# BOT NAMES — Ethiopian names + varied suffixes (Yosef_b, Abebe_ad, …)
+# BOT NAMES
 # ===================================================================
 BOT_NAMES = [
     "Bekele", "Alemu", "Aster", "Yednekachew", "Tigist", "Getachew",
@@ -1061,15 +1004,12 @@ def get_or_create_bot_users(count):
     load_all_data()
     if count > len(BOT_NAMES):
         count = len(BOT_NAMES)
-
     available_names = list(BOT_NAMES)
     random.shuffle(available_names)
-
     bot_users = []
     for i in range(count):
         base_name = available_names[i]
         bot_username = make_bot_username(base_name, i)
-
         if bot_username not in st.session_state.user_db:
             st.session_state.user_db[bot_username] = {
                 "password": hash_password(bot_username + "_secret_" + str(i)),
@@ -1085,25 +1025,20 @@ def get_or_create_bot_users(count):
     return bot_users
 
 def assign_bot_cards(bot_count):
-    """Assign cards to bots. Each bot gets 1 card. Returns number of cards assigned."""
     if bot_count <= 0:
         return 0
-
     row = load_state_row(force=True)
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
-
     bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_owned:
         cid = int(k)
         if cid in taken:
             taken.remove(cid)
         del owner[k]
-
     bot_users = get_or_create_bot_users(bot_count)
     available_cards = [i for i in range(1, 205) if i not in taken]
     random.shuffle(available_cards)
-
     assigned = 0
     for i, bot_name in enumerate(bot_users):
         if not available_cards:
@@ -1112,42 +1047,34 @@ def assign_bot_cards(bot_count):
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
-
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
     })
-
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
-
     return assigned
 
 def remove_bot_cards():
-    """Remove all bot-owned cards."""
     row = load_state_row(force=True)
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
-
     bot_cards = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_cards:
         cid = int(k)
         if cid in taken:
             taken.remove(cid)
         del owner[k]
-
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
     })
-
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
-
     return len(bot_cards)
 
 # ===================================================================
-# ADMIN PANEL — WITH DEPOSIT / WITHDRAW APPROVALS + BOT CARDS
+# ADMIN PANEL
 # ===================================================================
 BOT_USERNAME_DISPLAY = "@DerashBingoPlayBot"
 
@@ -1176,14 +1103,11 @@ def approve_transaction(tx):
     username = tx["username"]
     amount = float(tx["amount"])
     tx_type = tx["type"]
-
     load_all_data()
     if username not in st.session_state.user_db:
         st.error(f"❌ User '{username}' not found in database.")
         return False
-
     current_balance = float(st.session_state.user_db[username].get("balance", 0))
-
     if tx_type == "deposit":
         new_balance = current_balance + amount
     else:
@@ -1194,11 +1118,9 @@ def approve_transaction(tx):
             )
             return False
         new_balance = current_balance - amount
-
     if not update_user_balance(username, new_balance):
         st.error("❌ Failed to update user balance.")
         return False
-
     ok = update_transaction(tx["id"], {
         "status": "approved",
         "processed_at": datetime.now(timezone.utc).isoformat(),
@@ -1247,9 +1169,6 @@ def admin_panel():
         "👥 Users", "🤖 Bot Cards", "💰 Deposits", "💸 Withdrawals", "📜 History"
     ])
 
-    # ============================
-    # TAB 1: USERS
-    # ============================
     with tab_users:
         load_all_data()
         users = [u for u in st.session_state.user_db.keys() if u != "admin" and not is_bot_username(u)]
@@ -1315,9 +1234,6 @@ def admin_panel():
             total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
             st.info("👥 Users: " + str(total_users) + " | 💰 Total Balance: " + f"{total_balance:.2f}" + " ETB")
 
-    # ============================
-    # TAB 1b: BOT CARDS  (✅ ONE-CLICK APPLY)
-    # ============================
     with tab_bots:
         st.markdown("### 🤖 Bot Card Selection")
         st.markdown(
@@ -1353,9 +1269,6 @@ def admin_panel():
         if current_bot_cards in bot_options:
             default_index = bot_options.index(current_bot_cards)
 
-        # ✅ KEY FIX: Use a plain widget key + read from session_state in the
-        # button handler. Streamlit updates `st.session_state[key]` BEFORE
-        # the button's onClick fires in the same rerun, so the value is fresh.
         st.selectbox(
             "🔢 Select number of bot cards",
             options=bot_options,
@@ -1366,7 +1279,6 @@ def admin_panel():
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
-                # ✅ Read fresh value from session_state — this is what makes it 1-click
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
@@ -1412,9 +1324,6 @@ def admin_panel():
                 unsafe_allow_html=True,
             )
 
-    # ============================
-    # TAB 2: DEPOSITS
-    # ============================
     with tab_deposits:
         st.markdown("### 💰 Pending Deposit Requests")
         deposits = load_transactions(status_filter="pending", tx_type="deposit")
@@ -1467,9 +1376,6 @@ def admin_panel():
                             st.rerun()
                 st.markdown("---")
 
-    # ============================
-    # TAB 3: WITHDRAWALS
-    # ============================
     with tab_withdrawals:
         st.markdown("### 💸 Pending Withdrawal Requests")
         withdrawals = load_transactions(status_filter="pending", tx_type="withdraw")
@@ -1524,9 +1430,6 @@ def admin_panel():
                             st.rerun()
                 st.markdown("---")
 
-    # ============================
-    # TAB 4: HISTORY
-    # ============================
     with tab_history:
         st.markdown("### 📜 Processed Transactions")
         approved = load_transactions(status_filter="approved")
@@ -1815,24 +1718,18 @@ def check_winning_pattern(card_data, called_numbers):
 def check_for_winners(force_fresh=False):
     if st.session_state.winner_declared and not force_fresh:
         return
-
     row = load_state_row(force=True)
-
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
     called_numbers = list(db_called if len(db_called) >= len(session_called) else session_called)
-
     taken_cards = list(row.get("taken_cards") or [])
     if not taken_cards:
         taken_cards = list(st.session_state.taken_cards or [])
-
     card_owner = dict(row.get("card_owner") or {})
     if not card_owner:
         card_owner = dict(st.session_state.card_owner or {})
-
     if not called_numbers or not taken_cards:
         return
-
     winners_found = []
     for card_id in taken_cards:
         card_data = get_card_data(card_id)
@@ -1852,12 +1749,10 @@ def check_for_winners(force_fresh=False):
                     "patterns": [pattern['type']],
                     "card_data": card_data
                 })
-
     if winners_found:
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
         st.session_state.card_owner = card_owner
-
         st.session_state.winners_list = winners_found
         st.session_state.winner_declared = True
         st.session_state.game_over = True
@@ -1865,9 +1760,7 @@ def check_for_winners(force_fresh=False):
         st.session_state.celebration_start_time = time.time()
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
-
         distribute_prizes(winners_found)
-
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1888,16 +1781,12 @@ def distribute_prizes(winners):
     if global_paid:
         st.session_state.prize_distributed = True
         return
-
     if st.session_state.prize_distributed:
         return
-
     total_cards = len(st.session_state.taken_cards)
     total_prize = total_cards * PRIZE_PER_CARD
     prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
-
     load_all_data()
-
     for winner in winners:
         username = winner.get("username")
         if username in st.session_state.user_db:
@@ -1907,7 +1796,6 @@ def distribute_prizes(winners):
                 int(st.session_state.user_db[username].get("wins", 0)) + 1
             st.session_state.user_db[username]["game_played"] = \
                 int(st.session_state.user_db[username].get("game_played", 0)) + 1
-
     save_all_data()
     st.session_state.prize_distributed = True
     save_global_winners(
@@ -1976,6 +1864,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
+    # ✅ No "Selected Cards" chip strip and no card list below the board.
     if not st.session_state.winner_declared:
         sync_global_winners()
 
@@ -1985,8 +1874,6 @@ def display_master_board():
         'O': list(range(61, 76))
     }
     called_numbers = list(st.session_state.called_numbers)
-
-    # ✅ REMOVED: Selected Cards strip is no longer displayed.
 
     html = (
         '<style>'
@@ -2047,39 +1934,31 @@ def render_card_selection():
     if st.session_state.game_started or st.session_state.winner_declared:
         st.rerun()
         return
-
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play.")
         return
-
     _row_guard = load_state_row(force=True)
     if _row_guard.get("game_started", False) or _row_guard.get("winner_declared", False):
         st.session_state.game_started = True
         st.rerun()
         return
-
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
-
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
         st.rerun()
         return
-
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
     time_str = f"{minutes:01d}:{seconds:02d}"
-
     user = st.session_state.user_db.get(st.session_state.current_user, {})
     balance = user.get("balance", 0)
-
     file_taken, _, _, _ = load_global_cards()
     total_selected = len(file_taken)
     your_cards = len(st.session_state.clicked_numbers)
     available = 204 - total_selected
     enough_cards = total_selected >= MIN_CARDS_TO_START
-
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
 
     st.markdown(f"""
@@ -2133,7 +2012,6 @@ def render_card_selection():
             is_taken = card_num in taken and not is_mine
             is_rejected = (rejected == card_num) and not is_mine and not is_taken
             is_insufficient = (insufficient == card_num) and not is_mine and not is_taken
-
             with cols[col_idx]:
                 if is_mine:
                     if st.button(f"✅{card_num}", key=f"card_{card_num}", use_container_width=True, type="primary"):
@@ -2172,7 +2050,6 @@ def render_card_selection():
                             else:
                                 st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
                         st.rerun()
-
     st.progress(1 - (remaining / CARD_SELECTION_DURATION) if remaining > 0 else 0)
 
 # ===================================================================
@@ -2195,9 +2072,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ===================================================================
-# LOGIN / REGISTER
-# ===================================================================
 if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     with tab1:
@@ -2241,16 +2115,10 @@ if not st.session_state.logged_in:
                         st.error(message)
     st.stop()
 
-# ===================================================================
-# ADMIN PANEL
-# ===================================================================
 if st.session_state.current_role == "admin":
     admin_panel()
     st.stop()
 
-# ===================================================================
-# USER INFO
-# ===================================================================
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
 
@@ -2270,9 +2138,6 @@ if st.sidebar.button("🚪 Logout", use_container_width=True):
 st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
-# ===================================================================
-# GLOBAL GATE
-# ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
 _gate_row = load_state_row(force=True)
@@ -2304,15 +2169,9 @@ if not _show_game:
         st.session_state.celebration_start_time = None
         st.session_state.prize_distributed = False
 
-# ===================================================================
-# SYNC GLOBAL STATE
-# ===================================================================
 sync_global_cards()
 sync_global_winners()
 
-# ===================================================================
-# SESSION SELF-HEAL
-# ===================================================================
 try:
     _db_row = load_state_row(force=True)
     _db_gs = bool(_db_row.get("game_started", False))
@@ -2388,14 +2247,8 @@ try:
 except Exception:
     pass
 
-# ===================================================================
-# START THE GAME
-# ===================================================================
 maybe_start_game()
 
-# ===================================================================
-# GLOBAL WINNER OVERLAY
-# ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
@@ -2538,9 +2391,6 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.rerun()
     st.stop()
 
-# ===================================================================
-# PLAYER DISPLAY
-# ===================================================================
 if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
 
@@ -2636,9 +2486,6 @@ else:
     time.sleep(0.5)
     st.rerun()
 
-# ===================================================================
-# FOOTER
-# ===================================================================
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;">
@@ -2646,9 +2493,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ===================================================================
-# AUTO-CALL
-# ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared and _show_game:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
     if _gd:
@@ -2668,9 +2512,6 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         time.sleep(0.3)
         st.rerun()
 
-# ===================================================================
-# AUTO-RERUN
-# ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
