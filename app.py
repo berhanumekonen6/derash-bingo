@@ -701,8 +701,6 @@ def get_global_remaining_time():
     """Return remaining seconds, always fresh from DB.
 
     ✅ FIX: Uses math.ceil so it counts 60 → 59 → 58 → ... → 1 → 0.
-    ✅ FIX: When timer expires, checks card count and either starts game
-       or resets the timer.
     """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
@@ -747,15 +745,7 @@ def check_global_start_condition():
 # GLOBAL CALLER LOCK  (✅ FIXED — never freezes at N/75)
 # ===================================================================
 def try_global_call():
-    """Pick and publish ONE new called number.
-
-    Fixes the 'stacking at 28/75' freeze:
-      • Sanitized fresh read (no stale future last_called_at)
-      • If called_numbers already has ≥75 items, force-mark game_over
-      • After the lock age check, re-read sanitized state (defeats replica lag)
-      • If lock age > 5 s, force-release it (assume caller died)
-      • Atomic single write (lock + called_numbers + last_called_number)
-    """
+    """Pick and publish ONE new called number."""
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
@@ -764,13 +754,11 @@ def try_global_call():
     last_at = row.get("last_called_at", 0) or 0
     lock_age = now - last_at if last_at > 0 else 999
 
-    # If nobody called in the last 1.5 s → this player gets the lock
     if lock_age < 1.5:
         return None
 
     current_called = set(row.get("called_numbers") or [])
     if len(current_called) >= 75:
-        # Board is full and nobody won → force the game over
         update_state({"game_over": True, "winner_declared": False})
         return None
 
@@ -781,7 +769,6 @@ def try_global_call():
     called_num = random.choice(available)
     current_called.add(called_num)
 
-    # Atomic single write — no second read, no replica lag
     ok = update_state({
         "last_called_at": now,
         "last_called_by": st.session_state.current_user,
@@ -1329,7 +1316,7 @@ def admin_panel():
             st.info("👥 Users: " + str(total_users) + " | 💰 Total Balance: " + f"{total_balance:.2f}" + " ETB")
 
     # ============================
-    # TAB 1b: BOT CARDS
+    # TAB 1b: BOT CARDS  (✅ ONE-CLICK APPLY)
     # ============================
     with tab_bots:
         st.markdown("### 🤖 Bot Card Selection")
@@ -1366,7 +1353,10 @@ def admin_panel():
         if current_bot_cards in bot_options:
             default_index = bot_options.index(current_bot_cards)
 
-        selected_bot_count = st.selectbox(
+        # ✅ KEY FIX: Use a plain widget key + read from session_state in the
+        # button handler. Streamlit updates `st.session_state[key]` BEFORE
+        # the button's onClick fires in the same rerun, so the value is fresh.
+        st.selectbox(
             "🔢 Select number of bot cards",
             options=bot_options,
             index=default_index,
@@ -1376,6 +1366,8 @@ def admin_panel():
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
+                # ✅ Read fresh value from session_state — this is what makes it 1-click
+                selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
                     st.success("🗑️ Removed " + str(removed) + " bot card(s).")
@@ -1876,7 +1868,6 @@ def check_for_winners(force_fresh=False):
 
         distribute_prizes(winners_found)
 
-        # ✅ CRITICAL: Write winner state immediately and force fresh reads everywhere
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1886,10 +1877,9 @@ def check_for_winners(force_fresh=False):
             "last_called_number": row.get("last_called_number"),
             "auto_called_count": len(called_numbers),
             "prize_distributed": st.session_state.prize_distributed,
-            "last_called_at": 0,  # ✅ Release caller lock immediately
+            "last_called_at": 0,
             "last_called_by": None,
         })
-        # Clear cache so next read gets fresh winner data
         st.session_state["_state_cache"] = None
         st.session_state["_state_cache_at"] = 0.0
 
@@ -1989,10 +1979,6 @@ def display_master_board():
     if not st.session_state.winner_declared:
         sync_global_winners()
 
-    _fresh = load_state_row(force=True)
-    fresh_taken = list(_fresh.get("taken_cards") or [])
-    fresh_owner = dict(_fresh.get("card_owner") or {})
-
     master_board = {
         'B': list(range(1, 16)), 'I': list(range(16, 31)),
         'N': list(range(31, 46)), 'G': list(range(46, 61)),
@@ -2000,44 +1986,7 @@ def display_master_board():
     }
     called_numbers = list(st.session_state.called_numbers)
 
-    # ---- Selected Cards strip ----
-    if fresh_taken:
-        sorted_taken = sorted(set(int(c) for c in fresh_taken))
-        chips = []
-        for c in sorted_taken:
-            owner = fresh_owner.get(str(c), "")
-            is_bot = is_bot_username(owner)
-            chip_bg = "rgba(229,57,53,0.18)" if is_bot else "rgba(255,152,0,0.18)"
-            chip_border = "#E53935" if is_bot else "#FF9800"
-            chip_color = "#FF6B6B" if is_bot else "#FFD700"
-            chips.append(
-                '<span style="display:inline-block;padding:2px 7px;margin:2px;'
-                'border-radius:10px;background:' + chip_bg + ';color:' + chip_color + ';'
-                'border:1px solid ' + chip_border + ';font-size:0.7rem;font-weight:bold;">'
-                '#' + str(c) + '</span>'
-            )
-        chips_html = "".join(chips)
-        selected_cards_html = (
-            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
-            'background:rgba(0,0,0,0.2);border-radius:15px;'
-            'border:1px solid rgba(229,57,53,0.15);">'
-            '<div style="text-align:center;font-size:0.85rem;font-weight:bold;'
-            'color:#FF6B6B;margin-bottom:6px;letter-spacing:1px;">'
-            '🎴 Selected Cards (' + str(len(sorted_taken)) + '/204)'
-            '</div>'
-            '<div style="text-align:center;line-height:1.9;">' + chips_html + '</div>'
-            '</div>'
-        )
-    else:
-        selected_cards_html = (
-            '<div style="max-width:600px;margin:0 auto 15px auto;padding:10px 12px;'
-            'background:rgba(0,0,0,0.15);border-radius:15px;'
-            'border:1px dashed rgba(255,255,255,0.1);text-align:center;">'
-            '<div style="font-size:0.85rem;color:rgba(255,255,255,0.5);">'
-            '🎴 No cards selected yet'
-            '</div>'
-            '</div>'
-        )
+    # ✅ REMOVED: Selected Cards strip is no longer displayed.
 
     html = (
         '<style>'
@@ -2052,7 +2001,6 @@ def display_master_board():
         '.board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }'
         '.board-stats strong { color: #FFD700; }'
         '</style>'
-        + selected_cards_html +
         '<div class="board-container">'
         '<div class="board-title">🎯 BINGO Board</div>'
     )
