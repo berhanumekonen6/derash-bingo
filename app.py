@@ -1139,7 +1139,6 @@ def admin_panel():
     if st.session_state.get("admin_celebration_msg"):
         msg = st.session_state["admin_celebration_msg"]
         st.success(msg)
-        st.balloons()
         st.session_state["admin_celebration_msg"] = None
 
     st.markdown("""
@@ -1282,19 +1281,19 @@ def admin_panel():
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
-                    st.success("🗑️ Removed " + str(removed) + " bot card(s).")
+                    st.session_state["admin_celebration_msg"] = "🗑️ Removed " + str(removed) + " bot card(s)."
                 else:
                     assigned = assign_bot_cards(selected_bot_count)
-                    st.success("🤖 Assigned " + str(assigned) + " bot card(s) — visible to all players as 🔴 selected")
-                st.balloons()
-                time.sleep(1.0)
+                    st.session_state["admin_celebration_msg"] = (
+                        "🤖 Assigned " + str(assigned)
+                        + " bot card(s) — visible to all players as 🔴 selected"
+                    )
                 st.rerun()
 
         with col_b2:
             if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
                 removed = remove_bot_cards()
-                st.warning("🗑️ Removed " + str(removed) + " bot card(s).")
-                time.sleep(0.8)
+                st.session_state["admin_celebration_msg"] = "🗑️ Removed " + str(removed) + " bot card(s)."
                 st.rerun()
 
         st.markdown("---")
@@ -1864,17 +1863,14 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     st.markdown(html, unsafe_allow_html=True)
 
 def display_master_board():
-    # ✅ No "Selected Cards" chip strip and no card list below the board.
     if not st.session_state.winner_declared:
         sync_global_winners()
-
     master_board = {
         'B': list(range(1, 16)), 'I': list(range(16, 31)),
         'N': list(range(31, 46)), 'G': list(range(46, 61)),
         'O': list(range(61, 76))
     }
     called_numbers = list(st.session_state.called_numbers)
-
     html = (
         '<style>'
         '.board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }'
@@ -1891,7 +1887,6 @@ def display_master_board():
         '<div class="board-container">'
         '<div class="board-title">🎯 BINGO Board</div>'
     )
-
     if st.session_state.last_called_number:
         letter = get_letter_for_number(st.session_state.last_called_number)
         amharic = get_amharic_number(st.session_state.last_called_number)
@@ -1901,12 +1896,10 @@ def display_master_board():
             + str(st.session_state.last_called_number) + ' (' + letter + ') - ' + amharic +
             '</span></div>'
         )
-
     html += '<table class="board-table"><tr>'
     for letter in ['B', 'I', 'N', 'G', 'O']:
         html += '<td class="header-cell">' + letter + '</td>'
     html += '</tr>'
-
     for row in range(15):
         html += '<tr>'
         for letter in ['B', 'I', 'N', 'G', 'O']:
@@ -1920,11 +1913,9 @@ def display_master_board():
             else:
                 html += '<td><div class="board-number">' + str(num) + '</div></td>'
         html += '</tr>'
-
     html += '</table>'
     html += '<div class="board-stats">📊 Called: <strong>' + str(len(called_numbers)) + '</strong> / 75 numbers</div>'
     html += '</div>'
-
     st.markdown(html, unsafe_allow_html=True)
 
 # ===================================================================
@@ -1960,7 +1951,6 @@ def render_card_selection():
     available = 204 - total_selected
     enough_cards = total_selected >= MIN_CARDS_TO_START
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
-
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">⌚ {time_str}</div>
@@ -1972,12 +1962,10 @@ def render_card_selection():
         <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">💰 {balance:.2f} ETB</div>
     </div>
     """, unsafe_allow_html=True)
-
     if not enough_cards:
         st.warning(f"⚠️ Waiting for {MIN_CARDS_TO_START - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
     else:
         st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
-
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
     selected_cols = st.selectbox(
@@ -1989,19 +1977,16 @@ def render_card_selection():
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
         st.rerun()
-
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     rejected = st.session_state.rejected_card_num
     insufficient = st.session_state.insufficient_balance_card_num
-
     st.markdown("""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
         <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">🎯 Tap a card to SELECT (10 ETB)</div>
     </div>
     """, unsafe_allow_html=True)
-
     for row_start in range(1, 205, cols_per_row):
         cols = st.columns(cols_per_row)
         for col_idx in range(cols_per_row):
@@ -2391,6 +2376,9 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.rerun()
     st.stop()
 
+# ===================================================================
+# PLAYER DISPLAY — Board only (no card list)
+# ===================================================================
 if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
 
@@ -2420,43 +2408,8 @@ if st.session_state.game_started and _show_game:
     </div>
     """, unsafe_allow_html=True)
 
-    board_col, cards_col = st.columns([2, 1], gap="large")
-
-    with board_col:
-        display_master_board()
-
-    with cards_col:
-        st.markdown("### 📋🍀 የእርስዎ ካርቴላ/ዎች")
-        if all_player_cards:
-            for cid in all_player_cards:
-                display_selected_card(cid, list(st.session_state.called_numbers), False)
-        else:
-            st.warning("⚠️በዚህ ዙር ጨዋታ ካርቴላ አልመረጡም!")
-            st.info("💡ጨዋታዉ ተጀምሯል🍀 ካርቴላ ለመምረጥ ቀጣዩን ዙር ይጠብቁ።")
-            st.markdown("""
-<div style="text-align:center;margin:15px 0 5px 0;">
-    <p style="color:#FF9800;font-size:1.1rem;font-weight:bold;margin:0;">
-        ⏳ አሸናፊ እስኪታወቅ ይጠብቁ...
-    </p>
-    <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:6px 0 0 0;">
-        🎯 ጨዋታው በመካሄድ ላይ ነው
-    </p>
-    <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:4px 0 0 0;font-style:italic;">
-        ⏳ Waiting for winner to be declared...
-    </p>
-</div>
-""", unsafe_allow_html=True)
-            if st.session_state.get("winner_declared", False):
-                st.markdown("""
-<div style="text-align:center;margin:15px 0 5px 0;">
-    <p style="color:#FFD700;font-size:1rem;font-weight:bold;margin:0;">
-        ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
-    </p>
-</div>
-""", unsafe_allow_html=True)
-                if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
-                    reset_for_next_round()
-                    st.rerun()
+    # ✅ Board only — the player's card list on the right is hidden during gameplay.
+    display_master_board()
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
