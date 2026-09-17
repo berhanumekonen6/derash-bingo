@@ -817,18 +817,22 @@ def reset_for_next_round():
 # SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
-    global_taken, global_owner, _, _ = load_global_cards()
-    
+    # ✅ FORCE-fresh state so bot cards selected by the admin
+    #    appear IMMEDIATELY for all players (bypasses 0.3s cache).
+    _fresh_row = load_state_row(force=True)
+    global_taken = list(_fresh_row.get("taken_cards") or [])
+    global_owner = dict(_fresh_row.get("card_owner") or {})
+
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-    
+
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     if game_started:
         st.session_state.game_started = True
-    
+
     load_game_state()
-    
+
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
@@ -917,6 +921,9 @@ def register_user(username, password, name, phone=""):
         return False, "❌ Username must be at least 2 characters"
     if len(password) < 6:
         return False, "❌ Password must be at least 6 characters"
+    # ✅ Reserve bot names so real players can't hijack bot usernames
+    if username.endswith(BOT_SUFFIX) or username in BOT_NAMES:
+        return False, "❌ This username is reserved"
     load_all_data()
     if username in st.session_state.user_db:
         return False, "❌ Username already exists"
@@ -943,6 +950,52 @@ def logout_user():
 # ADMIN PANEL — WITH DEPOSIT / WITHDRAW APPROVALS
 # ===================================================================
 BOT_USERNAME_DISPLAY = "@DerashBingoPlayBot"
+
+# ===================================================================
+# BOT NAMES — Ethiopian / Amharic names + "_b" suffix to mark them
+# ===================================================================
+BOT_NAMES = [
+    "Bekele", "Alemu", "Aster", "Yednekachew", "Tigist", "Getachew",
+    "Meseret", "Dawit", "Hana", "Solomon", "Marta", "Kebede",
+    "Selam", "Tesfaye", "Meron", "Abebe", "Hiwot", "Girma",
+    "Bethlehem", "Yohannes", "Rahel", "Mulugeta", "Eden", "Fikadu",
+    "Tsehay", "Berhanu", "Liya", "Assefa", "Genet", "Wondimu",
+    "Sara", "Desta", "Mahlet", "Tewodros", "Kidist", "Bantayehu",
+    "Eyerusalem", "Endale", "Mekdes", "Samuel", "Zewditu", "Nardos",
+    "Bereket", "Alemitu", "Yonas", "Wubit", "Henok", "Tizita",
+    "Melaku", "Netsanet", "Biniam", "Aynalem", "Eyob", "Sindu",
+    "Gedion", "Mimi", "Natnael", "Tsedale", "Firaol", "Rediet",
+    "Bruk", "Sifen", "Naol", "Hermela", "Yafet", "Lidiya",
+    "Ebisa", "Ruth", "Kaleab", "Beza", "Yared", "Eleni",
+    "Abel", "Feven", "Mikiyas", "Saron", "Yosef", "Meron",
+    "Dagmawi", "Tinsae", "Luel", "Tsion", "Nahom", "Sena",
+    "Kaleb", "Bethany", "Ermias", "Ruhama", "Yosef", "Mimi",
+    "Andualem", "Mieraf", "Mulu", "Habtamu", "Frehiwot", "Tadesse",
+    "Zerihun", "Aregash", "Mulugeta", "Tigabu", "Lulit", "Bonsa",
+]
+
+# Suffix used to mark bot usernames (e.g., "Alemu_b")
+BOT_SUFFIX = "_b"
+
+def make_bot_username(base_name):
+    """Return the bot username with the _b suffix."""
+    return f"{base_name}{BOT_SUFFIX}"
+
+def is_bot_username(username):
+    """Return True if this username belongs to a bot (ends with _b)."""
+    if not username:
+        return False
+    return str(username).endswith(BOT_SUFFIX)
+
+def get_bot_display_name(username):
+    """Strip the _b suffix for display, prefixed with 🤖."""
+    if not username:
+        return "🤖 Bot"
+    name = str(username)
+    if name.endswith(BOT_SUFFIX):
+        name = name[: -len(BOT_SUFFIX)]
+    return f"🤖 {name}"
+
 
 def load_transactions(status_filter=None, tx_type=None):
     try:
@@ -1014,22 +1067,31 @@ def reject_transaction(tx, note=""):
 # BOT CARDS — ADMIN FEATURE
 # ===================================================================
 def get_or_create_bot_users(count):
-    """Create/get bot users for auto card selection."""
+    """Create/get bot users with Ethiopian names + '_b' suffix."""
     load_all_data()
+    if count > len(BOT_NAMES):
+        count = len(BOT_NAMES)
+
+    # Shuffle a copy so assignments vary, but keep BOT_NAMES intact
+    available_names = list(BOT_NAMES)
+    random.shuffle(available_names)
+
     bot_users = []
-    for i in range(1, count + 1):
-        bot_name = f"bot_{i:03d}"
-        if bot_name not in st.session_state.user_db:
-            st.session_state.user_db[bot_name] = {
-                "password": hash_password(f"bot_{i:03d}_secret"),
+    for i in range(count):
+        base_name = available_names[i]
+        bot_username = make_bot_username(base_name)  # e.g., "Alemu_b"
+
+        if bot_username not in st.session_state.user_db:
+            st.session_state.user_db[bot_username] = {
+                "password": hash_password(f"{bot_username}_secret_{i}"),
                 "balance": 10000.0,
                 "role": "player",
-                "name": f"🤖 Bot {i}",
+                "name": f"🤖 {base_name}",       # Display name without suffix
                 "phone": "",
                 "game_played": 0,
                 "wins": 0,
             }
-        bot_users.append(bot_name)
+        bot_users.append(bot_username)
     save_local_users(st.session_state.user_db)
     return bot_users
 
@@ -1044,8 +1106,8 @@ def assign_bot_cards(bot_count):
     owner = dict(row.get("card_owner") or {})
 
     # Remove any existing bot-owned cards first (idempotent re-apply)
-    bot_prefix_owners = [k for k, v in owner.items() if v and str(v).startswith("bot_")]
-    for k in bot_prefix_owners:
+    bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
+    for k in bot_owned:
         cid = int(k)
         if cid in taken:
             taken.remove(cid)
@@ -1081,7 +1143,7 @@ def remove_bot_cards():
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
 
-    bot_cards = [k for k, v in owner.items() if v and str(v).startswith("bot_")]
+    bot_cards = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_cards:
         cid = int(k)
         if cid in taken:
@@ -1141,7 +1203,7 @@ def admin_panel():
     # ============================
     with tab_users:
         load_all_data()
-        users = [u for u in st.session_state.user_db.keys() if u != "admin"]
+        users = [u for u in st.session_state.user_db.keys() if u != "admin" and not is_bot_username(u)]
         if not users:
             st.info("No users registered yet.")
         else:
@@ -1205,15 +1267,16 @@ def admin_panel():
         st.markdown("### 🤖 Bot Card Selection")
         st.markdown(
             "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
-            "Select how many bot cards to auto-assign. Each bot gets 1 card "
-            "(1 card = 1 bot user). Bots are labelled 🤖 Bot 1, Bot 2, ...</p>",
+            "Select how many bot cards to auto-assign. Each bot gets 1 card. "
+            "Bot usernames look like <b>Bekele_b</b>, <b>Alemu_b</b>, <b>Aster_b</b> — "
+            "the <b>_b</b> suffix marks them as bots so they are easy to spot.</p>",
             unsafe_allow_html=True,
         )
 
         row_b = load_state_row(force=True)
         current_bot_cards = sum(
             1 for v in (row_b.get("card_owner") or {}).values()
-            if v and str(v).startswith("bot_")
+            if is_bot_username(v)
         )
         total_taken_b = len(row_b.get("taken_cards") or [])
 
@@ -1249,7 +1312,7 @@ def admin_panel():
                     st.success(f"🗑️ Removed {removed} bot card(s).")
                 else:
                     assigned = assign_bot_cards(selected_bot_count)
-                    st.success(f"🤖 Assigned {assigned} bot card(s)!")
+                    st.success(f"🤖 Assigned {assigned} bot card(s) — names like Bekele_b, Alemu_b, Aster_b")
                 st.balloons()
                 time.sleep(1.0)
                 st.rerun()
@@ -1264,19 +1327,25 @@ def admin_panel():
         st.markdown("---")
         st.info(
             "💡 Bot cards count toward the 3-card minimum to start the game. "
-            "Each bot user has a 10,000 ETB balance and can win prizes like a normal player."
+            "Each bot has a 10,000 ETB balance and can win prizes like a normal player. "
+            "Bot usernames end with '_b' (e.g., Alemu_b, Bekele_b) so they are easy to identify."
         )
 
-        # Preview of current bot cards
+        # Preview of current bot cards — shows Card# → Bot username (with _b)
         if current_bot_cards > 0:
             st.markdown("#### 👀 Current Bot Cards")
             owner_map = row_b.get("card_owner") or {}
-            bot_card_list = sorted(
-                [int(k) for k, v in owner_map.items() if v and str(v).startswith("bot_")]
-            )
-            preview = ", ".join(f"#{c}" for c in bot_card_list[:40])
-            if len(bot_card_list) > 40:
-                preview += f" ... +{len(bot_card_list) - 40} more"
+            bot_entries = []
+            for k, v in owner_map.items():
+                if is_bot_username(v):
+                    try:
+                        bot_entries.append((int(k), v))
+                    except (ValueError, TypeError):
+                        pass
+            bot_entries.sort(key=lambda x: x[0])
+            preview = ", ".join(f"#{c}→{name}" for c, name in bot_entries[:30])
+            if len(bot_entries) > 30:
+                preview += f" ... +{len(bot_entries) - 30} more"
             st.markdown(
                 f"<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"
                 f"color:rgba(255,255,255,0.75);font-size:0.85rem;'>{preview}</div>",
