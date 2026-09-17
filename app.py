@@ -696,14 +696,8 @@ def check_global_start_condition():
 def try_global_call():
     """
     Pick and publish ONE new called number.
-
-    To ensure every player sees the SAME called_numbers set:
-      1. Read fresh from Supabase.
-      2. Take the 2-second lock (last_called_at) IMMEDIATELY.
-      3. Re-read fresh again — this is the authoritative set.
-      4. Pick a number NOT in the current set.
-      5. Write the full set back.
-    The lock guarantees only ONE caller proceeds per 2 seconds.
+    Lock-first write, then immediate winner check.
+    Interval: 1.2 s — faster than the old 2.0 s.
     """
     row = load_state_row(force=True)
     if row.get("winner_declared"):
@@ -711,16 +705,16 @@ def try_global_call():
 
     now = time.time()
     last_at = row.get("last_called_at", 0) or 0
-    if now - last_at < 2.0:
+    if now - last_at < 1.2:
         return None
 
-    # ✅ Lock FIRST so no two players can race
+    # Lock FIRST so no two players can race
     update_state({
         "last_called_at": now,
         "last_called_by": st.session_state.current_user,
     })
 
-    # ✅ Re-read AFTER acquiring the lock — authoritative state
+    # Re-read AFTER acquiring the lock — authoritative state
     row2 = load_state_row(force=True)
     if row2.get("winner_declared"):
         return None
@@ -745,6 +739,7 @@ def try_global_call():
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(current_called)
 
+    # ✅ Check for winners IMMEDIATELY after writing the call
     check_for_winners(force_fresh=True)
     return called_num
 
@@ -1106,7 +1101,9 @@ def reject_transaction(tx, note=""):
 # BOT CARDS — ADMIN FEATURE
 # ===================================================================
 def get_or_create_bot_users(count):
-    """Create/get bot users with Ethiopian names + varied suffixes."""
+    """Create/get bot users with Ethiopian names + varied suffixes.
+    NOTE: only writes to the LOCAL session dict. The caller is responsible
+    for a single batched upsert — this keeps the UI snappy."""
     load_all_data()
     if count > len(BOT_NAMES):
         count = len(BOT_NAMES)
@@ -1130,12 +1127,11 @@ def get_or_create_bot_users(count):
                 "wins": 0,
             }
         bot_users.append(bot_username)
-    save_local_users(st.session_state.user_db)
     return bot_users
 
 
 def assign_bot_cards(bot_count):
-    """Assign cards to bots. Each bot gets 1 card. Returns number of cards assigned."""
+    """Assign cards to bots. FAST: single batched upsert, single state write."""
     if bot_count <= 0:
         return 0
 
@@ -1143,6 +1139,7 @@ def assign_bot_cards(bot_count):
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
 
+    # Strip any previous bot cards (idempotent)
     bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_owned:
         cid = int(k)
@@ -1150,7 +1147,67 @@ def assign_bot_cards(bot_count):
             taken.remove(cid)
         del owner[k]
 
-    bot_users = get_or_create_bot_users(bot_count)
+    # Build bots locally — DO NOT save each one individually
+    load_all_data()
+    if bot_count > len(BOT_NAMES):
+        bot_count = len(BOT_NAMES)
+
+    available_names = list(BOT_NAMES)
+    random.shuffle(available_names)
+
+    bot_users = []
+    new_bot_records = {}
+    for i in range(bot_count):
+        base_name = available_names[i]
+        bot_username = make_bot_username(base_name, i)
+
+        if bot_username not in st.session_state.user_db:
+            new_bot_records[bot_username] = {
+                "password": hash_password(bot_username + "_secret_" + str(i)),
+                "balance": 10000.0,
+                "role": "player",
+                "name": "🤖 " + base_name,
+                "phone": "",
+                "game_played": 0,
+                "wins": 0,
+            }
+            st.session_state.user_db[bot_username] = new_bot_records[bot_username]
+        bot_users.append(bot_username)
+
+    # Save bots in ONE batched upsert (much faster than N individual writes)
+    if new_bot_records:
+        try:
+            batch = []
+            for u, d in new_bot_records.items():
+                batch.append({
+                    "username": u,
+                    "password": d.get("password", ""),
+                    "balance": float(d.get("balance", 0)),
+                    "role": d.get("role", "player"),
+                    "name": d.get("name", ""),
+                    "phone": d.get("phone", ""),
+                    "game_played": int(d.get("game_played", 0)),
+                    "wins": int(d.get("wins", 0)),
+                })
+            supabase.table("users").upsert(batch).execute()
+        except Exception:
+            # Fall back to individual saves if batch fails
+            for u in new_bot_records:
+                try:
+                    d = new_bot_records[u]
+                    supabase.table("users").upsert({
+                        "username": u,
+                        "password": d.get("password", ""),
+                        "balance": float(d.get("balance", 0)),
+                        "role": d.get("role", "player"),
+                        "name": d.get("name", ""),
+                        "phone": d.get("phone", ""),
+                        "game_played": int(d.get("game_played", 0)),
+                        "wins": int(d.get("wins", 0)),
+                    }).execute()
+                except Exception:
+                    pass
+
     available_cards = [i for i in range(1, 205) if i not in taken]
     random.shuffle(available_cards)
 
@@ -1163,6 +1220,7 @@ def assign_bot_cards(bot_count):
         owner[str(card_num)] = bot_name
         assigned += 1
 
+    # SINGLE state write
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
@@ -1170,7 +1228,6 @@ def assign_bot_cards(bot_count):
 
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
-
     return assigned
 
 
@@ -1350,19 +1407,16 @@ def admin_panel():
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
-                    st.success("🗑️ Removed " + str(removed) + " bot card(s).")
+                    st.toast("🗑️ Removed " + str(removed) + " bot card(s).", icon="🗑️")
                 else:
                     assigned = assign_bot_cards(selected_bot_count)
-                    st.success("🤖 Assigned " + str(assigned) + " bot card(s) — visible to all players as 🔴 selected")
-                st.balloons()
-                time.sleep(1.0)
+                    st.toast("🤖 Assigned " + str(assigned) + " bot card(s).", icon="✅")
                 st.rerun()
 
         with col_b2:
             if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
                 removed = remove_bot_cards()
-                st.warning("🗑️ Removed " + str(removed) + " bot card(s).")
-                time.sleep(0.8)
+                st.toast("🗑️ Removed " + str(removed) + " bot card(s).", icon="🗑️")
                 st.rerun()
 
         st.markdown("---")
@@ -1857,6 +1911,9 @@ def check_for_winners(force_fresh=False):
             "last_called_number": row.get("last_called_number"),
             "auto_called_count": len(called_numbers),
             "prize_distributed": st.session_state.prize_distributed,
+            # ✅ Release the caller lock so nobody can call after the winner
+            "last_called_at": 0,
+            "last_called_by": None,
         })
 
 def distribute_prizes(winners):
@@ -2628,9 +2685,14 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         just_called = try_global_call()
         # ✅ force-fresh read so every player sees the same called set
         load_game_state()
+
+        # ✅ If a winner was just declared, rerun IMMEDIATELY — do not sleep
+        if st.session_state.get("winner_declared", False):
+            st.rerun()
+
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-        time.sleep(0.3)
+        time.sleep(0.2)
         st.rerun()
 
 # ===================================================================
