@@ -2168,7 +2168,7 @@ def render_card_selection():
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
                 elif is_rejected:
-                    if st.button("🚫2+ አይቻልም🚫", key=f"card_{card_num}", use_container_width=True):
+                    if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
                         st.rerun()
                 elif is_insufficient:
