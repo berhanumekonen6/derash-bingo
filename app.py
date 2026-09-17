@@ -691,9 +691,20 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.ceil(remaining)))
 
 # ===================================================================
-# GLOBAL CALLER LOCK
+# GLOBAL CALLER LOCK  (✅ CONSISTENT CALLED NUMBERS)
 # ===================================================================
 def try_global_call():
+    """
+    Pick and publish ONE new called number.
+
+    To ensure every player sees the SAME called_numbers set:
+      1. Read fresh from Supabase.
+      2. Take the 2-second lock (last_called_at) IMMEDIATELY.
+      3. Re-read fresh again — this is the authoritative set.
+      4. Pick a number NOT in the current set.
+      5. Write the full set back.
+    The lock guarantees only ONE caller proceeds per 2 seconds.
+    """
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
@@ -703,9 +714,18 @@ def try_global_call():
     if now - last_at < 2.0:
         return None
 
-    update_state({"last_called_at": now, "last_called_by": st.session_state.current_user})
+    # ✅ Lock FIRST so no two players can race
+    update_state({
+        "last_called_at": now,
+        "last_called_by": st.session_state.current_user,
+    })
 
-    current_called = set(row.get("called_numbers") or [])
+    # ✅ Re-read AFTER acquiring the lock — authoritative state
+    row2 = load_state_row(force=True)
+    if row2.get("winner_declared"):
+        return None
+
+    current_called = set(row2.get("called_numbers") or [])
     if len(current_called) >= 75:
         return None
     available = [i for i in range(1, 76) if i not in current_called]
@@ -745,7 +765,8 @@ def save_game_state():
     })
 
 def load_game_state():
-    row = load_state_row()
+    # ✅ Force-fresh so every player sees the SAME called_numbers
+    row = load_state_row(force=True)
     st.session_state.called_numbers = set(row.get("called_numbers") or [])
     st.session_state.last_called_number = row.get("last_called_number")
     st.session_state.auto_called_count = row.get("auto_called_count", 0)
@@ -1090,14 +1111,12 @@ def get_or_create_bot_users(count):
     if count > len(BOT_NAMES):
         count = len(BOT_NAMES)
 
-    # Shuffle a copy so assignments vary, but keep BOT_NAMES intact
     available_names = list(BOT_NAMES)
     random.shuffle(available_names)
 
     bot_users = []
     for i in range(count):
         base_name = available_names[i]
-        # ✅ Varied suffix: Yosef_b, Abebe_ad, Bekele_x7, …
         bot_username = make_bot_username(base_name, i)
 
         if bot_username not in st.session_state.user_db:
@@ -2607,6 +2626,7 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
             st.rerun()
 
         just_called = try_global_call()
+        # ✅ force-fresh read so every player sees the same called set
         load_game_state()
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
