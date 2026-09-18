@@ -339,7 +339,7 @@ def get_winner_sound_js():
     """
 
 # ===================================================================
-# SESSION STATE — transient only
+# SESSION STATE
 # ===================================================================
 def init_session_state():
     defaults = {
@@ -355,18 +355,29 @@ def init_session_state():
         'deposit_msg_text': "",
         'admin_celebration_msg': None,
         'bot_apply_flash': None,
-        'admin_bot_card_count': 0,
         '_first_render_done': False,
         '_last_sound_played_for': None,
+        '_rerun_guard': False,
+        '_admin_selected_bot_count': 0,
+        '_celebration_rendered_this_run': False,
+        '_winner_screen_shown_at': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 init_session_state()
+st.session_state["_rerun_guard"] = False
+st.session_state["_celebration_rendered_this_run"] = False
 
 if "_first_render_done" not in st.session_state:
     st.session_state["_first_render_done"] = False
+
+def fire_rerun_once():
+    if st.session_state.get("_rerun_guard", False):
+        return
+    st.session_state["_rerun_guard"] = True
+    st.rerun()
 
 # ===================================================================
 # SUPABASE — GLOBAL GAME STATE
@@ -459,7 +470,7 @@ def update_state(patch: dict):
             return False
 
 # ===================================================================
-# GAME CONSTANTS
+# GAME CONSTANTS  (1-round celebration, 5 seconds)
 # ===================================================================
 CARD_PRICE = 10
 PRIZE_PER_CARD = 8
@@ -468,6 +479,7 @@ MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
 CALL_INTERVAL = 3.0
 LEADER_TIMEOUT = 4.5
+CELEBRATION_DURATION_SECONDS = 5
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -765,7 +777,7 @@ def remove_bot_cards():
     return len(bot_cards)
 
 # ===================================================================
-# BINGO CARDS — ALL 204
+# BINGO CARDS — 204 (kept as your original dataset)
 # ===================================================================
 BINGO_CARDS = [
     {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
@@ -1647,7 +1659,7 @@ st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(my_cards)}/2 cards")
 
 # ===================================================================
-# READ GLOBAL STATE FRESH ON EVERY RENDER
+# READ GLOBAL STATE
 # ===================================================================
 row = load_state_row(force=True)
 
@@ -1660,9 +1672,42 @@ winner_declared = bool(row.get("winner_declared", False))
 winners_list = row.get("winners_list") or []
 
 # ===================================================================
-# WINNER OVERLAY
+# WINNER OVERLAY — SINGLE ROUND, 5 SECONDS, AUTO-RESUME
 # ===================================================================
 if winner_declared and game_started:
+    if st.session_state.get("_celebration_rendered_this_run", False):
+        st.stop()
+    st.session_state["_celebration_rendered_this_run"] = True
+
+    if st.session_state.get("_winner_screen_shown_at") is None:
+        st.session_state["_winner_screen_shown_at"] = time.time()
+
+    elapsed = time.time() - st.session_state["_winner_screen_shown_at"]
+    seconds_left = max(0, int(math.ceil(CELEBRATION_DURATION_SECONDS - elapsed)))
+
+    # Auto-resume as soon as the 5s celebration is done
+    if elapsed >= CELEBRATION_DURATION_SECONDS:
+        remove_bot_cards()
+        update_state({
+            "winners_list": [],
+            "winner_declared": False,
+            "game_over": False,
+            "prize_distributed": False,
+            "called_numbers": [],
+            "last_called_number": None,
+            "auto_called_count": 0,
+            "game_started": False,
+            "auto_call_started": False,
+            "last_called_at": 0,
+            "last_called_by": None,
+            "timer_start_time": time.time(),
+            "card_selection_time": CARD_SELECTION_DURATION,
+        })
+        st.session_state["_winner_screen_shown_at"] = None
+        st.session_state["_last_sound_played_for"] = None
+        fire_rerun_once()
+        st.stop()
+
     st.markdown(get_winner_sound_js(), unsafe_allow_html=True)
 
     total_prize = len(taken_cards) * PRIZE_PER_CARD
@@ -1706,7 +1751,6 @@ if winner_declared and game_started:
     """, unsafe_allow_html=True)
 
     st.balloons()
-    st.snow()
 
     st.markdown("""
     <div style="text-align:center;margin:20px 0 15px 0;">
@@ -1733,37 +1777,20 @@ if winner_declared and game_started:
             cards = ", ".join([f"#{c}" for c in w.get("cards", [])])
             st.success(f"🎉 {w.get('username')} - Card(s): {cards} - {patterns} 🎉")
 
-    st.markdown("""
-    <div style="text-align:center;margin:25px 0 10px 0;">
-        <p style="color:#FFD700;font-size:1.2rem;font-weight:bold;margin:0;">
-            ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+    st.markdown(f"""
+    <div style="text-align:center;margin:20px 0 10px 0;">
+        <p style="color:#FF9800;font-size:1.1rem;font-weight:bold;margin:0;
+                  animation: celebrationPulse 1s ease-in-out infinite alternate;">
+            ⏳ ቀጣይ ዙር በ <span style="font-size:1.4rem;color:#FFD700;">{seconds_left}</span> ሰከንድ ይጀምራል...
+        </p>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:4px 0 0 0;font-style:italic;">
+            Next round starts in {seconds_left}s
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    col_a, col_b, col_c = st.columns([1, 2, 1])
-    with col_b:
-        if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="global_resume_btn"):
-            remove_bot_cards()
-            update_state({
-                "winners_list": [],
-                "winner_declared": False,
-                "game_over": False,
-                "prize_distributed": False,
-                "called_numbers": [],
-                "last_called_number": None,
-                "auto_called_count": 0,
-                "game_started": False,
-                "auto_call_started": False,
-                "last_called_at": 0,
-                "last_called_by": None,
-                "timer_start_time": time.time(),
-                "card_selection_time": CARD_SELECTION_DURATION,
-            })
-            st.rerun()
-
-    time.sleep(1.0)
-    st.rerun()
+    time.sleep(1)
+    fire_rerun_once()
     st.stop()
 
 # ===================================================================
@@ -1812,7 +1839,7 @@ if not game_started:
     )
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
-        st.rerun()
+        fire_rerun_once()
 
     cols_per_row = st.session_state.columns_per_row
     rejected = st.session_state.rejected_card_num
@@ -1843,17 +1870,17 @@ if not game_started:
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
-                        st.rerun()
+                        fire_rerun_once()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
                 elif is_rejected:
                     if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
-                        st.rerun()
+                        fire_rerun_once()
                 elif is_insufficient:
                     if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
-                        st.rerun()
+                        fire_rerun_once()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
@@ -1871,16 +1898,16 @@ if not game_started:
                                 st.session_state.rejected_card_num = None
                             else:
                                 st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
-                        st.rerun()
+                        fire_rerun_once()
 
     st.progress(1 - (remaining / CARD_SELECTION_DURATION) if remaining > 0 else 0)
 
     if remaining <= 0 and enough_cards and not game_started:
         start_game_globally()
-        st.rerun()
+        fire_rerun_once()
 
     time.sleep(0.5)
-    st.rerun()
+    fire_rerun_once()
 
 # ===================================================================
 # GAME STARTED PHASE
@@ -1920,6 +1947,6 @@ if game_started and not winner_declared:
     scan_for_winner()
 
     time.sleep(1.0)
-    st.rerun()
+    fire_rerun_once()
 
 st.session_state["_first_render_done"] = True
