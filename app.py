@@ -408,6 +408,7 @@ def init_session_state():
         '_first_render_done': False,
         'bot_apply_flash': None,
         '_last_rerun_at': 0.0,
+        '_last_sound_played_for': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -597,6 +598,7 @@ MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
 CALL_LOCK_WINDOW = 0.8
+CALL_INTERVAL = 2.0
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -844,7 +846,7 @@ def try_global_call():
     now = time.time()
     last_at = float(row.get("last_called_at") or 0)
     lock_age = now - last_at if last_at > 0 else 999.0
-    if lock_age < CALL_LOCK_WINDOW:
+    if lock_age < CALL_INTERVAL:
         return None
 
     current_called = set(row.get("called_numbers") or [])
@@ -2633,7 +2635,7 @@ if st.session_state.game_started and _show_game:
                     reset_for_next_round()
                     safe_rerun(0.4)
 
-    st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
+    st.info(f"🎯 Auto-calling every {CALL_INTERVAL:.0f} seconds... ({len(st.session_state.called_numbers)}/75)")
 
 else:
     _final_row = load_state_row(force=True)
@@ -2692,7 +2694,7 @@ if st.session_state.game_started and not st.session_state.winner_declared:
     if just_called is not None:
         st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
 
-    time.sleep(1.0)
+    time.sleep(CALL_INTERVAL)
     safe_rerun(0.3)
 
 # ===================================================================
