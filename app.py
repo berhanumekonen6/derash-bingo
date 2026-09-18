@@ -419,7 +419,7 @@ if "_first_render_done" not in st.session_state:
     st.session_state["_first_render_done"] = False
 
 # ===================================================================
-# RERUN HELPER — sleeps remaining interval then reruns (never blocks)
+# RERUN HELPER
 # ===================================================================
 def safe_rerun(min_interval=0.35):
     now = time.time()
@@ -530,7 +530,8 @@ def update_state(patch: dict):
             st.session_state["_state_cache"] = None
             st.session_state["_state_cache_at"] = 0.0
             st.session_state["_state_err_count"] = 0
-            return True        except Exception as e:
+            return True
+        except Exception as e:
             if attempt == 0:
                 time.sleep(0.1)
                 continue
@@ -595,7 +596,7 @@ CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
-CALL_LOCK_WINDOW = 0.8  # seconds between calls
+CALL_LOCK_WINDOW = 0.8
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -961,7 +962,7 @@ def reset_for_next_round():
     st.session_state.celebration_round = 1
 
 # ===================================================================
-# SYNC GLOBAL CARDS  (always take DB value — caller is atomic)
+# SYNC GLOBAL CARDS  (always take DB value)
 # ===================================================================
 def sync_global_cards():
     _fresh_row = load_state_row(force=True)
@@ -2339,7 +2340,7 @@ sync_global_cards()
 sync_global_winners()
 
 # ===================================================================
-# SESSION SELF-HEAL  (no try/except — must not swallow RerunException)
+# SESSION SELF-HEAL
 # ===================================================================
 _db_row = load_state_row(force=True)
 _db_gs = bool(_db_row.get("game_started", False))
@@ -2671,10 +2672,9 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# AUTO-CALL — runs whenever game_started is True and no winner yet.
+# AUTO-CALL — runs whenever game_started and no winner yet.
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
-    # Refresh state from DB
     _wl, _wd, _cn, _lcn, _acc, _go, _pd, _ts = load_global_winners()
     if _wd:
         sync_global_winners()
