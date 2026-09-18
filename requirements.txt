@@ -3,18 +3,18 @@
 # ============================================================
 
 # === ለቢንጎ ጨዋታ (app.py) ===
-streamlit>=1.40.0 
-pandas>=2.0.0
-openpyxl>=3.1.0
-pillow>=11.3.0
-plotly>=5.18.0
-python-dotenv>=1.0.0
+streamlit==1.40.2
+pandas==2.2.3
+openpyxl==3.1.5
+pillow==11.0.0
+plotly==5.24.1
+python-dotenv==1.0.1
 
 # === ለቴሌግራም ቻትቦት (bot.py) ===
-python-telegram-bot>=20.0
+python-telegram-bot==21.6
 
-# === ለውሂብ ማከማቻ (አማራጭ) ===
-supabase>=2.10.0
+# === ለውሂብ ማከማቻ ===
+supabase==2.10.0
 
 # === ለደህንነት ===
-cryptography>=39.0.0
+cryptography==43.0.3
