@@ -418,7 +418,6 @@ def init_session_state():
 
 init_session_state()
 
-# Reset per-script-run flags
 st.session_state["_rerun_already_fired"] = False
 st.session_state["_celebration_rendered_this_run"] = False
 
@@ -843,7 +842,7 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.floor(remaining + 0.001)))
 
 # ===================================================================
-# GLOBAL CALLER — single atomic write, winner detected same tick
+# GLOBAL CALLER — single atomic write
 # ===================================================================
 def try_global_call():
     row = load_state_row(force=True)
@@ -854,7 +853,7 @@ def try_global_call():
 
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
-    current_called = db_called if len(db_called) >= len(session_called) else session_called
+    current_called = db_called | session_called
 
     db_last = float(row.get("last_called_at") or 0)
     sess_last = float(st.session_state.get("_last_called_at_local") or 0)
@@ -894,24 +893,29 @@ def try_global_call():
     check_for_winners_with_set(new_called)
     return called_num
 
+# ===================================================================
+# WINNER CHECK — always scans every card
+# ===================================================================
 def check_for_winners_with_set(called_numbers):
-    """Winner check using the in-memory called set (no DB read)."""
-    if st.session_state.winner_declared:
+    if st.session_state.get("winner_declared", False):
         return
+
     taken_cards = list(st.session_state.taken_cards or [])
     if not taken_cards:
-        row = load_state_row(force=True)
-        taken_cards = list(row.get("taken_cards") or [])
+        _r = load_state_row(force=True)
+        taken_cards = list(_r.get("taken_cards") or [])
+
     card_owner = dict(st.session_state.card_owner or {})
     if not card_owner:
-        row = load_state_row(force=True)
-        card_owner = dict(row.get("card_owner") or {})
+        _r = load_state_row(force=True)
+        card_owner = dict(_r.get("card_owner") or {})
 
     if not called_numbers or not taken_cards:
         return
 
-    called_set = set(called_numbers)
+    called_set = set(int(x) for x in called_numbers)
     winners_found = []
+
     for card_id in taken_cards:
         card_data = get_card_data(card_id)
         if not card_data:
@@ -947,9 +951,9 @@ def check_for_winners_with_set(called_numbers):
             "winner_declared": True,
             "game_over": True,
             "auto_call_started": False,
-            "called_numbers": list(called_numbers),
+            "called_numbers": sorted(list(called_set)),
             "last_called_number": st.session_state.last_called_number,
-            "auto_called_count": len(called_numbers),
+            "auto_called_count": len(called_set),
             "prize_distributed": st.session_state.prize_distributed,
             "last_called_at": 0,
             "last_called_by": None,
@@ -975,10 +979,9 @@ def save_game_state():
 
 def load_game_state():
     row = load_state_row(force=True)
-    # Merge called_numbers monotonically — never shrink
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
-    st.session_state.called_numbers = db_called if len(db_called) >= len(session_called) else session_called
+    st.session_state.called_numbers = db_called | session_called
 
     db_last_num = row.get("last_called_number")
     if db_last_num is not None:
@@ -1016,7 +1019,6 @@ def clear_game_state():
 # RESET FOR NEXT ROUND  (auto-removes bot cards)
 # ===================================================================
 def reset_for_next_round():
-    # ---- Remove all bot cards so admin can re-apply for the next game ----
     try:
         _row = load_state_row(force=True)
         _taken = list(_row.get("taken_cards") or [])
@@ -1077,19 +1079,21 @@ def reset_for_next_round():
     st.session_state["_last_called_at_local"] = 0.0
 
 # ===================================================================
-# SYNC GLOBAL CARDS  (monotonic — never shrink)
+# SYNC GLOBAL CARDS  (union — never shrink; DB empty = keep session)
 # ===================================================================
 def sync_global_cards():
     _fresh_row = load_state_row(force=True)
     global_taken = list(_fresh_row.get("taken_cards") or [])
     global_owner = dict(_fresh_row.get("card_owner") or {})
-    st.session_state.taken_cards = list(global_taken)
-    st.session_state.card_owner = dict(global_owner)
+
+    if global_taken:
+        st.session_state.taken_cards = list(global_taken)
+    if global_owner:
+        st.session_state.card_owner = dict(global_owner)
 
     db_called = set(_fresh_row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
-    if len(db_called) >= len(session_called):
-        st.session_state.called_numbers = db_called
+    st.session_state.called_numbers = session_called | db_called
 
     db_last_num = _fresh_row.get("last_called_number")
     if db_last_num is not None:
@@ -2008,7 +2012,7 @@ def check_for_winners(force_fresh=False):
     row = load_state_row(force=True)
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
-    called_numbers = list(db_called if len(db_called) >= len(session_called) else session_called)
+    called_numbers = list(db_called | session_called)
     taken_cards = list(row.get("taken_cards") or [])
     if not taken_cards:
         taken_cards = list(st.session_state.taken_cards or [])
@@ -2471,7 +2475,7 @@ elif _db_gs and not _db_wd:
     st.session_state.winners_list = []
     st.session_state.winner_acknowledged = False
     if _db_called:
-        st.session_state.called_numbers = _db_called
+        st.session_state.called_numbers = set(st.session_state.called_numbers or set()) | _db_called
     st.session_state.taken_cards = _db_taken
     st.session_state.card_owner = _db_owner
     _cu = st.session_state.current_user
@@ -2504,7 +2508,6 @@ maybe_start_game()
 # GLOBAL WINNER OVERLAY
 # ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
-    # Skip re-rendering the celebration twice in the same script run
     if st.session_state.get("_celebration_rendered_this_run", False):
         st.stop()
     st.session_state["_celebration_rendered_this_run"] = True
@@ -2757,20 +2760,30 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# AUTO-CALL
+# AUTO-CALL + WINNER CHECK (every tick)
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
-    _wl, _wd, _cn, _lcn, _acc, _go, _pd, _ts = load_global_winners()
+    _wl, _wd, _cn_db, _lcn, _acc, _go, _pd, _ts = load_global_winners()
     if _wd:
         sync_global_winners()
         safe_rerun(0.3)
 
+    # Merge called sets (session ∪ DB) so we never miss a number
+    session_called = set(st.session_state.called_numbers or set())
+    merged_called = session_called | set(_cn_db or set())
+    st.session_state.called_numbers = merged_called
+
+    # Refresh taken cards + owners
     sync_global_cards()
-    check_for_winners(force_fresh=True)
+
+    # Winner check on EVERY tick using the merged set
+    if merged_called and not st.session_state.winner_declared:
+        check_for_winners_with_set(list(merged_called))
 
     if st.session_state.winner_declared:
         safe_rerun(0.3)
 
+    # Call one new number
     just_called = try_global_call()
     load_game_state()
 
