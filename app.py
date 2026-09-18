@@ -108,7 +108,7 @@ st.markdown("""
     }
 
     /* ============================================================
-       FIX #4: INPUT FIELD VISIBILITY
+       INPUT FIELD VISIBILITY
        ============================================================ */
     div[data-testid="stTextInput"] input,
     div[data-testid="stPasswordInput"] input,
@@ -380,7 +380,6 @@ def init_session_state():
         '_first_render_done': False,
         'bot_apply_flash': None,
         '_last_rerun_at': 0.0,
-        '_last_rendered_signature': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -392,16 +391,9 @@ if "_first_render_done" not in st.session_state:
     st.session_state["_first_render_done"] = False
 
 # ===================================================================
-# SAFE RERUN HELPER  — FIX: prevents "SessionInfo before initialized"
+# SAFE RERUN HELPER — prevents "SessionInfo before initialized"
 # ===================================================================
 def safe_rerun(min_interval=0.35):
-    """Only rerun if enough time has passed since the last rerun.
-
-    This avoids the Streamlit-internal race condition where chained
-    st.rerun() calls tear down the WebSocket session before the
-    front-end finishes processing the previous message
-    (Bad message format / SessionInfo before initialized).
-    """
     now = time.time()
     last = st.session_state.get("_last_rerun_at", 0.0)
     if now - last >= min_interval:
@@ -751,7 +743,7 @@ def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selec
     return True
 
 # ===================================================================
-# GLOBAL TIMER  — FIX #1
+# GLOBAL TIMER  (1:00 → 0:59 → … → 0:00)
 # ===================================================================
 def load_global_timer():
     row = load_state_row()
@@ -779,11 +771,6 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
-    """FIX #1: Countdown 1:00 -> 0:59 -> 0:58 -> ... -> 0:01 -> 0:00
-
-    math.floor gives the natural countdown. Offset by +0.001 to make
-    sure the very first displayed value is 1:00 (60) and not 0:59.
-    """
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -797,7 +784,6 @@ def get_global_remaining_time():
         else:
             reset_global_timer(CARD_SELECTION_DURATION)
             return CARD_SELECTION_DURATION, False
-    # math.floor ensures 60.0 -> 60, 59.99 -> 59, 0.01 -> 0
     return int(math.floor(remaining + 0.001)), False
 
 # ===================================================================
@@ -819,19 +805,11 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.floor(remaining + 0.001)))
 
 # ===================================================================
-# GLOBAL CALLER LOCK  — FIX #3
+# GLOBAL CALLER LOCK
 # ===================================================================
-# A DB-level atomic lock so two concurrent Streamlit reruns can NEVER
-# both call a number. The lock is a short-lived token written to the
-# game_state row; the winner of the lock proceeds to call a number.
-CALL_LOCK_WINDOW = 1.6  # seconds between calls
+CALL_LOCK_WINDOW = 1.6
 
 def try_global_call():
-    """Atomically call one number. Never stacks.
-
-    Uses an optimistic compare-and-set on `last_called_at` / `call_lock_token`.
-    If another rerun already claimed the slot, this returns None immediately.
-    """
     row = load_state_row(force=True)
     if row.get("winner_declared"):
         return None
@@ -840,14 +818,11 @@ def try_global_call():
     last_at = float(row.get("last_called_at") or 0)
     lock_age = now - last_at if last_at > 0 else 999.0
 
-    # Not yet time for the next call
     if lock_age < CALL_LOCK_WINDOW:
         return None
 
-    # Generate a unique token for this attempt
     my_token = f"{st.session_state.current_user or 'anon'}-{now}-{random.randint(0, 1_000_000)}"
 
-    # Optimistic lock: write the token, then re-read to confirm we own it.
     ok = update_state({
         "last_called_at": now,
         "last_called_by": st.session_state.current_user,
@@ -857,12 +832,10 @@ def try_global_call():
     if not ok:
         return None
 
-    # Re-read to confirm we still own the lock and no winner was declared
     verify = load_state_row(force=True)
     if verify.get("winner_declared"):
         return None
     if verify.get("call_lock_token") != my_token:
-        # Another rerun beat us to it — abort silently
         return None
     if abs(float(verify.get("last_called_at") or 0) - now) > 0.001:
         return None
@@ -899,7 +872,6 @@ def try_global_call():
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(current_called)
 
-    # Immediately check for winners so celebration starts ASAP
     check_for_winners(force_fresh=True)
     return called_num
 
@@ -1167,7 +1139,7 @@ def get_bot_display_name(username):
     return "🤖 " + name
 
 # ===================================================================
-# BOT CARDS — ADMIN FEATURE  (FIX #2: single-click + visible flash)
+# BOT CARDS — ADMIN FEATURE
 # ===================================================================
 def get_or_create_bot_users(count):
     load_all_data()
@@ -1194,7 +1166,6 @@ def get_or_create_bot_users(count):
     return bot_users
 
 def assign_bot_cards(bot_count):
-    """Single atomic write so all players see it ASAP."""
     if bot_count <= 0:
         return 0, "No bot count selected"
     row = load_state_row(force=True)
@@ -1306,7 +1277,6 @@ def reject_transaction(tx, note=""):
     return ok
 
 def admin_panel():
-    # FIX #2: Show any pending bot flash on every admin render
     if st.session_state.get("bot_apply_flash"):
         flash = st.session_state["bot_apply_flash"]
         st.success(flash["msg"])
@@ -1411,7 +1381,6 @@ def admin_panel():
 
     with tab_bots:
         st.markdown("### 🤖 Bot Card Selection")
-
         st.markdown(
             "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
             "Select how many bot cards to auto-assign. Each bot gets 1 card. "
@@ -2704,7 +2673,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# AUTO-CALL  — one number at a time, never stacks (FIX #3)
+# AUTO-CALL — one number at a time, never stacks
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared and _show_game:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
@@ -2722,8 +2691,6 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         load_game_state()
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-        # Wait ~1.6s between calls (matches CALL_LOCK_WINDOW). This is the
-        # natural pacing of the game, NOT a busy rerun loop.
         time.sleep(1.55)
         safe_rerun(0.4)
 
@@ -2733,16 +2700,13 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
 st.session_state["_first_render_done"] = True
 
 # ===================================================================
-# AUTO-RERUN  (controlled polling — never more than ~1/sec)
+# AUTO-RERUN
 # ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
-    # Celebration screen handles its own rerun cadence above
     pass
 elif not st.session_state.game_started:
-    # Card selection phase: refresh once per second to update the timer
     time.sleep(0.9)
     safe_rerun(0.9)
 else:
-    # In-game: the auto-call block above already reruns; nothing extra needed
     time.sleep(0.25)
     safe_rerun(0.5)
