@@ -425,16 +425,11 @@ if "_first_render_done" not in st.session_state:
     st.session_state["_first_render_done"] = False
 
 # ===================================================================
-# RERUN HELPER — never fires twice in one script execution
+# RERUN HELPER — one rerun per script execution max
 # ===================================================================
-def safe_rerun(min_interval=0.35):
+def safe_rerun(min_interval=0.0):
     if st.session_state.get("_rerun_already_fired", False):
         return
-    now = time.time()
-    last = st.session_state.get("_last_rerun_at", 0.0)
-    wait = min_interval - (now - last)
-    if wait > 0:
-        time.sleep(wait)
     st.session_state["_last_rerun_at"] = time.time()
     st.session_state["_rerun_already_fired"] = True
     st.rerun()
@@ -604,7 +599,7 @@ CELEBRATION_DURATION = 3
 MAX_CARDS_PER_PLAYER = 2
 MIN_CARDS_TO_START = 3
 CARD_SELECTION_DURATION = 60
-CALL_LOCK_WINDOW = 0.8
+CALL_LOCK_WINDOW = 1.4
 
 # ===================================================================
 # MOTIVATIONAL QUOTES
@@ -842,7 +837,9 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.floor(remaining + 0.001)))
 
 # ===================================================================
-# GLOBAL CALLER — single atomic write
+# GLOBAL CALLER — SINGLE-CALLER ELECTION
+# Only the client that last wrote `last_called_by` may call.
+# Prevents 14 concurrent clients from racing each other.
 # ===================================================================
 def try_global_call():
     row = load_state_row(force=True)
@@ -850,15 +847,23 @@ def try_global_call():
         return None
 
     now = time.time()
+    my_user = st.session_state.current_user or "anon"
 
     db_called = set(row.get("called_numbers") or [])
     session_called = set(st.session_state.called_numbers or set())
     current_called = db_called | session_called
 
+    current_caller = row.get("last_called_by")
     db_last = float(row.get("last_called_at") or 0)
     sess_last = float(st.session_state.get("_last_called_at_local") or 0)
     last_at = max(db_last, sess_last)
     lock_age = now - last_at if last_at > 0 else 999.0
+
+    # If someone else called very recently, do NOT call
+    if current_caller and current_caller != my_user and lock_age < CALL_LOCK_WINDOW:
+        return None
+
+    # If the last write was too recent (by anyone), do NOT call
     if lock_age < CALL_LOCK_WINDOW:
         return None
 
@@ -872,7 +877,6 @@ def try_global_call():
 
     called_num = random.choice(available)
     new_called = sorted(current_called | {called_num})
-
     write_at = max(now, last_at + CALL_LOCK_WINDOW)
 
     ok = update_state({
@@ -880,7 +884,7 @@ def try_global_call():
         "last_called_number": called_num,
         "auto_called_count": len(new_called),
         "last_called_at": write_at,
-        "last_called_by": st.session_state.current_user,
+        "last_called_by": my_user,
     })
     if not ok:
         return None
@@ -894,21 +898,21 @@ def try_global_call():
     return called_num
 
 # ===================================================================
-# WINNER CHECK — always scans every card
+# WINNER CHECK — reads taken_cards and card_owner from DB
 # ===================================================================
 def check_for_winners_with_set(called_numbers):
     if st.session_state.get("winner_declared", False):
         return
 
-    taken_cards = list(st.session_state.taken_cards or [])
-    if not taken_cards:
-        _r = load_state_row(force=True)
-        taken_cards = list(_r.get("taken_cards") or [])
+    # Always read taken_cards and card_owner from DB (global truth)
+    _r = load_state_row(force=True)
+    taken_cards = list(_r.get("taken_cards") or [])
+    card_owner = dict(_r.get("card_owner") or {})
 
-    card_owner = dict(st.session_state.card_owner or {})
+    if not taken_cards:
+        taken_cards = list(st.session_state.taken_cards or [])
     if not card_owner:
-        _r = load_state_row(force=True)
-        card_owner = dict(_r.get("card_owner") or {})
+        card_owner = dict(st.session_state.card_owner or {})
 
     if not called_numbers or not taken_cards:
         return
@@ -917,20 +921,24 @@ def check_for_winners_with_set(called_numbers):
     winners_found = []
 
     for card_id in taken_cards:
-        card_data = get_card_data(card_id)
+        try:
+            cid = int(card_id)
+        except (ValueError, TypeError):
+            cid = card_id
+        card_data = get_card_data(cid)
         if not card_data:
             continue
         pattern = check_winning_pattern(card_data, called_set)
         if pattern:
-            owner = card_owner.get(str(card_id), "Unknown")
+            owner = card_owner.get(str(cid), "Unknown")
             existing = next((w for w in winners_found if w["username"] == owner), None)
             if existing:
-                existing["cards"].append(card_id)
+                existing["cards"].append(cid)
                 existing["patterns"].append(pattern['type'])
             else:
                 winners_found.append({
                     "username": owner,
-                    "cards": [card_id],
+                    "cards": [cid],
                     "patterns": [pattern['type']],
                     "card_data": card_data
                 })
@@ -944,7 +952,10 @@ def check_for_winners_with_set(called_numbers):
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
 
-        distribute_prizes(winners_found)
+        try:
+            distribute_prizes(winners_found)
+        except Exception:
+            pass
 
         update_state({
             "winners_list": winners_found,
@@ -1012,6 +1023,7 @@ def clear_game_state():
         "game_over": False,
         "prize_distributed": False,
         "last_called_at": 0,
+        "last_called_by": None,
     })
     return True
 
@@ -1079,7 +1091,7 @@ def reset_for_next_round():
     st.session_state["_last_called_at_local"] = 0.0
 
 # ===================================================================
-# SYNC GLOBAL CARDS  (union — never shrink; DB empty = keep session)
+# SYNC GLOBAL CARDS  (union — never shrink)
 # ===================================================================
 def sync_global_cards():
     _fresh_row = load_state_row(force=True)
@@ -1141,7 +1153,7 @@ def maybe_start_game():
         else:
             st.session_state.selected_card = -1
         save_game_state()
-        safe_rerun(0.4)
+        safe_rerun()
 
 # ===================================================================
 # AUTHENTICATION
@@ -2171,7 +2183,7 @@ def display_master_board():
 # ===================================================================
 def render_card_selection():
     if st.session_state.game_started or st.session_state.winner_declared:
-        safe_rerun(0.5)
+        safe_rerun()
         return
     if st.session_state.current_role == "admin":
         st.warning("⚠️ Admin cannot play.")
@@ -2179,14 +2191,14 @@ def render_card_selection():
     _row_guard = load_state_row(force=True)
     if _row_guard.get("game_started", False) or _row_guard.get("winner_declared", False):
         st.session_state.game_started = True
-        safe_rerun(0.5)
+        safe_rerun()
         return
     if st.session_state.flash_msg:
         st.warning(st.session_state.flash_msg)
         st.session_state.flash_msg = ""
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
-        safe_rerun(0.5)
+        safe_rerun()
         return
     minutes = int(remaining // 60)
     seconds = int(remaining % 60)
@@ -2227,7 +2239,7 @@ def render_card_selection():
     )
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
-        safe_rerun(0.3)
+        safe_rerun()
 
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
@@ -2260,17 +2272,17 @@ def render_card_selection():
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
-                        safe_rerun(0.3)
+                        safe_rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
                 elif is_rejected:
                     if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
-                        safe_rerun(0.3)
+                        safe_rerun()
                 elif is_insufficient:
                     if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
-                        safe_rerun(0.3)
+                        safe_rerun()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
@@ -2288,7 +2300,7 @@ def render_card_selection():
                                 st.session_state.rejected_card_num = None
                             else:
                                 st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
-                        safe_rerun(0.3)
+                        safe_rerun()
     st.progress(1 - (remaining / CARD_SELECTION_DURATION) if remaining > 0 else 0)
 
 # ===================================================================
@@ -2326,7 +2338,6 @@ if not st.session_state.logged_in:
                 if success:
                     st.success(message)
                     st.balloons()
-                    time.sleep(0.3)
                     st.rerun()
                 else:
                     st.error(message)
@@ -2350,7 +2361,7 @@ if not st.session_state.logged_in:
                     if success:
                         st.success("🎉🎊🥳 በትክክል ተመዝግበዋል! 🥳🎊🎉")
                         st.balloons()
-                        time.sleep(0.8)
+                        time.sleep(0.5)
                         st.rerun()
                     else:
                         st.error(message)
@@ -2528,13 +2539,13 @@ if st.session_state.winner_declared and st.session_state.game_started:
             st.session_state.celebration_round = current_round_check + 1
             st.session_state.winner_screen_shown_at = time.time()
             st.session_state.celebration_start_time = time.time()
-            safe_rerun(0.4)
+            safe_rerun()
         else:
             st.session_state.winner_acknowledged = True
             st.session_state.winner_screen_shown_at = None
             st.session_state.celebration_round = 1
             reset_for_next_round()
-            safe_rerun(0.4)
+            safe_rerun()
 
     seconds_left = int(math.ceil(remaining_w))
     current_round = st.session_state.get("celebration_round", 1)
@@ -2647,9 +2658,10 @@ if st.session_state.winner_declared and st.session_state.game_started:
                 st.session_state.winner_screen_shown_at = None
                 st.session_state.celebration_round = 1
                 reset_for_next_round()
-                safe_rerun(0.4)
+                st.rerun()
 
-    safe_rerun(1.0)
+    time.sleep(0.5)
+    safe_rerun()
     st.stop()
 
 # ===================================================================
@@ -2720,7 +2732,7 @@ if st.session_state.game_started and _show_game:
 """, unsafe_allow_html=True)
                 if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
                     reset_for_next_round()
-                    safe_rerun(0.4)
+                    st.rerun()
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
@@ -2735,7 +2747,7 @@ else:
 
     if _final_gs or _final_wd or st.session_state.game_started:
         st.session_state.game_started = True
-        safe_rerun(0.4)
+        safe_rerun()
 
     if (not _final_gs
             and not _final_wd
@@ -2743,11 +2755,10 @@ else:
             and _final_remaining <= 0):
         mark_game_started_globally()
         st.session_state.game_started = True
-        safe_rerun(0.4)
+        safe_rerun()
 
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
-    safe_rerun(0.5)
 
 # ===================================================================
 # FOOTER
@@ -2766,31 +2777,28 @@ if st.session_state.game_started and not st.session_state.winner_declared:
     _wl, _wd, _cn_db, _lcn, _acc, _go, _pd, _ts = load_global_winners()
     if _wd:
         sync_global_winners()
-        safe_rerun(0.3)
+        st.rerun()
 
-    # Merge called sets (session ∪ DB) so we never miss a number
     session_called = set(st.session_state.called_numbers or set())
     merged_called = session_called | set(_cn_db or set())
     st.session_state.called_numbers = merged_called
 
-    # Refresh taken cards + owners
     sync_global_cards()
 
-    # Winner check on EVERY tick using the merged set
     if merged_called and not st.session_state.winner_declared:
         check_for_winners_with_set(list(merged_called))
 
     if st.session_state.winner_declared:
-        safe_rerun(0.3)
+        st.rerun()
 
-    # Call one new number
     just_called = try_global_call()
     load_game_state()
 
     if just_called is not None:
         st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
 
-    safe_rerun(1.0)
+    time.sleep(1.0)
+    st.rerun()
 
 # ===================================================================
 # MARK FIRST RENDER COMPLETE
@@ -2803,4 +2811,5 @@ st.session_state["_first_render_done"] = True
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
-    safe_rerun(0.5)
+    time.sleep(0.5)
+    st.rerun()
