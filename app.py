@@ -525,6 +525,15 @@ def load_local_users():
     except Exception:
         return {}
 
+def load_single_user(username):
+    try:
+        res = supabase.table("users").select("*").eq("username", username).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+    except Exception:
+        pass
+    return None
+
 def save_local_users(users):
     try:
         for u, d in users.items():
@@ -669,6 +678,7 @@ def mark_game_started_globally():
     save_global_timer(timer_start, duration, True)
 
 def get_global_remaining_time():
+    """Countdown: 60 → 59 → 58 → ... → 1 → 0 (using math.ceil)."""
     timer_start, duration, game_started = load_global_timer()
     if game_started:
         return 0, True
@@ -703,7 +713,7 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.ceil(remaining)))
 
 # ===================================================================
-# GLOBAL CALLER LOCK
+# GLOBAL CALLER LOCK — never stacks, one number per 1.5 s
 # ===================================================================
 def try_global_call():
     row = load_state_row(force=True)
@@ -870,7 +880,7 @@ def maybe_start_game():
         st.rerun()
 
 # ===================================================================
-# AUTHENTICATION
+# AUTHENTICATION  (✅ FAST login/logout)
 # ===================================================================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -879,10 +889,13 @@ def verify_password(password, hashed):
     return hash_password(password) == hashed if hashed else False
 
 def login_user(username, password):
+    """Fast login: player → targeted single-user fetch; admin → full load."""
     username = username.strip()
     password = password.strip()
-    load_all_data()
+
+    # --- ADMIN ---
     if username == "admin" and password == "admin123":
+        load_all_data()
         if username not in st.session_state.user_db:
             st.session_state.user_db[username] = {
                 "password": hash_password("admin123"),
@@ -898,17 +911,17 @@ def login_user(username, password):
         st.session_state.logged_in = True
         st.session_state.current_user = username
         st.session_state.current_role = "admin"
-        load_all_data()
-        sync_global_cards()
         return True, "✅ Admin login successful!"
-    if username not in st.session_state.user_db:
+
+    # --- PLAYER: targeted single fetch (FAST) ---
+    user = load_single_user(username)
+    if not user:
         return False, "❌ Username not found"
-    if verify_password(password, st.session_state.user_db[username]["password"]):
+    if verify_password(password, user.get("password", "")):
+        st.session_state.user_db = {username: user}
         st.session_state.logged_in = True
         st.session_state.current_user = username
-        st.session_state.current_role = st.session_state.user_db[username]["role"]
-        load_all_data()
-        sync_global_cards()
+        st.session_state.current_role = user.get("role", "player")
         return True, "✅ Login successful!"
     return False, "❌ Incorrect password"
 
@@ -922,24 +935,25 @@ def register_user(username, password, name, phone=""):
         return False, "❌ Password must be at least 6 characters"
     if is_bot_username(username) or username in BOT_NAMES:
         return False, "❌ This username is reserved"
-    load_all_data()
-    if username in st.session_state.user_db:
+    # Fast uniqueness check via targeted query
+    if load_single_user(username) is not None:
         return False, "❌ Username already exists"
-    st.session_state.user_db[username] = {
+    new_user = {
+        "username": username,
         "password": hash_password(password),
         "balance": 0.0, "role": "player",
         "name": name, "phone": phone,
         "game_played": 0, "wins": 0
     }
-    save_local_users(st.session_state.user_db)
-    load_all_data()
+    try:
+        supabase.table("users").upsert(new_user).execute()
+    except Exception:
+        return False, "❌ Registration failed"
+    st.session_state.user_db = {username: new_user}
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
 def logout_user():
-    save_all_data()
-    save_game_state()
-    save_global_cards(st.session_state.taken_cards, st.session_state.card_owner,
-                      st.session_state.timer_start_time, st.session_state.card_selection_time)
+    """Fast logout — no heavy writes (state already persisted in DB)."""
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
@@ -998,7 +1012,7 @@ def get_bot_display_name(username):
     return "🤖 " + name
 
 # ===================================================================
-# BOT CARDS — ADMIN FEATURE
+# BOT CARDS — ADMIN FEATURE  (✅ ONE-CLICK, FAST, ATOMIC)
 # ===================================================================
 def get_or_create_bot_users(count):
     load_all_data()
@@ -1025,6 +1039,7 @@ def get_or_create_bot_users(count):
     return bot_users
 
 def assign_bot_cards(bot_count):
+    """One-click: single atomic write so all players see it ASAP."""
     if bot_count <= 0:
         return 0
     row = load_state_row(force=True)
@@ -1047,6 +1062,7 @@ def assign_bot_cards(bot_count):
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
+    # ✅ Single atomic write — visible to every player on next rerun.
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
@@ -1277,6 +1293,7 @@ def admin_panel():
 
         col_b1, col_b2 = st.columns(2)
         with col_b1:
+            # ✅ ONE-CLICK + FAST: no balloons, no sleeps, atomic write, immediate rerun
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
@@ -1363,15 +1380,17 @@ def admin_panel():
                 with col1:
                     if st.button("✅ Approve #" + str(tx['id']), key="app_dep_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.success("✅ Deposit #" + str(tx['id']) + " approved! " + str(tx['username']) + " +" + f"{float(tx['amount']):.2f}" + " ETB")
-                            st.balloons()
-                            time.sleep(1.2)
+                            st.session_state["admin_celebration_msg"] = (
+                                "✅ Deposit #" + str(tx['id']) + " approved! "
+                                + str(tx['username']) + " +" + f"{float(tx['amount']):.2f}" + " ETB"
+                            )
                             st.rerun()
                 with col2:
                     if st.button("❌ Reject #" + str(tx['id']), key="rej_dep_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Deposit rejected by admin"):
-                            st.warning("❌ Deposit #" + str(tx['id']) + " rejected.")
-                            time.sleep(0.8)
+                            st.session_state["admin_celebration_msg"] = (
+                                "❌ Deposit #" + str(tx['id']) + " rejected."
+                            )
                             st.rerun()
                 st.markdown("---")
 
@@ -1418,14 +1437,17 @@ def admin_panel():
                 with col1:
                     if st.button("✅ Approve #" + str(tx['id']), key="app_wd_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.success("✅ Withdrawal #" + str(tx['id']) + " approved! " + str(tx['username']) + " -" + f"{amount:.2f}" + " ETB")
-                            time.sleep(1.0)
+                            st.session_state["admin_celebration_msg"] = (
+                                "✅ Withdrawal #" + str(tx['id']) + " approved! "
+                                + str(tx['username']) + " -" + f"{amount:.2f}" + " ETB"
+                            )
                             st.rerun()
                 with col2:
                     if st.button("❌ Reject #" + str(tx['id']), key="rej_wd_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Withdrawal rejected by admin"):
-                            st.warning("❌ Withdrawal #" + str(tx['id']) + " rejected.")
-                            time.sleep(0.8)
+                            st.session_state["admin_celebration_msg"] = (
+                                "❌ Withdrawal #" + str(tx['id']) + " rejected."
+                            )
                             st.rerun()
                 st.markdown("---")
 
@@ -1760,6 +1782,7 @@ def check_for_winners(force_fresh=False):
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
         distribute_prizes(winners_found)
+        # ✅ Single atomic write → all players see winner ASAP
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -1951,6 +1974,7 @@ def render_card_selection():
     available = 204 - total_selected
     enough_cards = total_selected >= MIN_CARDS_TO_START
     color = "#FFD700" if enough_cards and remaining > 30 else ("#FF9800" if remaining <= 30 else "#FFD700")
+
     st.markdown(f"""
     <div style="background:rgba(0,0,0,0.15);padding:12px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:15px;text-align:center;">
         <div style="font-size:1.6rem;font-weight:bold;color:{color};font-family:monospace;margin-bottom:6px;">⌚ {time_str}</div>
@@ -1962,10 +1986,12 @@ def render_card_selection():
         <div style="font-size:1rem;color:#FFD700;margin-top:6px;font-weight:bold;">💰 {balance:.2f} ETB</div>
     </div>
     """, unsafe_allow_html=True)
+
     if not enough_cards:
         st.warning(f"⚠️ Waiting for {MIN_CARDS_TO_START - total_selected} more card(s). Game will start when time hits 0:00 AND 3+ cards are selected! 🎯")
     else:
         st.success(f"✅ 3+ cards ready! Game will start when the timer hits 0:00 — {int(remaining)}s remaining 🎯")
+
     col_options = [4, 5, 6, 7, 8]
     current_value = st.session_state.columns_per_row if st.session_state.columns_per_row in col_options else 6
     selected_cols = st.selectbox(
@@ -1977,16 +2003,19 @@ def render_card_selection():
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
         st.rerun()
+
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
     taken = st.session_state.taken_cards
     rejected = st.session_state.rejected_card_num
     insufficient = st.session_state.insufficient_balance_card_num
+
     st.markdown("""
     <div style="background:rgba(0,0,0,0.15);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">
         <div style="text-align:center;font-size:0.9rem;color:#FFD700;font-weight:bold;">🎯 Tap a card to SELECT (10 ETB)</div>
     </div>
     """, unsafe_allow_html=True)
+
     for row_start in range(1, 205, cols_per_row):
         cols = st.columns(cols_per_row)
         for col_idx in range(cols_per_row):
@@ -2057,6 +2086,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ===================================================================
+# LOGIN / REGISTER
+# ===================================================================
 if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     with tab1:
@@ -2065,7 +2097,6 @@ if not st.session_state.logged_in:
             password = st.text_input("🔑 Password", type="password")
             submitted = st.form_submit_button("🎰 Login")
             if submitted and username and password:
-                load_all_data()
                 success, message = login_user(username, password)
                 if success:
                     st.success(message)
@@ -2093,17 +2124,22 @@ if not st.session_state.logged_in:
                     if success:
                         st.success("🎉🎊🥳 በትክክል ተመዝግበዋል! 🥳🎊🎉")
                         st.balloons()
-                        load_all_data()
                         time.sleep(2)
                         st.rerun()
                     else:
                         st.error(message)
     st.stop()
 
+# ===================================================================
+# ADMIN PANEL
+# ===================================================================
 if st.session_state.current_role == "admin":
     admin_panel()
     st.stop()
 
+# ===================================================================
+# USER INFO
+# ===================================================================
 user = st.session_state.user_db.get(st.session_state.current_user, {})
 balance = user.get("balance", 0)
 
@@ -2123,6 +2159,9 @@ if st.sidebar.button("🚪 Logout", use_container_width=True):
 st.sidebar.markdown("---")
 st.sidebar.info(f"📋 Selected: {len(st.session_state.clicked_numbers)}/2 cards")
 
+# ===================================================================
+# GLOBAL GATE
+# ===================================================================
 _show_game, _g_count, _g_remaining = check_global_start_condition()
 
 _gate_row = load_state_row(force=True)
@@ -2154,9 +2193,15 @@ if not _show_game:
         st.session_state.celebration_start_time = None
         st.session_state.prize_distributed = False
 
+# ===================================================================
+# SYNC GLOBAL STATE
+# ===================================================================
 sync_global_cards()
 sync_global_winners()
 
+# ===================================================================
+# SESSION SELF-HEAL
+# ===================================================================
 try:
     _db_row = load_state_row(force=True)
     _db_gs = bool(_db_row.get("game_started", False))
@@ -2232,8 +2277,14 @@ try:
 except Exception:
     pass
 
+# ===================================================================
+# START THE GAME
+# ===================================================================
 maybe_start_game()
 
+# ===================================================================
+# GLOBAL WINNER OVERLAY
+# ===================================================================
 if st.session_state.winner_declared and st.session_state.game_started:
     sync_global_winners()
     total_prize = len(st.session_state.taken_cards) * PRIZE_PER_CARD
@@ -2377,7 +2428,7 @@ if st.session_state.winner_declared and st.session_state.game_started:
     st.stop()
 
 # ===================================================================
-# PLAYER DISPLAY — Board + player's own cards
+# PLAYER DISPLAY
 # ===================================================================
 if st.session_state.game_started and _show_game:
     all_player_cards = list(st.session_state.clicked_numbers)
@@ -2408,9 +2459,6 @@ if st.session_state.game_started and _show_game:
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Board on the left + player's OWN cards on the right.
-    # The card SELECTION grid (204 buttons) is NOT rendered here — it only
-    # appears before the game starts, inside render_card_selection().
     board_col, cards_col = st.columns([2, 1], gap="large")
 
     with board_col:
@@ -2437,6 +2485,17 @@ if st.session_state.game_started and _show_game:
     </p>
 </div>
 """, unsafe_allow_html=True)
+            if st.session_state.get("winner_declared", False):
+                st.markdown("""
+<div style="text-align:center;margin:15px 0 5px 0;">
+    <p style="color:#FFD700;font-size:1rem;font-weight:bold;margin:0;">
+        ✅ ወደ ካርቴላ ምርጫ ለመመለስ ከታች ያለውን ቁልፍ ይጫኑ
+    </p>
+</div>
+""", unsafe_allow_html=True)
+                if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
+                    reset_for_next_round()
+                    st.rerun()
 
     st.info(f"🎯 Auto-calling every 2 seconds... ({len(st.session_state.called_numbers)}/75)")
 
@@ -2466,6 +2525,9 @@ else:
     time.sleep(0.5)
     st.rerun()
 
+# ===================================================================
+# FOOTER
+# ===================================================================
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:15px;">
@@ -2473,6 +2535,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ===================================================================
+# AUTO-CALL  (one number at a time — never stacks)
+# ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared and _show_game:
     _, _gd, _, _, _, _, _, _ = load_global_winners()
     if _gd:
@@ -2492,6 +2557,9 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         time.sleep(0.3)
         st.rerun()
 
+# ===================================================================
+# AUTO-RERUN
+# ===================================================================
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
