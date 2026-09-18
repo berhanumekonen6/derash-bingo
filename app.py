@@ -1616,7 +1616,7 @@ def admin_panel():
                         👤 {u} | 📅 {dt}
                     </p>
                     {note}
-                </div>
+                </div> 
                 """.format(
                     tc=tcolor, ic=icon, ty=tx['type'].title(),
                     amt=float(tx['amount']), u=tx['username'],
