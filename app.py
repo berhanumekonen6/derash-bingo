@@ -880,7 +880,7 @@ def maybe_start_game():
         st.rerun()
 
 # ===================================================================
-# AUTHENTICATION  (✅ FAST login/logout)
+# AUTHENTICATION  (FAST login/logout)
 # ===================================================================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -1012,7 +1012,7 @@ def get_bot_display_name(username):
     return "🤖 " + name
 
 # ===================================================================
-# BOT CARDS — ADMIN FEATURE  (✅ ONE-CLICK, FAST, ATOMIC)
+# BOT CARDS — ADMIN FEATURE  (ONE-CLICK, FAST, ATOMIC)
 # ===================================================================
 def get_or_create_bot_users(count):
     load_all_data()
@@ -1062,7 +1062,7 @@ def assign_bot_cards(bot_count):
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
-    # ✅ Single atomic write — visible to every player on next rerun.
+    # Single atomic write — visible to every player on next rerun.
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
@@ -1293,7 +1293,7 @@ def admin_panel():
 
         col_b1, col_b2 = st.columns(2)
         with col_b1:
-            # ✅ ONE-CLICK + FAST: no balloons, no sleeps, atomic write, immediate rerun
+            # ONE-CLICK + FAST: no balloons, no sleeps, atomic write, immediate rerun
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
@@ -1782,7 +1782,7 @@ def check_for_winners(force_fresh=False):
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
         distribute_prizes(winners_found)
-        # ✅ Single atomic write → all players see winner ASAP
+        # Single atomic write → all players see winner ASAP
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -2522,7 +2522,7 @@ else:
 
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
-    time.sleep(0.5)
+    time.sleep(0.25)
     st.rerun()
 
 # ===================================================================
@@ -2554,7 +2554,7 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
         load_game_state()
         if just_called is not None:
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
-        time.sleep(0.3)
+        time.sleep(0.15)
         st.rerun()
 
 # ===================================================================
@@ -2563,8 +2563,8 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
-    time.sleep(0.5)
+    time.sleep(0.25)
     st.rerun()
 else:
-    time.sleep(0.5)
+    time.sleep(0.25)
     st.rerun()
