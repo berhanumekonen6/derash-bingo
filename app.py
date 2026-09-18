@@ -8,6 +8,12 @@ import math
 from datetime import datetime, timedelta, timezone
 from supabase import create_client
 
+st.set_page_config(
+    page_title="ደራሽ ቢንጎ🍀",
+    page_icon="🎯🍀",
+    layout="wide"
+)
+
 @st.cache_resource
 def get_supabase():
     url = st.secrets["SUPABASE_URL"]
@@ -15,13 +21,6 @@ def get_supabase():
     return create_client(url, key)
 
 supabase = get_supabase()
-
-st.set_page_config(
-    page_title="ደራሽ ቢንጎ🍀",
-    page_icon="🎯🍀",
-    layout="wide"
-)
-
 # ===================================================================
 # VIEWPORT META
 # ===================================================================
