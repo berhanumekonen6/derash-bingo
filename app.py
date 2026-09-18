@@ -37,6 +37,8 @@ st.markdown("""
 # ===================================================================
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;700;900&display=swap');
+
     .stApp {
         background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50);
         background-size: 400% 400%;
@@ -100,7 +102,10 @@ st.markdown("""
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #FFD700, #FFA500); border-radius: 10px; }
-    h1, h2, h3, h4, p, label, .stMarkdown { color: #FFFFFF !important; }
+    h1, h2, h3, h4, p, label, .stMarkdown, .stText, .stButton > button, input, textarea, select {
+        color: #FFFFFF !important;
+        font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif !important;
+    }
     .stInfo, .stSuccess, .stWarning, .stError {
         background: rgba(0, 0, 0, 0.25) !important;
         color: #FFFFFF !important;
