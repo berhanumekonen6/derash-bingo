@@ -309,12 +309,17 @@ def init_session_state():
         '_last_caller_retry': 0.0,
         'admin_bot_card_count': 0,
         '_bot_apply_pending': False,
+        '_first_render_done': False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 init_session_state()
+
+# Ensure the first-render flag exists even on the very first cold start
+if "_first_render_done" not in st.session_state:
+    st.session_state["_first_render_done"] = False
 
 # ===================================================================
 # SUPABASE — GAME STATE
@@ -369,11 +374,24 @@ def _sanitize_row(row):
     return row
 
 def load_state_row(force=False):
+    """Fetch the game_state row from Supabase.
+
+    Cold-start optimization: on the very first render (before the page
+    has fully painted once), the cache TTL is extended to 1.5 s so the
+    4–5 forced reads that happen during startup collapse into a single
+    network round-trip. After the first full render, the TTL drops
+    back to 0.3 s.
+    """
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
-    if not force and cached is not None and (now - cached_at) < 0.3:
+
+    _first_render = st.session_state.get("_first_render_done", False)
+    ttl = 1.5 if not _first_render else 0.3
+
+    if cached is not None and (now - cached_at) < ttl:
         return cached
+
     last_err = None
     for attempt in range(3):
         try:
@@ -394,10 +412,12 @@ def load_state_row(force=False):
             last_err = e
             if attempt < 2:
                 time.sleep(0.2)
+
     err_count = st.session_state.get("_state_err_count", 0) + 1
     st.session_state["_state_err_count"] = err_count
     if err_count == 3:
         st.warning(f"⚠️ ግንኙነት ችግር — በራስ-ሰር እየተስተካከለ ነው... ({last_err})")
+
     if cached is not None:
         return cached
     return _default_state()
@@ -935,7 +955,6 @@ def register_user(username, password, name, phone=""):
         return False, "❌ Password must be at least 6 characters"
     if is_bot_username(username) or username in BOT_NAMES:
         return False, "❌ This username is reserved"
-    # Fast uniqueness check via targeted query
     if load_single_user(username) is not None:
         return False, "❌ Username already exists"
     new_user = {
@@ -1062,7 +1081,6 @@ def assign_bot_cards(bot_count):
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
-    # Single atomic write — visible to every player on next rerun.
     update_state({
         "taken_cards": list(taken),
         "card_owner": dict(owner),
@@ -1293,7 +1311,6 @@ def admin_panel():
 
         col_b1, col_b2 = st.columns(2)
         with col_b1:
-            # ONE-CLICK + FAST: no balloons, no sleeps, atomic write, immediate rerun
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
@@ -1782,7 +1799,6 @@ def check_for_winners(force_fresh=False):
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
         distribute_prizes(winners_found)
-        # Single atomic write → all players see winner ASAP
         update_state({
             "winners_list": winners_found,
             "winner_declared": True,
@@ -2556,6 +2572,11 @@ if st.session_state.game_started and not st.session_state.winner_declared and _s
             st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
         time.sleep(0.15)
         st.rerun()
+
+# ===================================================================
+# MARK FIRST RENDER COMPLETE
+# ===================================================================
+st.session_state["_first_render_done"] = True
 
 # ===================================================================
 # AUTO-RERUN
