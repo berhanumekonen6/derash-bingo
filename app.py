@@ -868,8 +868,8 @@ def logout_user():
 # ===================================================================
 BOT_NAMES = ["Bekele","Alemu","Aster","Yednekachew","Tigist","Getachew","Meseret","Dawit","Hana","Solomon","Marta","Kebede","Selam","Tesfaye","Meron","Abebe","Hiwot","Girma","Bethlehem","Yohannes","Rahel","Mulugeta","Eden","Fikadu","Tsehay","Berhanu","Liya","Assefa","Genet","Wondimu","Sara","Desta","Mahlet","Tewodros","Kidist","Bantayehu","Eyerusalem","Endale","Mekdes","Samuel","Zewditu","Nardos","Bereket","Alemitu","Yonas","Wubit","Henok","Tizita","Melaku","Netsanet","Biniam","Aynalem","Eyob","Sindu","Gedion","Mimi","Natnael","Tsedale","Firaol","Rediet","Bruk","Sifen","Naol","Hermela","Yafet","Lidiya","Ebisa","Ruth","Kaleab","Beza","Yared","Eleni","Abel","Feven","Mikiyas","Saron","Yosef","Meron","Dagmawi","Tinsae","Luel","Tsion","Nahom","Sena","Kaleb","Bethany","Ermias","Ruhama","Andualem","Mieraf","Mulu","Habtamu","Frehiwot","Tadesse","Zerihun","Aregash","Tigabu","Lulit","Bonsa"]
 
-BOT_SUFFIXES = ["_b","_ad","_x7","_z9","_m2","_k4","_p5","_t8","_g3","_n6","_r1","_v0","_w9","_y5","_q7","_s4","_c8","_d2","_e6","_f3","_h1","_j9","_l0","_u7"]
-BOT_SUFFIX = "_b"
+BOT_SUFFIXES = ["b","ad","x7","z9","m2","k4","p5","t8","g3","n6","r1","v0","w9","y5","q7","s4","c8","d2","e6","f3","h1","j9","l0","u7"]
+BOT_SUFFIX = "br"
 
 def make_bot_username(base_name, index=0):
     if not BOT_SUFFIXES: return base_name + BOT_SUFFIX
