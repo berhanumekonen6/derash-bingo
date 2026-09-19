@@ -38,273 +38,58 @@ st.markdown("""
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;700;900&display=swap');
-
-    .stApp {
-        background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50);
-        background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
-    }
-    @keyframes gradientBG {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    .glass-container {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    }
-    .motivation-box {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.06));
-        border-left: 4px solid #FFD700;
-        padding: 12px 18px;
-        border-radius: 10px;
-        margin: 10px 0;
-        background: rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 215, 0, 0.1);
-    }
-    .motivation-box .quote {
-        font-size: 1rem;
-        color: #FFD700;
-        font-style: italic;
-        font-family: 'Noto Sans Ethiopic', Arial, sans-serif;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-    }
-    .motivation-box .author {
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 0.8rem;
-        margin-top: 3px;
-    }
-    .winner-card {
-        animation: winnerCardPulse 1s ease-in-out infinite alternate !important;
-        border: 3px solid #FFD700 !important;
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 165, 0, 0.15)) !important;
-        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5) !important;
-    }
-    @keyframes winnerCardPulse {
-        0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-        100% { transform: scale(1.03); box-shadow: 0 0 70px rgba(255, 215, 0, 0.7); }
-    }
-    @keyframes emojiFloat {
-        0% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(5deg); }
-        100% { transform: translateY(0) rotate(0deg); }
-    }
-    @keyframes celebrationPulse {
-        0% { transform: scale(1); box-shadow: 0 0 30px rgba(255,215,0,0.2); }
-        100% { transform: scale(1.01); box-shadow: 0 0 60px rgba(255,215,0,0.4); }
-    }
+    .stApp { background: linear-gradient(135deg, #1a472a, #2d5a27, #3a7d44, #4caf50); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
+    @keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .glass-container { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); padding: 20px; margin: 10px 0; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+    .motivation-box { background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06)); border-left: 4px solid #FFD700; padding: 12px 18px; border-radius: 10px; margin: 10px 0; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,215,0,0.1); }
+    .motivation-box .quote { font-size: 1rem; color: #FFD700; font-style: italic; font-family: 'Noto Sans Ethiopic', Arial, sans-serif; text-shadow: 0 0 20px rgba(255,215,0,0.1); }
+    .motivation-box .author { color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-top: 3px; }
+    .winner-card { animation: winnerCardPulse 1s ease-in-out infinite alternate !important; border: 3px solid #FFD700 !important; background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,165,0,0.15)) !important; box-shadow: 0 0 50px rgba(255,215,0,0.5) !important; }
+    @keyframes winnerCardPulse { 0%{transform:scale(1)} 100%{transform:scale(1.03)} }
+    @keyframes emojiFloat { 0%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(5deg)} 100%{transform:translateY(0) rotate(0deg)} }
+    @keyframes celebrationPulse { 0%{transform:scale(1);box-shadow:0 0 30px rgba(255,215,0,0.2)} 100%{transform:scale(1.01);box-shadow:0 0 60px rgba(255,215,0,0.4)} }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #FFD700, #FFA500); border-radius: 10px; }
-    h1, h2, h3, h4, p, label, .stMarkdown, .stText, .stButton > button, input, textarea, select {
-        color: #FFFFFF !important;
-        font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif !important;
-    }
-
-    div[data-testid="stTextInput"] input,
-    div[data-testid="stPasswordInput"] input,
-    div[data-baseweb="input"] input,
-    div[data-baseweb="base-input"] input,
-    .stTextInput input,
-    .stPasswordInput input,
-    input[type="text"],
-    input[type="password"],
-    textarea {
-        background-color: rgba(0, 0, 0, 0.45) !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        caret-color: #FFD700 !important;
-        border: 1px solid rgba(255, 215, 0, 0.35) !important;
-        border-radius: 10px !important;
-    }
-    div[data-testid="stTextInput"] input:focus,
-    div[data-testid="stPasswordInput"] input:focus,
-    div[data-baseweb="input"] input:focus,
-    .stTextInput input:focus,
-    .stPasswordInput input:focus,
-    input[type="text"]:focus,
-    input[type="password"]:focus {
-        border: 1px solid #FFD700 !important;
-        box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.25) !important;
-        background-color: rgba(0, 0, 0, 0.55) !important;
-    }
-    div[data-testid="stTextInput"] input::placeholder,
-    div[data-testid="stPasswordInput"] input::placeholder,
-    .stTextInput input::placeholder,
-    .stPasswordInput input::placeholder,
-    input::placeholder {
-        color: rgba(255, 255, 255, 0.45) !important;
-        -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
-        opacity: 1 !important;
-    }
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover,
-    input:-webkit-autofill:focus,
-    input:-webkit-autofill:active {
-        -webkit-text-fill-color: #FFFFFF !important;
-        -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.55) inset !important;
-        box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.55) inset !important;
-        transition: background-color 5000s ease-in-out 0s;
-        caret-color: #FFD700 !important;
-    }
-    div[data-baseweb="input"],
-    div[data-baseweb="base-input"] {
-        background-color: rgba(0, 0, 0, 0.45) !important;
-        border-radius: 10px !important;
-    }
-    div[data-testid="stTextInput"] label,
-    div[data-testid="stPasswordInput"] label,
-    .stTextInput label,
-    .stPasswordInput label {
-        color: #FFD700 !important;
-        font-weight: 600 !important;
-    }
-
-    .stInfo, .stSuccess, .stWarning, .stError {
-        background: rgba(0, 0, 0, 0.25) !important;
-        color: #FFFFFF !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
-    }
+    h1, h2, h3, h4, p, label, .stMarkdown, .stText, .stButton > button, input, textarea, select { color: #FFFFFF !important; font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif !important; }
+    div[data-testid="stTextInput"] input, div[data-testid="stPasswordInput"] input, div[data-baseweb="input"] input, div[data-baseweb="base-input"] input, .stTextInput input, .stPasswordInput input, input[type="text"], input[type="password"], textarea { background-color: rgba(0,0,0,0.45) !important; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; caret-color: #FFD700 !important; border: 1px solid rgba(255,215,0,0.35) !important; border-radius: 10px !important; }
+    div[data-testid="stTextInput"] input:focus, div[data-testid="stPasswordInput"] input:focus, div[data-baseweb="input"] input:focus, .stTextInput input:focus, .stPasswordInput input:focus, input[type="text"]:focus, input[type="password"]:focus { border: 1px solid #FFD700 !important; box-shadow: 0 0 0 2px rgba(255,215,0,0.25) !important; background-color: rgba(0,0,0,0.55) !important; }
+    div[data-testid="stTextInput"] input::placeholder, div[data-testid="stPasswordInput"] input::placeholder, .stTextInput input::placeholder, .stPasswordInput input::placeholder, input::placeholder { color: rgba(255,255,255,0.45) !important; -webkit-text-fill-color: rgba(255,255,255,0.45) !important; opacity: 1 !important; }
+    input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active { -webkit-text-fill-color: #FFFFFF !important; -webkit-box-shadow: 0 0 0 1000px rgba(0,0,0,0.55) inset !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.55) inset !important; transition: background-color 5000s ease-in-out 0s; caret-color: #FFD700 !important; }
+    div[data-baseweb="input"], div[data-baseweb="base-input"] { background-color: rgba(0,0,0,0.45) !important; border-radius: 10px !important; }
+    div[data-testid="stTextInput"] label, div[data-testid="stPasswordInput"] label, .stTextInput label, .stPasswordInput label { color: #FFD700 !important; font-weight: 600 !important; }
+    .stInfo, .stSuccess, .stWarning, .stError { background: rgba(0,0,0,0.25) !important; color: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; }
     .stInfo { border-left: 4px solid #2196F3 !important; }
     .stSuccess { border-left: 4px solid #4CAF50 !important; }
     .stWarning { border-left: 4px solid #FF9800 !important; }
     .stError { border-left: 4px solid #F44336 !important; }
-    @keyframes winnerPulse {
-        0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-        100% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8); }
-    }
-    .stButton > button {
-        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
-        color: #1a1a2e !important;
-        font-weight: bold !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 10px 20px !important;
-        transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease !important;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
-    }
-    .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
-    }
-    .stButton > button:active {
-        transform: translateY(0px) scale(0.95) !important;
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
-    }
-
-    div[data-testid="stFormSubmitButton"] button,
-    div[data-testid="stFormSubmitButton"] button *,
-    .stFormSubmitButton > button,
-    .stFormSubmitButton > button *,
-    button[kind="formSubmit"],
-    button[kind="formSubmit"] *,
-    div[data-testid="stForm"] button,
-    div[data-testid="stForm"] button * {
-        background: linear-gradient(135deg, #FFD700, #FFA500) !important;
-        color: #1a1a2e !important;
-        -webkit-text-fill-color: #1a1a2e !important;
-        font-weight: 900 !important;
-        font-size: 1rem !important;
-        border: none !important;
-        border-radius: 12px !important;
-        min-height: 48px !important;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.25) !important;
-        text-shadow: none !important;
-    }
-    div[data-testid="stFormSubmitButton"] button:hover,
-    div[data-testid="stForm"] button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.35) !important;
-    }
-    div[data-testid="stFormSubmitButton"] button:active,
-    div[data-testid="stForm"] button:active {
-        transform: translateY(0px) scale(0.97) !important;
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4) !important;
-    }
-
-    .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
-    .logo-text p { color: rgba(255, 255, 255, 0.6) !important; }
-
-    .display-card-circle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        font-weight: bold;
-        font-size: 0.52rem;
-        box-sizing: border-box;
-        line-height: 1;
-    }
-    @media (max-width: 768px) {
-        .display-card-circle { width: 16px; height: 16px; font-size: 0.46rem; }
-    }
-    @media (max-width: 480px) {
-        .display-card-circle { width: 14px; height: 14px; font-size: 0.42rem; }
-    }
-
-    .board-number {
-        width: 22px;
-        height: 22px;
-        font-size: 0.6rem;
-    }
-
-    @media (max-width: 768px) {
-        .board-table td { padding: 2px 1px; font-size: 0.65rem; min-width: 18px; }
-        .board-number { width: 18px; height: 18px; font-size: 0.52rem; }
-        .board-table .header-cell { font-size: 0.95rem; padding: 4px 1px; }
-        .board-container { padding: 8px !important; margin: 4px 0 !important; }
-        .board-title { font-size: 1.1rem !important; }
-        .motivation-box { padding: 8px 12px !important; }
-        .motivation-box .quote { font-size: 0.85rem !important; }
-        h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; }
-    }
-    @media (max-width: 480px) {
-        .board-number { width: 16px; height: 16px; font-size: 0.46rem; }
-        .board-table td { padding: 1px 0.5px; }
-    }
+    @keyframes winnerPulse { 0%{box-shadow:0 0 20px rgba(255,215,0,0.3)} 100%{box-shadow:0 0 60px rgba(255,215,0,0.8)} }
+    .stButton > button { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: #1a1a2e !important; font-weight: bold !important; border: none !important; border-radius: 12px !important; padding: 10px 20px !important; transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease !important; box-shadow: 0 4px 15px rgba(255,215,0,0.2) !important; }
+    .stButton > button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 25px rgba(255,215,0,0.3) !important; }
+    .stButton > button:active { transform: translateY(0px) scale(0.95) !important; box-shadow: 0 2px 8px rgba(255,215,0,0.4) !important; }
+    div[data-testid="stFormSubmitButton"] button, div[data-testid="stFormSubmitButton"] button *, .stFormSubmitButton > button, .stFormSubmitButton > button *, button[kind="formSubmit"], button[kind="formSubmit"] *, div[data-testid="stForm"] button, div[data-testid="stForm"] button * { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: #1a1a2e !important; -webkit-text-fill-color: #1a1a2e !important; font-weight: 900 !important; font-size: 1rem !important; border: none !important; border-radius: 12px !important; min-height: 48px !important; box-shadow: 0 4px 15px rgba(255,215,0,0.25) !important; text-shadow: none !important; }
+    div[data-testid="stFormSubmitButton"] button:hover, div[data-testid="stForm"] button:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 25px rgba(255,215,0,0.35) !important; }
+    div[data-testid="stFormSubmitButton"] button:active, div[data-testid="stForm"] button:active { transform: translateY(0px) scale(0.97) !important; box-shadow: 0 2px 8px rgba(255,215,0,0.4) !important; }
+    .logo-text h1 { -webkit-text-fill-color: #FFFFFF !important; background: none !important; color: #FFFFFF !important; text-shadow: 0 0 30px rgba(255,215,0,0.1); }
+    .logo-text p { color: rgba(255,255,255,0.6) !important; }
+    .display-card-circle { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-weight: bold; font-size: 0.52rem; box-sizing: border-box; line-height: 1; }
+    @media (max-width: 768px) { .display-card-circle { width: 16px; height: 16px; font-size: 0.46rem; } }
+    @media (max-width: 480px) { .display-card-circle { width: 14px; height: 14px; font-size: 0.42rem; } }
+    .board-number { width: 22px; height: 22px; font-size: 0.6rem; }
+    @media (max-width: 768px) { .board-table td { padding: 2px 1px; font-size: 0.65rem; min-width: 18px; } .board-number { width: 18px; height: 18px; font-size: 0.52rem; } .board-table .header-cell { font-size: 0.95rem; padding: 4px 1px; } .board-container { padding: 8px !important; margin: 4px 0 !important; } .board-title { font-size: 1.1rem !important; } .motivation-box { padding: 8px 12px !important; } .motivation-box .quote { font-size: 0.85rem !important; } h1 { font-size: 1.4rem !important; letter-spacing: 3px !important; } }
+    @media (max-width: 480px) { .board-number { width: 16px; height: 16px; font-size: 0.46rem; } .board-table td { padding: 1px 0.5px; } }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <style>
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"] {
-            flex-wrap: nowrap !important;
-            gap: 3px !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div {
-            min-width: 0 !important;
-            flex: 1 1 0 !important;
-            width: auto !important;
-        }
-        div[data-testid="stHorizontalBlock"] .stButton > button {
-            padding: 4px 1px !important;
-            font-size: 11px !important;
-            min-height: 42px !important;
-            height: 42px !important;
-            line-height: 1.1 !important;
-            border-radius: 6px !important;
-        }
+        div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 3px !important; }
+        div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; flex: 1 1 0 !important; width: auto !important; }
+        div[data-testid="stHorizontalBlock"] .stButton > button { padding: 4px 1px !important; font-size: 11px !important; min-height: 42px !important; height: 42px !important; line-height: 1.1 !important; border-radius: 6px !important; }
     }
-    .stButton > button {
-        padding: 6px 3px !important;
-        font-size: 13px !important;
-        min-height: 44px !important;
-        border-radius: 8px !important;
-        font-weight: bold !important;
-    }
-    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
-        margin-bottom: 3px !important;
-    }
+    .stButton > button { padding: 6px 3px !important; font-size: 13px !important; min-height: 44px !important; border-radius: 8px !important; font-weight: bold !important; }
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] { margin-bottom: 3px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -366,48 +151,24 @@ def get_winner_sound_js():
 # ===================================================================
 def init_session_state():
     defaults = {
-        'logged_in': False,
-        'current_user': None,
-        'current_role': None,
-        'clicked_numbers': set(),
-        'selected_card': None,
-        'called_numbers': set(),
-        'last_called_number': None,
-        'auto_called_count': 0,
-        'last_call_time': time.time(),
-        'game_started': False,
-        'auto_call_started': False,
-        'card_selection_time': 60,
-        'card_selection_last_update': time.time(),
-        'game_over': False,
-        'winners_list': [],
-        'winner_declared': False,
-        'user_db': {},
-        'taken_cards': [],
-        'prize_distributed': False,
-        'card_owner': {},
-        'columns_per_row': 6,
-        'timer_start_time': time.time(),
-        'show_deposit_msg': False,
-        'deposit_msg_text': "",
-        'flash_msg': "",
-        'celebration_start_time': None,
-        'rejected_card_num': None,
-        'insufficient_balance_card_num': None,
+        'logged_in': False, 'current_user': None, 'current_role': None,
+        'clicked_numbers': set(), 'selected_card': None,
+        'called_numbers': set(), 'last_called_number': None, 'auto_called_count': 0,
+        'last_call_time': time.time(), 'game_started': False, 'auto_call_started': False,
+        'card_selection_time': 60, 'card_selection_last_update': time.time(),
+        'game_over': False, 'winners_list': [], 'winner_declared': False,
+        'user_db': {}, 'taken_cards': [], 'prize_distributed': False,
+        'card_owner': {}, 'columns_per_row': 6, 'timer_start_time': time.time(),
+        'show_deposit_msg': False, 'deposit_msg_text': "",
+        'flash_msg': "", 'celebration_start_time': None,
+        'rejected_card_num': None, 'insufficient_balance_card_num': None,
         'winner_acknowledged': False,
-        '_state_cache': None,
-        '_state_cache_at': 0.0,
-        '_state_err_count': 0,
-        'admin_celebration_msg': None,
-        '_local_balance': None,
-        'winner_screen_shown_at': None,
-        'celebration_round': 1,
-        '_last_caller_retry': 0.0,
-        'admin_bot_card_count': 0,
-        '_bot_apply_pending': False,
-        '_first_render_done': False,
-        'bot_apply_flash': None,
-        '_last_rerun_at': 0.0,
+        '_state_cache': None, '_state_cache_at': 0.0, '_state_err_count': 0,
+        'admin_celebration_msg': None, '_local_balance': None,
+        'winner_screen_shown_at': None, 'celebration_round': 1,
+        '_last_caller_retry': 0.0, 'admin_bot_card_count': 0,
+        '_bot_apply_pending': False, '_first_render_done': False,
+        'bot_apply_flash': None, '_last_rerun_at': 0.0,
         '_last_sound_played_for': None,
     }
     for k, v in defaults.items():
@@ -420,9 +181,10 @@ if "_first_render_done" not in st.session_state:
     st.session_state["_first_render_done"] = False
 
 # ===================================================================
-# RERUN HELPER
+# RERUN HELPERS
 # ===================================================================
 def safe_rerun(min_interval=0.35):
+    """Throttled rerun for background loops (auto-call, polling)."""
     now = time.time()
     last = st.session_state.get("_last_rerun_at", 0.0)
     wait = min_interval - (now - last)
@@ -431,28 +193,22 @@ def safe_rerun(min_interval=0.35):
     st.session_state["_last_rerun_at"] = time.time()
     st.rerun()
 
+def user_rerun():
+    """Immediate rerun for user clicks — no delay so buttons feel instant."""
+    st.session_state["_last_rerun_at"] = time.time()
+    st.rerun()
+
 # ===================================================================
 # SUPABASE — GAME STATE
 # ===================================================================
 def _default_state():
     return {
-        "id": 1,
-        "called_numbers": [],
-        "last_called_number": None,
-        "auto_called_count": 0,
-        "game_started": False,
-        "auto_call_started": False,
-        "last_call_time": time.time(),
-        "winner_declared": False,
-        "game_over": False,
-        "prize_distributed": False,
-        "winners_list": [],
-        "taken_cards": [],
-        "card_owner": {},
-        "timer_start_time": time.time(),
-        "card_selection_time": 60,
-        "last_called_at": 0,
-        "last_called_by": None,
+        "id": 1, "called_numbers": [], "last_called_number": None,
+        "auto_called_count": 0, "game_started": False, "auto_call_started": False,
+        "last_call_time": time.time(), "winner_declared": False, "game_over": False,
+        "prize_distributed": False, "winners_list": [], "taken_cards": [],
+        "card_owner": {}, "timer_start_time": time.time(), "card_selection_time": 60,
+        "last_called_at": 0, "last_called_by": None,
     }
 
 def _sanitize_row(row):
@@ -462,13 +218,11 @@ def _sanitize_row(row):
     cn = row.get("called_numbers")
     if isinstance(cn, list):
         try:
-            unique_cn = []
-            seen = set()
+            unique_cn, seen = [], set()
             for x in cn:
                 xi = int(x)
                 if xi not in seen and 1 <= xi <= 75:
-                    seen.add(xi)
-                    unique_cn.append(xi)
+                    seen.add(xi); unique_cn.append(xi)
             row["called_numbers"] = unique_cn
         except Exception:
             row["called_numbers"] = []
@@ -487,13 +241,10 @@ def load_state_row(force=False):
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
-
     _first_render = st.session_state.get("_first_render_done", False)
-    ttl = 1.5 if not _first_render else 0.25
-
+    ttl = 1.5 if not _first_render else 0.4
     if (not force) and cached is not None and (now - cached_at) < ttl:
         return cached
-
     last_err = None
     for attempt in range(3):
         try:
@@ -513,13 +264,11 @@ def load_state_row(force=False):
         except Exception as e:
             last_err = e
             if attempt < 2:
-                time.sleep(0.15)
-
+                time.sleep(0.1)
     err_count = st.session_state.get("_state_err_count", 0) + 1
     st.session_state["_state_err_count"] = err_count
     if err_count == 3:
         st.warning(f"⚠️ ግንኙነት ችግር — በራስ-ሰር እየተስተካከለ ነው... ({last_err})")
-
     if cached is not None:
         return cached
     return _default_state()
@@ -534,7 +283,7 @@ def update_state(patch: dict):
             return True
         except Exception as e:
             if attempt == 0:
-                time.sleep(0.1)
+                time.sleep(0.05)
                 continue
             err_count = st.session_state.get("_state_err_count", 0) + 1
             st.session_state["_state_err_count"] = err_count
@@ -547,12 +296,10 @@ def update_state(patch: dict):
 # ===================================================================
 def save_global_winners(winners_list, winner_declared, called_numbers, last_called_number, auto_called_count, game_over, prize_distributed):
     update_state({
-        "winners_list": winners_list,
-        "winner_declared": winner_declared,
+        "winners_list": winners_list, "winner_declared": winner_declared,
         "called_numbers": list(called_numbers) if called_numbers else [],
         "last_called_number": last_called_number,
-        "auto_called_count": auto_called_count,
-        "game_over": game_over,
+        "auto_called_count": auto_called_count, "game_over": game_over,
         "prize_distributed": prize_distributed,
     })
     return True
@@ -560,14 +307,10 @@ def save_global_winners(winners_list, winner_declared, called_numbers, last_call
 def load_global_winners():
     row = load_state_row(force=True)
     return (
-        row.get("winners_list") or [],
-        row.get("winner_declared", False),
-        set(row.get("called_numbers") or []),
-        row.get("last_called_number"),
-        row.get("auto_called_count", 0),
-        row.get("game_over", False),
-        row.get("prize_distributed", False),
-        row.get("last_call_time", 0),
+        row.get("winners_list") or [], row.get("winner_declared", False),
+        set(row.get("called_numbers") or []), row.get("last_called_number"),
+        row.get("auto_called_count", 0), row.get("game_over", False),
+        row.get("prize_distributed", False), row.get("last_call_time", 0),
     )
 
 def sync_global_winners():
@@ -662,12 +405,10 @@ def save_local_users(users):
     try:
         for u, d in users.items():
             supabase.table("users").upsert({
-                "username": u,
-                "password": d.get("password", ""),
+                "username": u, "password": d.get("password", ""),
                 "balance": float(d.get("balance", 0)),
                 "role": d.get("role", "player"),
-                "name": d.get("name", ""),
-                "phone": d.get("phone", ""),
+                "name": d.get("name", ""), "phone": d.get("phone", ""),
                 "game_played": int(d.get("game_played", 0)),
                 "wins": int(d.get("wins", 0)),
             }).execute()
@@ -682,9 +423,6 @@ def save_all_data():
     if "user_db" in st.session_state and st.session_state.user_db:
         save_local_users(st.session_state.user_db)
 
-# ===================================================================
-# FAST USER BALANCE UPDATE
-# ===================================================================
 def update_user_balance(username, new_balance):
     try:
         supabase.table("users").update({"balance": float(new_balance)}).eq("username", username).execute()
@@ -715,16 +453,11 @@ def fast_select_card(card_num, current_balance):
     if card_num not in taken:
         taken.append(card_num)
     owner[str(card_num)] = user
-    update_state({
-        "taken_cards": list(taken),
-        "card_owner": dict(owner),
-    })
+    update_state({"taken_cards": list(taken), "card_owner": dict(owner)})
     update_user_balance(user, current_balance - CARD_PRICE)
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
-    st.session_state.clicked_numbers = set(
-        int(k) for k, v in owner.items() if v == user
-    )
+    st.session_state.clicked_numbers = set(int(k) for k, v in owner.items() if v == user)
     return True, "selected"
 
 def fast_deselect_card(card_num, current_balance):
@@ -737,16 +470,11 @@ def fast_deselect_card(card_num, current_balance):
     if card_num in taken:
         taken.remove(card_num)
     del owner[str(card_num)]
-    update_state({
-        "taken_cards": list(taken),
-        "card_owner": dict(owner),
-    })
+    update_state({"taken_cards": list(taken), "card_owner": dict(owner)})
     update_user_balance(user, current_balance + CARD_PRICE)
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
-    st.session_state.clicked_numbers = set(
-        int(k) for k, v in owner.items() if v == user
-    )
+    st.session_state.clicked_numbers = set(int(k) for k, v in owner.items() if v == user)
     return True, "deselected"
 
 # ===================================================================
@@ -754,42 +482,28 @@ def fast_deselect_card(card_num, current_balance):
 # ===================================================================
 def load_global_cards():
     row = load_state_row()
-    return (
-        row.get("taken_cards") or [],
-        row.get("card_owner") or {},
-        row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", CARD_SELECTION_DURATION),
-    )
+    return (row.get("taken_cards") or [], row.get("card_owner") or {},
+            row.get("timer_start_time", time.time()),
+            row.get("card_selection_time", CARD_SELECTION_DURATION))
 
 def save_global_cards(taken_cards, card_owner, timer_start_time=None, card_selection_time=None):
-    patch = {
-        "taken_cards": list(taken_cards),
-        "card_owner": dict(card_owner),
-    }
-    if timer_start_time is not None:
-        patch["timer_start_time"] = timer_start_time
-    if card_selection_time is not None:
-        patch["card_selection_time"] = card_selection_time
+    patch = {"taken_cards": list(taken_cards), "card_owner": dict(card_owner)}
+    if timer_start_time is not None: patch["timer_start_time"] = timer_start_time
+    if card_selection_time is not None: patch["card_selection_time"] = card_selection_time
     update_state(patch)
     return True
 
 # ===================================================================
-# GLOBAL TIMER  (1:00 → 0:59 → … → 0:00)
+# GLOBAL TIMER
 # ===================================================================
 def load_global_timer():
     row = load_state_row()
-    return (
-        row.get("timer_start_time", time.time()),
-        row.get("card_selection_time", CARD_SELECTION_DURATION),
-        row.get("game_started", False),
-    )
+    return (row.get("timer_start_time", time.time()),
+            row.get("card_selection_time", CARD_SELECTION_DURATION),
+            row.get("game_started", False))
 
 def save_global_timer(timer_start, duration=CARD_SELECTION_DURATION, game_started=False):
-    update_state({
-        "timer_start_time": timer_start,
-        "card_selection_time": duration,
-        "game_started": game_started,
-    })
+    update_state({"timer_start_time": timer_start, "card_selection_time": duration, "game_started": game_started})
     return True
 
 def reset_global_timer(duration=CARD_SELECTION_DURATION):
@@ -809,12 +523,10 @@ def get_global_remaining_time():
     remaining = duration - elapsed
     if remaining <= 0:
         file_taken, _, _, _ = load_global_cards()
-        total_now = len(file_taken)
-        if total_now >= MIN_CARDS_TO_START:
+        if len(file_taken) >= MIN_CARDS_TO_START:
             return 0, False
-        else:
-            reset_global_timer(CARD_SELECTION_DURATION)
-            return CARD_SELECTION_DURATION, False
+        reset_global_timer(CARD_SELECTION_DURATION)
+        return CARD_SELECTION_DURATION, False
     return int(math.floor(remaining + 0.001)), False
 
 # ===================================================================
@@ -836,47 +548,145 @@ def check_global_start_condition():
     return False, global_count, max(0, int(math.floor(remaining + 0.001)))
 
 # ===================================================================
-# GLOBAL CALLER — single atomic write, no verify step
+# WINNER DETECTION HELPERS (pure, no DB)
+# ===================================================================
+def get_card(card_id):
+    for card in BINGO_CARDS:
+        if card["id"] == card_id:
+            return card
+    return None
+
+def get_card_data(card_id):
+    card = get_card(card_id)
+    return card["cells"] if card else None
+
+def check_winning_pattern(card_data, called_numbers):
+    if not called_numbers or not card_data:
+        return None
+    called_set = set(called_numbers)
+    def is_marked(value):
+        if value == 'F': return True
+        return int(value) in called_set
+    for row in range(5):
+        if all(is_marked(card_data[row][col]) for col in range(5)):
+            return {'type': f"Row {row + 1}"}
+    letters = ['B','I','N','G','O']
+    for col in range(5):
+        if all(is_marked(card_data[row][col]) for row in range(5)):
+            return {'type': f"Column {letters[col]}"}
+    if all(is_marked(card_data[i][i]) for i in range(5)):
+        return {'type': "Diagonal Main"}
+    if all(is_marked(card_data[i][4 - i]) for i in range(5)):
+        return {'type': "Diagonal Anti"}
+    lc = [card_data[0][0], card_data[0][4], card_data[4][0], card_data[4][4]]
+    if all(is_marked(c) for c in lc): return {'type': "Large Corners"}
+    sc = [card_data[1][1], card_data[1][3], card_data[3][1], card_data[3][3]]
+    if all(is_marked(c) for c in sc): return {'type': "Small Corners"}
+    return None
+
+def _detect_winners(called_numbers, taken_cards, card_owner):
+    if not called_numbers or not taken_cards:
+        return []
+    winners_found = []
+    for card_id in taken_cards:
+        card_data = get_card_data(card_id)
+        if not card_data:
+            continue
+        pattern = check_winning_pattern(card_data, called_numbers)
+        if pattern:
+            owner = card_owner.get(str(card_id), "Unknown")
+            existing = next((w for w in winners_found if w["username"] == owner), None)
+            if existing:
+                existing["cards"].append(card_id)
+                existing["patterns"].append(pattern['type'])
+            else:
+                winners_found.append({"username": owner, "cards": [card_id], "patterns": [pattern['type']]})
+    return winners_found
+
+def _distribute_prizes_for_winners(winners, taken_cards):
+    _, _, _, _, _, _, global_paid, _ = load_global_winners()
+    if global_paid:
+        st.session_state.prize_distributed = True
+        return
+    total_prize = len(taken_cards) * PRIZE_PER_CARD
+    ppw = total_prize // len(winners) if winners else 0
+    load_all_data()
+    for winner in winners:
+        uname = winner.get("username")
+        if uname in st.session_state.user_db:
+            st.session_state.user_db[uname]["balance"] = float(st.session_state.user_db[uname].get("balance", 0)) + ppw
+            st.session_state.user_db[uname]["wins"] = int(st.session_state.user_db[uname].get("wins", 0)) + 1
+            st.session_state.user_db[uname]["game_played"] = int(st.session_state.user_db[uname].get("game_played", 0)) + 1
+    save_all_data()
+    st.session_state.prize_distributed = True
+
+# ===================================================================
+# GLOBAL CALLER — detects winner INLINE, one atomic write
 # ===================================================================
 def try_global_call():
     row = load_state_row(force=True)
     if row.get("winner_declared"):
-        return None
+        return None, False
 
     now = time.time()
     last_at = float(row.get("last_called_at") or 0)
     lock_age = now - last_at if last_at > 0 else 999.0
     if lock_age < CALL_INTERVAL:
-        return None
+        return None, False
 
     current_called = set(row.get("called_numbers") or [])
     if len(current_called) >= 75:
         update_state({"game_over": True, "winner_declared": False})
-        return None
+        return None, False
 
     available = [i for i in range(1, 76) if i not in current_called]
     if not available:
-        return None
+        return None, False
 
     called_num = random.choice(available)
     new_called = list(current_called) + [called_num]
 
-    ok = update_state({
+    taken_cards = list(row.get("taken_cards") or [])
+    card_owner = dict(row.get("card_owner") or {})
+    winners_found = _detect_winners(new_called, taken_cards, card_owner)
+
+    patch = {
         "called_numbers": new_called,
         "last_called_number": called_num,
         "auto_called_count": len(new_called),
         "last_called_at": now,
         "last_called_by": st.session_state.current_user,
-    })
+    }
+    if winners_found:
+        patch["winners_list"] = winners_found
+        patch["winner_declared"] = True
+        patch["game_over"] = True
+        patch["auto_call_started"] = False
+        patch["prize_distributed"] = True
+        patch["last_called_at"] = 0
+        patch["last_called_by"] = None
+
+    ok = update_state(patch)
     if not ok:
-        return None
+        return None, False
 
     st.session_state.called_numbers = set(new_called)
     st.session_state.last_called_number = called_num
     st.session_state.auto_called_count = len(new_called)
 
-    check_for_winners(force_fresh=True)
-    return called_num
+    if winners_found:
+        _distribute_prizes_for_winners(winners_found, taken_cards)
+        st.session_state.winners_list = winners_found
+        st.session_state.winner_declared = True
+        st.session_state.game_over = True
+        st.session_state.game_started = True
+        st.session_state.taken_cards = taken_cards
+        st.session_state.card_owner = card_owner
+        st.session_state.celebration_start_time = time.time()
+        st.session_state.celebration_round = 1
+        st.session_state.winner_screen_shown_at = None
+
+    return called_num, True
 
 # ===================================================================
 # GAME STATE
@@ -908,15 +718,10 @@ def load_game_state():
 
 def clear_game_state():
     update_state({
-        "called_numbers": [],
-        "last_called_number": None,
-        "auto_called_count": 0,
-        "game_started": False,
-        "auto_call_started": False,
-        "winner_declared": False,
-        "game_over": False,
-        "prize_distributed": False,
-        "last_called_at": 0,
+        "called_numbers": [], "last_called_number": None, "auto_called_count": 0,
+        "game_started": False, "auto_call_started": False,
+        "winner_declared": False, "game_over": False,
+        "prize_distributed": False, "last_called_at": 0,
     })
     return True
 
@@ -925,21 +730,12 @@ def clear_game_state():
 # ===================================================================
 def reset_for_next_round():
     update_state({
-        "winners_list": [],
-        "winner_declared": False,
-        "game_over": False,
-        "prize_distributed": False,
-        "called_numbers": [],
-        "last_called_number": None,
-        "auto_called_count": 0,
-        "game_started": False,
-        "auto_call_started": False,
-        "last_called_at": 0,
-        "last_called_by": None,
-        "taken_cards": [],
-        "card_owner": {},
-        "timer_start_time": time.time(),
-        "card_selection_time": CARD_SELECTION_DURATION,
+        "winners_list": [], "winner_declared": False, "game_over": False,
+        "prize_distributed": False, "called_numbers": [], "last_called_number": None,
+        "auto_called_count": 0, "game_started": False, "auto_call_started": False,
+        "last_called_at": 0, "last_called_by": None,
+        "taken_cards": [], "card_owner": {},
+        "timer_start_time": time.time(), "card_selection_time": CARD_SELECTION_DURATION,
     })
     st.session_state.selected_card = None
     st.session_state.clicked_numbers = set()
@@ -964,7 +760,7 @@ def reset_for_next_round():
     st.session_state.celebration_round = 1
 
 # ===================================================================
-# SYNC GLOBAL CARDS  (always take DB value)
+# SYNC GLOBAL CARDS
 # ===================================================================
 def sync_global_cards():
     _fresh_row = load_state_row(force=True)
@@ -972,16 +768,13 @@ def sync_global_cards():
     global_owner = dict(_fresh_row.get("card_owner") or {})
     st.session_state.taken_cards = list(global_taken)
     st.session_state.card_owner = dict(global_owner)
-
     st.session_state.called_numbers = set(_fresh_row.get("called_numbers") or [])
     if _fresh_row.get("last_called_number") is not None:
         st.session_state.last_called_number = _fresh_row.get("last_called_number")
-
     remaining, game_started = get_global_remaining_time()
     st.session_state.card_selection_time = remaining
     if game_started:
         st.session_state.game_started = True
-
     current_user = st.session_state.current_user
     if current_user:
         user_cards = set()
@@ -1000,8 +793,7 @@ def maybe_start_game():
     if st.session_state.game_started:
         return
     file_taken, _, _, _ = load_global_cards()
-    total_now = len(file_taken)
-    if total_now < MIN_CARDS_TO_START:
+    if len(file_taken) < MIN_CARDS_TO_START:
         return
     remaining, _ = get_global_remaining_time()
     if remaining <= 0:
@@ -1013,7 +805,7 @@ def maybe_start_game():
         else:
             st.session_state.selected_card = -1
         save_game_state()
-        safe_rerun(0.4)
+        safe_rerun(0.2)
 
 # ===================================================================
 # AUTHENTICATION
@@ -1027,21 +819,14 @@ def verify_password(password, hashed):
 def login_user(username, password):
     username = username.strip()
     password = password.strip()
-
     if username == "admin" and password == "admin123":
         admin_row = load_single_user("admin")
         if admin_row is None:
-            new_admin = {
-                "username": "admin",
-                "password": hash_password("admin123"),
-                "balance": 0.0, "role": "admin",
-                "name": "Admin", "phone": "",
-                "game_played": 0, "wins": 0
-            }
-            try:
-                supabase.table("users").upsert(new_admin).execute()
-            except Exception:
-                pass
+            new_admin = {"username": "admin", "password": hash_password("admin123"),
+                         "balance": 0.0, "role": "admin", "name": "Admin",
+                         "phone": "", "game_played": 0, "wins": 0}
+            try: supabase.table("users").upsert(new_admin).execute()
+            except Exception: pass
             st.session_state.user_db = {"admin": new_admin}
         else:
             admin_row["balance"] = 0.0
@@ -1050,7 +835,6 @@ def login_user(username, password):
         st.session_state.current_user = "admin"
         st.session_state.current_role = "admin"
         return True, "✅ Admin login successful!"
-
     user = load_single_user(username)
     if not user:
         return False, "❌ Username not found"
@@ -1063,28 +847,16 @@ def login_user(username, password):
     return False, "❌ Incorrect password"
 
 def register_user(username, password, name, phone=""):
-    username = username.strip()
-    password = password.strip()
-    name = name.strip()
-    if len(username) < 2:
-        return False, "❌ Username must be at least 2 characters"
-    if len(password) < 6:
-        return False, "❌ Password must be at least 6 characters"
-    if is_bot_username(username) or username in BOT_NAMES:
-        return False, "❌ This username is reserved"
-    if load_single_user(username) is not None:
-        return False, "❌ Username already exists"
-    new_user = {
-        "username": username,
-        "password": hash_password(password),
-        "balance": 0.0, "role": "player",
-        "name": name, "phone": phone,
-        "game_played": 0, "wins": 0
-    }
-    try:
-        supabase.table("users").upsert(new_user).execute()
-    except Exception:
-        return False, "❌ Registration failed"
+    username = username.strip(); password = password.strip(); name = name.strip()
+    if len(username) < 2: return False, "❌ Username must be at least 2 characters"
+    if len(password) < 6: return False, "❌ Password must be at least 6 characters"
+    if is_bot_username(username) or username in BOT_NAMES: return False, "❌ This username is reserved"
+    if load_single_user(username) is not None: return False, "❌ Username already exists"
+    new_user = {"username": username, "password": hash_password(password),
+                "balance": 0.0, "role": "player", "name": name, "phone": phone,
+                "game_played": 0, "wins": 0}
+    try: supabase.table("users").upsert(new_user).execute()
+    except Exception: return False, "❌ Registration failed"
     st.session_state.user_db = {username: new_user}
     return True, "✅ Registration successful! Your balance is 0.00 ETB"
 
@@ -1096,54 +868,27 @@ def logout_user():
 # ===================================================================
 # BOT NAMES
 # ===================================================================
-BOT_NAMES = [
-    "Bekele", "Alemu", "Aster", "Yednekachew", "Tigist", "Getachew",
-    "Meseret", "Dawit", "Hana", "Solomon", "Marta", "Kebede",
-    "Selam", "Tesfaye", "Meron", "Abebe", "Hiwot", "Girma",
-    "Bethlehem", "Yohannes", "Rahel", "Mulugeta", "Eden", "Fikadu",
-    "Tsehay", "Berhanu", "Liya", "Assefa", "Genet", "Wondimu",
-    "Sara", "Desta", "Mahlet", "Tewodros", "Kidist", "Bantayehu",
-    "Eyerusalem", "Endale", "Mekdes", "Samuel", "Zewditu", "Nardos",
-    "Bereket", "Alemitu", "Yonas", "Wubit", "Henok", "Tizita",
-    "Melaku", "Netsanet", "Biniam", "Aynalem", "Eyob", "Sindu",
-    "Gedion", "Mimi", "Natnael", "Tsedale", "Firaol", "Rediet",
-    "Bruk", "Sifen", "Naol", "Hermela", "Yafet", "Lidiya",
-    "Ebisa", "Ruth", "Kaleab", "Beza", "Yared", "Eleni",
-    "Abel", "Feven", "Mikiyas", "Saron", "Yosef", "Meron",
-    "Dagmawi", "Tinsae", "Luel", "Tsion", "Nahom", "Sena",
-    "Kaleb", "Bethany", "Ermias", "Ruhama", "Yosef", "Mimi",
-    "Andualem", "Mieraf", "Mulu", "Habtamu", "Frehiwot", "Tadesse",
-    "Zerihun", "Aregash", "Mulugeta", "Tigabu", "Lulit", "Bonsa",
-]
+BOT_NAMES = ["Bekele","Alemu","Aster","Yednekachew","Tigist","Getachew","Meseret","Dawit","Hana","Solomon","Marta","Kebede","Selam","Tesfaye","Meron","Abebe","Hiwot","Girma","Bethlehem","Yohannes","Rahel","Mulugeta","Eden","Fikadu","Tsehay","Berhanu","Liya","Assefa","Genet","Wondimu","Sara","Desta","Mahlet","Tewodros","Kidist","Bantayehu","Eyerusalem","Endale","Mekdes","Samuel","Zewditu","Nardos","Bereket","Alemitu","Yonas","Wubit","Henok","Tizita","Melaku","Netsanet","Biniam","Aynalem","Eyob","Sindu","Gedion","Mimi","Natnael","Tsedale","Firaol","Rediet","Bruk","Sifen","Naol","Hermela","Yafet","Lidiya","Ebisa","Ruth","Kaleab","Beza","Yared","Eleni","Abel","Feven","Mikiyas","Saron","Yosef","Meron","Dagmawi","Tinsae","Luel","Tsion","Nahom","Sena","Kaleb","Bethany","Ermias","Ruhama","Andualem","Mieraf","Mulu","Habtamu","Frehiwot","Tadesse","Zerihun","Aregash","Tigabu","Lulit","Bonsa"]
 
-BOT_SUFFIXES = [
-    "_b", "_ad", "_x7", "_z9", "_m2", "_k4", "_p5", "_t8",
-    "_g3", "_n6", "_r1", "_v0", "_w9", "_y5", "_q7", "_s4",
-    "_c8", "_d2", "_e6", "_f3", "_h1", "_j9", "_l0", "_u7",
-]
-
+BOT_SUFFIXES = ["_b","_ad","_x7","_z9","_m2","_k4","_p5","_t8","_g3","_n6","_r1","_v0","_w9","_y5","_q7","_s4","_c8","_d2","_e6","_f3","_h1","_j9","_l0","_u7"]
 BOT_SUFFIX = "_b"
 
 def make_bot_username(base_name, index=0):
-    if not BOT_SUFFIXES:
-        return base_name + BOT_SUFFIX
+    if not BOT_SUFFIXES: return base_name + BOT_SUFFIX
     suffix = BOT_SUFFIXES[index % len(BOT_SUFFIXES)]
     return base_name + suffix
 
 def is_bot_username(username):
-    if not username:
-        return False
+    if not username: return False
     name = str(username)
     return any(name.endswith(sfx) for sfx in BOT_SUFFIXES)
 
 def get_bot_display_name(username):
-    if not username:
-        return "🤖 Bot"
+    if not username: return "🤖 Bot"
     name = str(username)
     for sfx in BOT_SUFFIXES:
         if name.endswith(sfx):
-            name = name[: -len(sfx)]
-            break
+            name = name[: -len(sfx)]; break
     return "🤖 " + name
 
 # ===================================================================
@@ -1151,55 +896,50 @@ def get_bot_display_name(username):
 # ===================================================================
 def get_or_create_bot_users(count):
     load_all_data()
-    if count > len(BOT_NAMES):
-        count = len(BOT_NAMES)
-    available_names = list(BOT_NAMES)
-    random.shuffle(available_names)
+    if count > len(BOT_NAMES): count = len(BOT_NAMES)
+    available_names = list(BOT_NAMES); random.shuffle(available_names)
     bot_users = []
+    new_bots = {}
     for i in range(count):
         base_name = available_names[i]
         bot_username = make_bot_username(base_name, i)
-        if bot_username not in st.session_state.user_db:
-            st.session_state.user_db[bot_username] = {
-                "password": hash_password(bot_username + "_secret_" + str(i)),
-                "balance": 10000.0,
-                "role": "player",
-                "name": "🤖 " + base_name,
-                "phone": "",
-                "game_played": 0,
-                "wins": 0,
-            }
         bot_users.append(bot_username)
-    save_local_users(st.session_state.user_db)
+        if bot_username in st.session_state.user_db:
+            continue
+        existing = load_single_user(bot_username)
+        if existing is None:
+            new_bots[bot_username] = {
+                "password": hash_password(bot_username + "_secret_" + str(i)),
+                "balance": 10000.0, "role": "player", "name": "🤖 " + base_name,
+                "phone": "", "game_played": 0, "wins": 0,
+            }
+    if new_bots:
+        save_local_users(new_bots)
+        st.session_state.user_db.update(new_bots)
     return bot_users
 
 def assign_bot_cards(bot_count):
-    if bot_count <= 0:
-        return 0, "No bot count selected"
+    if bot_count <= 0: return 0, "No bot count selected"
     row = load_state_row(force=True)
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
-    bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
-    for k in bot_owned:
-        cid = int(k)
-        if cid in taken:
-            taken.remove(cid)
-        del owner[k]
+    for k in [k for k, v in owner.items() if is_bot_username(v)]:
+        try:
+            cid = int(k)
+            if cid in taken: taken.remove(cid)
+        except (ValueError, TypeError): pass
+        owner.pop(k, None)
     bot_users = get_or_create_bot_users(bot_count)
     available_cards = [i for i in range(1, 205) if i not in taken]
     random.shuffle(available_cards)
     assigned = 0
-    for i, bot_name in enumerate(bot_users):
-        if not available_cards:
-            break
+    for bot_name in bot_users:
+        if not available_cards: break
         card_num = available_cards.pop()
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
-    update_state({
-        "taken_cards": list(taken),
-        "card_owner": dict(owner),
-    })
+    update_state({"taken_cards": list(taken), "card_owner": dict(owner)})
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
     return assigned, f"🤖 Assigned {assigned} bot card(s) — visible to all players as 🔴 selected"
@@ -1210,14 +950,12 @@ def remove_bot_cards():
     owner = dict(row.get("card_owner") or {})
     bot_cards = [k for k, v in owner.items() if is_bot_username(v)]
     for k in bot_cards:
-        cid = int(k)
-        if cid in taken:
-            taken.remove(cid)
-        del owner[k]
-    update_state({
-        "taken_cards": list(taken),
-        "card_owner": dict(owner),
-    })
+        try:
+            cid = int(k)
+            if cid in taken: taken.remove(cid)
+        except (ValueError, TypeError): pass
+        owner.pop(k, None)
+    update_state({"taken_cards": list(taken), "card_owner": dict(owner)})
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
     return len(bot_cards)
@@ -1230,10 +968,8 @@ BOT_USERNAME_DISPLAY = "@DerashBingoPlayBot"
 def load_transactions(status_filter=None, tx_type=None):
     try:
         q = supabase.table("transactions").select("*").order("created_at", desc=True)
-        if status_filter:
-            q = q.eq("status", status_filter)
-        if tx_type:
-            q = q.eq("type", tx_type)
+        if status_filter: q = q.eq("status", status_filter)
+        if tx_type: q = q.eq("type", tx_type)
         res = q.execute()
         return res.data or []
     except Exception as e:
@@ -1249,9 +985,7 @@ def update_transaction(tx_id, patch):
         return False
 
 def approve_transaction(tx):
-    username = tx["username"]
-    amount = float(tx["amount"])
-    tx_type = tx["type"]
+    username = tx["username"]; amount = float(tx["amount"]); tx_type = tx["type"]
     user_row = load_single_user(username)
     if user_row is None:
         st.error(f"❌ User '{username}' not found in database.")
@@ -1261,35 +995,25 @@ def approve_transaction(tx):
         new_balance = current_balance + amount
     else:
         if current_balance < amount:
-            st.error(
-                f"❌ Insufficient balance for {username}. "
-                f"Balance: {current_balance:.2f} ETB, Requested: {amount:.2f} ETB"
-            )
+            st.error(f"❌ Insufficient balance for {username}. Balance: {current_balance:.2f} ETB, Requested: {amount:.2f} ETB")
             return False
         new_balance = current_balance - amount
     if not update_user_balance(username, new_balance):
         st.error("❌ Failed to update user balance.")
         return False
-    ok = update_transaction(tx["id"], {
-        "status": "approved",
-        "processed_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return ok
+    return update_transaction(tx["id"], {"status": "approved",
+        "processed_at": datetime.now(timezone.utc).isoformat()})
 
 def reject_transaction(tx, note=""):
-    ok = update_transaction(tx["id"], {
-        "status": "rejected",
+    return update_transaction(tx["id"], {"status": "rejected",
         "admin_note": note or "Rejected by admin",
-        "processed_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return ok
+        "processed_at": datetime.now(timezone.utc).isoformat()})
 
 def admin_panel():
     if st.session_state.get("bot_apply_flash"):
         flash = st.session_state["bot_apply_flash"]
         st.success(flash["msg"])
         st.session_state["bot_apply_flash"] = None
-
     if st.session_state.get("admin_celebration_msg"):
         msg = st.session_state["admin_celebration_msg"]
         st.success(msg)
@@ -1338,36 +1062,24 @@ def admin_panel():
                     <p style="margin:5px 0;font-size:1.2rem;font-weight:bold;color:#FFD700;">💰 {:.2f} ETB</p>
                     <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">🎮 Games: {} | 🏆 Wins: {}</p>
                 </div>
-                """.format(
-                    ud.get('name', selected_user),
-                    ud.get('phone', 'N/A'),
-                    ud.get('balance', 0),
-                    ud.get('game_played', 0),
-                    ud.get('wins', 0)
-                ), unsafe_allow_html=True)
-
+                """.format(ud.get('name', selected_user), ud.get('phone', 'N/A'),
+                    ud.get('balance', 0), ud.get('game_played', 0), ud.get('wins', 0)),
+                unsafe_allow_html=True)
                 custom_amount = st.number_input("Amount (ETB)", min_value=0, step=10, value=100, key="admin_amt")
                 c1, c2, c3 = st.columns(3)
-
                 with c1:
                     if st.button("➕ Add", use_container_width=True, key="admin_add"):
                         new_balance = ud.get("balance", 0) + custom_amount
                         st.session_state.user_db[selected_user]["balance"] = new_balance
                         save_local_users(st.session_state.user_db)
-                        st.session_state["admin_celebration_msg"] = (
-                            "🎉 ለ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተጨምሯል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB"
-                        )
+                        st.session_state["admin_celebration_msg"] = ("🎉 ለ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተጨምሯል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB")
                         st.rerun()
-
                 with c2:
                     if st.button("💰 Set", use_container_width=True, key="admin_set"):
                         st.session_state.user_db[selected_user]["balance"] = custom_amount
                         save_local_users(st.session_state.user_db)
-                        st.session_state["admin_celebration_msg"] = (
-                            "🎉 የ " + selected_user + " ሂሳብ " + f"{custom_amount:.2f}" + " ETB ሆኖ ተቀናብሯል!"
-                        )
+                        st.session_state["admin_celebration_msg"] = ("🎉 የ " + selected_user + " ሂሳብ " + f"{custom_amount:.2f}" + " ETB ሆኖ ተቀናብሯል!")
                         st.rerun()
-
                 with c3:
                     if st.button("➖ Deduct", use_container_width=True, key="admin_deduct"):
                         cur = ud.get("balance", 0)
@@ -1375,13 +1087,10 @@ def admin_panel():
                             new_balance = cur - custom_amount
                             st.session_state.user_db[selected_user]["balance"] = new_balance
                             save_local_users(st.session_state.user_db)
-                            st.session_state["admin_celebration_msg"] = (
-                                "✅ ከ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተቀንሷል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB"
-                            )
+                            st.session_state["admin_celebration_msg"] = ("✅ ከ " + selected_user + " " + f"{custom_amount:.2f}" + " ETB ተቀንሷል! አዲስ ሂሳብ: " + f"{new_balance:.2f}" + " ETB")
                             st.rerun()
                         else:
                             st.warning("⚠️ በቂ ሂሳብ የለም")
-
             st.markdown("---")
             total_users = len(users)
             total_balance = sum(float(st.session_state.user_db[u].get("balance", 0)) for u in users)
@@ -1389,158 +1098,73 @@ def admin_panel():
 
     with tab_bots:
         st.markdown("### 🤖 Bot Card Selection")
-        st.markdown(
-            "<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>"
-            "Select how many bot cards to auto-assign. Each bot gets 1 card. "
-            "Bot usernames use Ethiopian names + varied suffixes — for example "
-            "<b>Yosef_b</b>, <b>Abebe_ad</b>, <b>Bekele_x7</b>, <b>Aster_z9</b>. "
-            "They appear as <b>🔴 selected</b> to all players, just like real players' cards.</p>",
-            unsafe_allow_html=True,
-        )
-
+        st.markdown("<p style='color:rgba(255,255,255,0.7);font-size:0.9rem;'>Select how many bot cards to auto-assign. Each bot gets 1 card. Bot usernames use Ethiopian names + varied suffixes — for example <b>Yosef_b</b>, <b>Abebe_ad</b>, <b>Bekele_x7</b>, <b>Aster_z9</b>. They appear as <b>🔴 selected</b> to all players, just like real players' cards.</p>", unsafe_allow_html=True)
         row_b = load_state_row(force=True)
-        current_bot_cards = sum(
-            1 for v in (row_b.get("card_owner") or {}).values()
-            if is_bot_username(v)
-        )
+        current_bot_cards = sum(1 for v in (row_b.get("card_owner") or {}).values() if is_bot_username(v))
         total_taken_b = len(row_b.get("taken_cards") or [])
-
-        st.markdown("""
-        <div style="background:linear-gradient(135deg,rgba(33,150,243,0.12),rgba(33,150,243,0.05));
-                    padding:14px;border-radius:12px;border:1px solid rgba(33,150,243,0.25);margin-bottom:12px;">
-            <p style="margin:0;color:#2196F3;font-weight:bold;font-size:1.05rem;">
-                🤖 Active Bot Cards: {}
-            </p>
-            <p style="margin:5px 0 0 0;color:rgba(255,255,255,0.65);font-size:0.85rem;">
-                📊 Total taken cards: {} / 204
-            </p>
-        </div>
-        """.format(current_bot_cards, total_taken_b), unsafe_allow_html=True)
-
+        st.markdown("""<div style="background:linear-gradient(135deg,rgba(33,150,243,0.12),rgba(33,150,243,0.05));padding:14px;border-radius:12px;border:1px solid rgba(33,150,243,0.25);margin-bottom:12px;"><p style="margin:0;color:#2196F3;font-weight:bold;font-size:1.05rem;">🤖 Active Bot Cards: {}</p><p style="margin:5px 0 0 0;color:rgba(255,255,255,0.65);font-size:0.85rem;">📊 Total taken cards: {} / 204</p></div>""".format(current_bot_cards, total_taken_b), unsafe_allow_html=True)
         bot_options = list(range(0, 101, 2))
         default_index = 0
-        if current_bot_cards in bot_options:
-            default_index = bot_options.index(current_bot_cards)
-
-        st.selectbox(
-            "🔢 Select number of bot cards",
-            options=bot_options,
-            index=default_index,
-            key="admin_bot_card_count",
-        )
-
+        if current_bot_cards in bot_options: default_index = bot_options.index(current_bot_cards)
+        st.selectbox("🔢 Select number of bot cards", options=bot_options, index=default_index, key="admin_bot_card_count")
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
-                    st.session_state["bot_apply_flash"] = {
-                        "msg": f"🗑️ Removed {removed} bot card(s).",
-                        "at": time.time(),
-                    }
+                    st.session_state["bot_apply_flash"] = {"msg": f"🗑️ Removed {removed} bot card(s)."}
                 else:
                     assigned, msg = assign_bot_cards(selected_bot_count)
-                    st.session_state["bot_apply_flash"] = {
-                        "msg": f"✅ {msg}",
-                        "at": time.time(),
-                    }
+                    st.session_state["bot_apply_flash"] = {"msg": f"✅ {msg}"}
                 st.rerun()
-
         with col_b2:
             if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
                 removed = remove_bot_cards()
-                st.session_state["bot_apply_flash"] = {
-                    "msg": f"🗑️ Removed {removed} bot card(s).",
-                    "at": time.time(),
-                }
+                st.session_state["bot_apply_flash"] = {"msg": f"🗑️ Removed {removed} bot card(s)."}
                 st.rerun()
-
         st.markdown("---")
-        st.info(
-            "💡 Bot cards count toward the 3-card minimum to start the game. "
-            "Each bot has a 10,000 ETB balance and can win prizes like a normal player. "
-            "Bot usernames use varied suffixes (e.g., Yosef_b, Abebe_ad, Aster_x7) so they blend in."
-        )
-
+        st.info("💡 Bot cards count toward the 3-card minimum to start the game. Each bot has a 10,000 ETB balance and can win prizes like a normal player. Bot usernames use varied suffixes (e.g., Yosef_b, Abebe_ad, Aster_x7) so they blend in.")
         if current_bot_cards > 0:
             st.markdown("#### 👀 Current Bot Cards")
             owner_map = row_b.get("card_owner") or {}
             bot_entries = []
             for k, v in owner_map.items():
                 if is_bot_username(v):
-                    try:
-                        bot_entries.append((int(k), v))
-                    except (ValueError, TypeError):
-                        pass
+                    try: bot_entries.append((int(k), v))
+                    except (ValueError, TypeError): pass
             bot_entries.sort(key=lambda x: x[0])
             preview = ", ".join("#" + str(c) + "→" + str(name) for c, name in bot_entries[:30])
-            if len(bot_entries) > 30:
-                preview += " ... +" + str(len(bot_entries) - 30) + " more"
-            st.markdown(
-                "<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"
-                "color:rgba(255,255,255,0.75);font-size:0.85rem;'>" + preview + "</div>",
-                unsafe_allow_html=True,
-            )
+            if len(bot_entries) > 30: preview += " ... +" + str(len(bot_entries) - 30) + " more"
+            st.markdown("<div style='background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;color:rgba(255,255,255,0.75);font-size:0.85rem;'>" + preview + "</div>", unsafe_allow_html=True)
 
     with tab_deposits:
         st.markdown("### 💰 Pending Deposit Requests")
         deposits = load_transactions(status_filter="pending", tx_type="deposit")
-
         if not deposits:
             st.info("✅ No pending deposit requests.")
         else:
             for tx in deposits:
-                st.markdown("""
-                <div style="background:linear-gradient(135deg,rgba(76,175,80,0.12),rgba(76,175,80,0.05));
-                            padding:15px;border-radius:12px;border:1px solid rgba(76,175,80,0.25);margin-bottom:6px;">
-                    <p style="margin:0;font-weight:bold;color:#4CAF50;font-size:1.1rem;">
-                        💰 {:.2f} ETB — Deposit
-                    </p>
-                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{}</b></p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-                        📱 Telegram: {} (ID: {})
-                    </p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
-                        📅 {}
-                    </p>
-                </div>
-                """.format(
-                    float(tx['amount']),
-                    tx['username'],
-                    tx.get('telegram_name', 'N/A'),
-                    tx.get('telegram_id', ''),
-                    tx.get('created_at', '')
-                ), unsafe_allow_html=True)
-
+                st.markdown("""<div style="background:linear-gradient(135deg,rgba(76,175,80,0.12),rgba(76,175,80,0.05));padding:15px;border-radius:12px;border:1px solid rgba(76,175,80,0.25);margin-bottom:6px;"><p style="margin:0;font-weight:bold;color:#4CAF50;font-size:1.1rem;">💰 {:.2f} ETB — Deposit</p><p style="margin:5px 0;color:#FFF;">👤 Username: <b>{}</b></p><p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📱 Telegram: {} (ID: {})</p><p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">📅 {}</p></div>""".format(float(tx['amount']), tx['username'], tx.get('telegram_name', 'N/A'), tx.get('telegram_id', ''), tx.get('created_at', '')), unsafe_allow_html=True)
                 if tx.get("screenshot_url"):
                     st.caption("🖼 Telegram file_id: `" + str(tx['screenshot_url']) + "`")
-                    st.markdown(
-                        "👉 [Open bot chat to view screenshot](https://t.me/" + BOT_USERNAME_DISPLAY.replace('@','') + ")"
-                    )
-
+                    st.markdown("👉 [Open bot chat to view screenshot](https://t.me/" + BOT_USERNAME_DISPLAY.replace('@','') + ")")
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("✅ Approve #" + str(tx['id']), key="app_dep_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.session_state["admin_celebration_msg"] = (
-                                "✅ Deposit #" + str(tx['id']) + " approved! "
-                                + str(tx['username']) + " +" + f"{float(tx['amount']):.2f}" + " ETB"
-                            )
+                            st.session_state["admin_celebration_msg"] = ("✅ Deposit #" + str(tx['id']) + " approved! " + str(tx['username']) + " +" + f"{float(tx['amount']):.2f}" + " ETB")
                             st.rerun()
                 with col2:
                     if st.button("❌ Reject #" + str(tx['id']), key="rej_dep_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Deposit rejected by admin"):
-                            st.session_state["admin_celebration_msg"] = (
-                                "❌ Deposit #" + str(tx['id']) + " rejected."
-                            )
+                            st.session_state["admin_celebration_msg"] = ("❌ Deposit #" + str(tx['id']) + " rejected.")
                             st.rerun()
                 st.markdown("---")
 
     with tab_withdrawals:
         st.markdown("### 💸 Pending Withdrawal Requests")
         withdrawals = load_transactions(status_filter="pending", tx_type="withdraw")
-
         if not withdrawals:
             st.info("✅ No pending withdrawal requests.")
         else:
@@ -1550,46 +1174,17 @@ def admin_panel():
                 amount = float(tx["amount"])
                 enough = cur_balance >= amount
                 color = "#FF9800" if enough else "#F44336"
-
-                st.markdown("""
-                <div style="background:linear-gradient(135deg,rgba(255,152,0,0.12),rgba(255,152,0,0.05));
-                            padding:15px;border-radius:12px;border:1px solid {c}44;margin-bottom:6px;">
-                    <p style="margin:0;font-weight:bold;color:{c};font-size:1.1rem;">
-                        💸 {amt:.2f} ETB — Withdrawal
-                    </p>
-                    <p style="margin:5px 0;color:#FFF;">👤 Username: <b>{u}</b></p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-                        📞 Phone: {p} | 📱 TG: {tg}
-                    </p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.6);font-size:0.85rem;">
-                        💼 Current balance: <b>{cb:.2f} ETB</b> {suf}
-                    </p>
-                    <p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">
-                        📅 {ca}
-                    </p>
-                </div>
-                """.format(
-                    c=color, amt=amount, u=tx['username'],
-                    p=tx.get('phone',''), tg=tx.get('telegram_name',''),
-                    cb=cur_balance, suf=("✅ sufficient" if enough else "❌ INSUFFICIENT"),
-                    ca=tx.get('created_at','')
-                ), unsafe_allow_html=True)
-
+                st.markdown("""<div style="background:linear-gradient(135deg,rgba(255,152,0,0.12),rgba(255,152,0,0.05));padding:15px;border-radius:12px;border:1px solid {c}44;margin-bottom:6px;"><p style="margin:0;font-weight:bold;color:{c};font-size:1.1rem;">💸 {amt:.2f} ETB — Withdrawal</p><p style="margin:5px 0;color:#FFF;">👤 Username: <b>{u}</b></p><p style="margin:5px 0;color:rgba(255,255,255,0.7);font-size:0.85rem;">📞 Phone: {p} | 📱 TG: {tg}</p><p style="margin:5px 0;color:rgba(255,255,255,0.6);font-size:0.85rem;">💼 Current balance: <b>{cb:.2f} ETB</b> {suf}</p><p style="margin:5px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;">📅 {ca}</p></div>""".format(c=color, amt=amount, u=tx['username'], p=tx.get('phone',''), tg=tx.get('telegram_name',''), cb=cur_balance, suf=("✅ sufficient" if enough else "❌ INSUFFICIENT"), ca=tx.get('created_at','')), unsafe_allow_html=True)
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("✅ Approve #" + str(tx['id']), key="app_wd_" + str(tx['id']), use_container_width=True):
                         if approve_transaction(tx):
-                            st.session_state["admin_celebration_msg"] = (
-                                "✅ Withdrawal #" + str(tx['id']) + " approved! "
-                                + str(tx['username']) + " -" + f"{amount:.2f}" + " ETB"
-                            )
+                            st.session_state["admin_celebration_msg"] = ("✅ Withdrawal #" + str(tx['id']) + " approved! " + str(tx['username']) + " -" + f"{amount:.2f}" + " ETB")
                             st.rerun()
                 with col2:
                     if st.button("❌ Reject #" + str(tx['id']), key="rej_wd_" + str(tx['id']), use_container_width=True):
                         if reject_transaction(tx, "Withdrawal rejected by admin"):
-                            st.session_state["admin_celebration_msg"] = (
-                                "❌ Withdrawal #" + str(tx['id']) + " rejected."
-                            )
+                            st.session_state["admin_celebration_msg"] = ("❌ Withdrawal #" + str(tx['id']) + " rejected.")
                             st.rerun()
                 st.markdown("---")
 
@@ -1598,7 +1193,6 @@ def admin_panel():
         approved = load_transactions(status_filter="approved")
         rejected = load_transactions(status_filter="rejected")
         history = approved + rejected
-
         if not history:
             st.info("No processed transactions yet.")
         else:
@@ -1608,272 +1202,217 @@ def admin_panel():
                 note_html = ""
                 if tx.get("admin_note"):
                     note_html = "<p style='margin:3px 0;color:rgba(255,255,255,0.5);font-size:0.8rem;'>📝 " + str(tx.get("admin_note","")) + "</p>"
-                st.markdown("""
-                <div style="background:rgba(0,0,0,0.2);padding:10px 14px;border-radius:10px;
-                            border-left:4px solid {tc};margin-bottom:6px;">
-                    <p style="margin:0;color:{tc};font-weight:bold;">
-                        {ic} {ty} — {amt:.2f} ETB
-                    </p>
-                    <p style="margin:3px 0;color:rgba(255,255,255,0.75);font-size:0.85rem;">
-                        👤 {u} | 📅 {dt}
-                    </p>
-                    {note}
-                </div>
-                """.format(
-                    tc=tcolor, ic=icon, ty=tx['type'].title(),
-                    amt=float(tx['amount']), u=tx['username'],
-                    dt=(tx.get('processed_at') or tx.get('created_at','')),
-                    note=note_html
-                ), unsafe_allow_html=True)
+                st.markdown("""<div style="background:rgba(0,0,0,0.2);padding:10px 14px;border-radius:10px;border-left:4px solid {tc};margin-bottom:6px;"><p style="margin:0;color:{tc};font-weight:bold;">{ic} {ty} — {amt:.2f} ETB</p><p style="margin:3px 0;color:rgba(255,255,255,0.75);font-size:0.85rem;">👤 {u} | 📅 {dt}</p>{note}</div>""".format(tc=tcolor, ic=icon, ty=tx['type'].title(), amt=float(tx['amount']), u=tx['username'], dt=(tx.get('processed_at') or tx.get('created_at','')), note=note_html), unsafe_allow_html=True)
 
 # ===================================================================
 # ALL 204 BINGO CARDS
 # ===================================================================
 BINGO_CARDS = [
-    {"id": 1, "cells": [['15', '16', '39', '59', '66'], ['11', '28', '40', '51', '68'], ['12', '20', 'F', '56', '67'], ['3', '30', '35', '60', '72'], ['10', '24', '37', '53', '64']]},
-    {"id": 2, "cells": [['5', '21', '35', '46', '69'], ['15', '20', '42', '51', '70'], ['10', '28', 'F', '47', '67'], ['2', '26', '31', '49', '64'], ['6', '27', '33', '52', '65']]},
-    {"id": 3, "cells": [['14', '23', '40', '58', '62'], ['13', '25', '32', '46', '65'], ['3', '28', 'F', '50', '63'], ['6', '30', '44', '54', '66'], ['10', '16', '37', '53', '74']]},
-    {"id": 4, "cells": [['1', '19', '41', '49', '72'], ['5', '26', '36', '50', '69'], ['6', '29', 'F', '60', '61'], ['14', '25', '42', '47', '71'], ['2', '24', '45', '54', '65']]},
-    {"id": 5, "cells": [['2', '16', '43', '47', '70'], ['4', '23', '32', '58', '73'], ['9', '17', 'F', '51', '74'], ['1', '26', '34', '59', '75'], ['14', '20', '31', '57', '72']]},
-    {"id": 6, "cells": [['3', '28', '42', '46', '70'], ['15', '18', '36', '53', '64'], ['14', '20', 'F', '55', '67'], ['6', '21', '45', '57', '73'], ['11', '30', '41', '60', '62']]},
-    {"id": 7, "cells": [['15', '28', '39', '58', '65'], ['10', '19', '34', '54', '68'], ['3', '17', 'F', '59', '71'], ['9', '16', '45', '51', '66'], ['14', '24', '36', '49', '64']]},
-    {"id": 8, "cells": [['7', '20', '32', '47', '61'], ['13', '19', '36', '53', '67'], ['9', '21', 'F', '57', '66'], ['4', '18', '38', '59', '68'], ['2', '27', '45', '51', '69']]},
-    {"id": 9, "cells": [['5', '26', '33', '56', '75'], ['2', '18', '39', '54', '62'], ['1', '29', 'F', '58', '72'], ['9', '22', '44', '57', '68'], ['13', '17', '42', '55', '67']]},
-    {"id": 10, "cells": [['1', '20', '34', '58', '75'], ['13', '18', '40', '59', '69'], ['6', '27', 'F', '52', '67'], ['7', '23', '37', '48', '70'], ['2', '29', '44', '57', '73']]},
-    {"id": 11, "cells": [['11', '21', '44', '49', '64'], ['4', '28', '34', '55', '62'], ['2', '26', 'F', '47', '71'], ['14', '29', '41', '48', '73'], ['5', '24', '31', '51', '63']]},
-    {"id": 12, "cells": [['9', '20', '35', '59', '66'], ['1', '26', '43', '56', '72'], ['6', '16', 'F', '58', '64'], ['12', '22', '41', '49', '61'], ['2', '18', '38', '51', '69']]},
-    {"id": 13, "cells": [['11', '16', '45', '60', '73'], ['1', '26', '44', '55', '69'], ['4', '29', 'F', '47', '72'], ['9', '28', '31', '51', '64'], ['14', '23', '40', '59', '68']]},
-    {"id": 14, "cells": [['5', '18', '45', '58', '67'], ['1', '27', '42', '50', '65'], ['7', '28', 'F', '54', '64'], ['2', '21', '43', '60', '74'], ['10', '24', '32', '51', '71']]},
-    {"id": 15, "cells": [['5', '30', '38', '48', '71'], ['1', '22', '42', '60', '62'], ['2', '18', 'F', '50', '65'], ['3', '29', '33', '46', '75'], ['12', '17', '32', '55', '66']]},
-    {"id": 16, "cells": [['7', '23', '45', '55', '62'], ['3', '27', '42', '60', '71'], ['12', '21', 'F', '57', '66'], ['4', '24', '41', '49', '68'], ['13', '17', '44', '50', '75']]},
-    {"id": 17, "cells": [['10', '28', '32', '59', '72'], ['3', '27', '40', '47', '63'], ['13', '24', 'F', '57', '71'], ['2', '21', '41', '60', '68'], ['7', '25', '42', '58', '65']]},
-    {"id": 18, "cells": [['13', '27', '33', '51', '63'], ['7', '22', '42', '48', '61'], ['10', '25', 'F', '54', '65'], ['8', '16', '43', '52', '72'], ['14', '23', '38', '60', '74']]},
-    {"id": 19, "cells": [['1', '22', '39', '51', '62'], ['15', '25', '35', '47', '75'], ['3', '23', 'F', '50', '66'], ['8', '26', '44', '49', '70'], ['4', '28', '38', '53', '67']]},
-    {"id": 20, "cells": [['9', '19', '35', '54', '73'], ['8', '23', '43', '57', '61'], ['4', '24', 'F', '58', '68'], ['11', '17', '32', '50', '62'], ['1', '26', '38', '49', '75']]},
-    {"id": 21, "cells": [['8', '18', '39', '54', '63'], ['2', '30', '37', '57', '75'], ['13', '29', 'F', '56', '68'], ['15', '27', '31', '49', '67'], ['6', '17', '45', '52', '61']]},
-    {"id": 22, "cells": [['6', '26', '44', '55', '62'], ['13', '19', '32', '60', '61'], ['9', '25', 'F', '49', '75'], ['3', '20', '40', '46', '65'], ['8', '27', '31', '56', '71']]},
-    {"id": 23, "cells": [['1', '27', '40', '54', '73'], ['4', '17', '33', '46', '68'], ['7', '16', 'F', '48', '63'], ['9', '23', '36', '56', '66'], ['11', '21', '34', '50', '74']]},
-    {"id": 24, "cells": [['9', '19', '40', '46', '75'], ['8', '26', '31', '48', '67'], ['1', '24', 'F', '59', '65'], ['7', '20', '39', '49', '70'], ['12', '27', '43', '57', '73']]},
-    {"id": 25, "cells": [['3', '23', '40', '53', '75'], ['1', '27', '45', '51', '68'], ['4', '28', 'F', '46', '73'], ['14', '29', '35', '56', '61'], ['9', '30', '41', '52', '74']]},
-    {"id": 26, "cells": [['10', '25', '37', '53', '65'], ['14', '29', '38', '58', '69'], ['2', '28', 'F', '56', '68'], ['6', '22', '35', '57', '70'], ['3', '18', '45', '60', '67']]},
-    {"id": 27, "cells": [['11', '26', '39', '51', '75'], ['3', '28', '33', '56', '67'], ['10', '24', 'F', '58', '74'], ['7', '18', '45', '53', '69'], ['13', '30', '44', '47', '64']]},
-    {"id": 28, "cells": [['8', '17', '42', '52', '74'], ['2', '24', '39', '56', '63'], ['14', '16', 'F', '60', '62'], ['9', '21', '31', '47', '72'], ['15', '18', '35', '54', '70']]},
-    {"id": 29, "cells": [['14', '16', '32', '53', '74'], ['15', '21', '34', '59', '65'], ['10', '26', 'F', '55', '66'], ['2', '19', '45', '56', '61'], ['1', '25', '40', '51', '64']]},
-    {"id": 30, "cells": [['8', '27', '44', '54', '70'], ['11', '26', '31', '55', '64'], ['9', '19', 'F', '57', '67'], ['6', '23', '41', '49', '62'], ['13', '22', '40', '56', '72']]},
-    {"id": 31, "cells": [['3', '27', '31', '46', '71'], ['9', '24', '40', '48', '67'], ['5', '17', 'F', '55', '62'], ['12', '18', '38', '58', '68'], ['4', '25', '36', '54', '73']]},
-    {"id": 32, "cells": [['10', '20', '32', '58', '73'], ['15', '28', '34', '56', '61'], ['9', '24', 'F', '50', '75'], ['5', '25', '37', '46', '67'], ['14', '23', '31', '51', '65']]},
-    {"id": 33, "cells": [['7', '29', '42', '56', '69'], ['15', '27', '40', '60', '64'], ['1', '18', 'F', '51', '74'], ['4', '16', '38', '57', '67'], ['8', '21', '39', '59', '68']]},
-    {"id": 34, "cells": [['4', '17', '31', '46', '70'], ['8', '29', '37', '57', '65'], ['9', '24', 'F', '59', '75'], ['11', '27', '34', '55', '63'], ['3', '22', '36', '48', '73']]},
-    {"id": 35, "cells": [['9', '17', '35', '55', '72'], ['14', '24', '45', '52', '68'], ['11', '18', 'F', '48', '66'], ['8', '21', '36', '47', '71'], ['4', '27', '37', '57', '70']]},
-    {"id": 36, "cells": [['2', '22', '41', '54', '62'], ['13', '21', '45', '51', '70'], ['15', '30', 'F', '47', '63'], ['4', '26', '39', '50', '75'], ['10', '29', '34', '58', '64']]},
-    {"id": 37, "cells": [['1', '21', '32', '54', '65'], ['5', '28', '42', '51', '63'], ['2', '26', 'F', '60', '61'], ['12', '24', '34', '59', '62'], ['15', '17', '43', '57', '72']]},
-    {"id": 38, "cells": [['1', '30', '45', '49', '66'], ['9', '24', '42', '56', '69'], ['7', '20', 'F', '52', '74'], ['12', '17', '36', '60', '62'], ['11', '18', '35', '54', '63']]},
-    {"id": 39, "cells": [['10', '27', '35', '51', '61'], ['14', '16', '37', '53', '72'], ['1', '25', 'F', '48', '69'], ['11', '26', '41', '58', '70'], ['13', '28', '42', '47', '68']]},
-    {"id": 40, "cells": [['14', '17', '34', '54', '63'], ['10', '28', '43', '55', '70'], ['7', '16', 'F', '58', '71'], ['15', '24', '41', '59', '69'], ['6', '29', '36', '57', '64']]},
-    {"id": 41, "cells": [['5', '18', '31', '52', '62'], ['10', '21', '43', '56', '66'], ['9', '28', 'F', '59', '69'], ['14', '25', '40', '48', '67'], ['6', '20', '35', '47', '71']]},
-    {"id": 42, "cells": [['11', '20', '43', '49', '75'], ['10', '25', '33', '58', '74'], ['15', '17', 'F', '50', '67'], ['13', '21', '42', '52', '71'], ['2', '23', '35', '51', '64']]},
-    {"id": 43, "cells": [['15', '18', '44', '54', '69'], ['6', '19', '31', '56', '64'], ['13', '16', 'F', '60', '70'], ['8', '27', '35', '55', '66'], ['7', '29', '38', '57', '72']]},
-    {"id": 44, "cells": [['11', '28', '35', '47', '72'], ['4', '26', '45', '48', '73'], ['14', '16', 'F', '54', '71'], ['8', '25', '33', '52', '61'], ['7', '22', '44', '57', '68']]},
-    {"id": 45, "cells": [['9', '27', '39', '48', '70'], ['6', '20', '38', '51', '63'], ['7', '19', 'F', '55', '68'], ['11', '22', '35', '46', '74'], ['8', '17', '45', '47', '69']]},
-    {"id": 46, "cells": [['5', '17', '43', '47', '74'], ['15', '18', '42', '48', '63'], ['11', '21', 'F', '56', '64'], ['4', '23', '39', '54', '66'], ['2', '25', '33', '49', '65']]},
-    {"id": 47, "cells": [['5', '17', '38', '46', '70'], ['6', '20', '43', '51', '75'], ['12', '25', 'F', '56', '61'], ['1', '16', '45', '60', '68'], ['4', '26', '35', '53', '74']]},
-    {"id": 48, "cells": [['4', '28', '37', '53', '61'], ['2', '19', '31', '49', '62'], ['7', '16', 'F', '56', '64'], ['14', '26', '39', '52', '74'], ['6', '18', '32', '57', '67']]},
-    {"id": 49, "cells": [['1', '21', '34', '52', '67'], ['3', '29', '41', '54', '69'], ['10', '24', 'F', '57', '70'], ['8', '26', '35', '53', '72'], ['6', '19', '31', '58', '64']]},
-    {"id": 50, "cells": [['3', '17', '36', '49', '69'], ['10', '30', '40', '52', '62'], ['14', '27', 'F', '58', '66'], ['2', '19', '41', '59', '68'], ['15', '18', '42', '47', '64']]},
-    {"id": 51, "cells": [['2', '21', '31', '49', '68'], ['12', '20', '45', '54', '69'], ['10', '27', 'F', '48', '75'], ['9', '16', '40', '46', '61'], ['14', '19', '39', '57', '62']]},
-    {"id": 52, "cells": [['10', '22', '36', '59', '74'], ['2', '21', '44', '55', '70'], ['11', '26', 'F', '48', '72'], ['15', '23', '40', '57', '75'], ['14', '18', '31', '58', '66']]},
-    {"id": 53, "cells": [['15', '30', '35', '59', '69'], ['5', '21', '45', '51', '71'], ['8', '25', 'F', '46', '67'], ['7', '23', '40', '58', '74'], ['11', '29', '42', '54', '72']]},
-    {"id": 54, "cells": [['1', '26', '34', '60', '61'], ['6', '18', '35', '52', '66'], ['4', '24', 'F', '50', '69'], ['15', '29', '32', '48', '63'], ['7', '25', '45', '53', '72']]},
-    {"id": 55, "cells": [['12', '24', '45', '51', '65'], ['8', '16', '42', '53', '62'], ['15', '19', 'F', '59', '64'], ['7', '25', '39', '56', '70'], ['14', '20', '32', '48', '74']]},
-    {"id": 56, "cells": [['13', '17', '44', '53', '68'], ['3', '30', '45', '56', '66'], ['15', '28', 'F', '55', '73'], ['12', '20', '33', '50', '70'], ['4', '24', '43', '52', '67']]},
-    {"id": 57, "cells": [['5', '28', '40', '56', '63'], ['12', '21', '36', '53', '73'], ['14', '16', 'F', '60', '68'], ['15', '25', '44', '58', '66'], ['11', '17', '45', '54', '64']]},
-    {"id": 58, "cells": [['1', '16', '32', '58', '74'], ['3', '28', '44', '60', '67'], ['9', '24', 'F', '49', '64'], ['10', '20', '37', '47', '71'], ['13', '19', '39', '46', '61']]},
-    {"id": 59, "cells": [['7', '20', '34', '47', '70'], ['2', '24', '43', '55', '73'], ['3', '29', 'F', '46', '62'], ['12', '18', '45', '49', '69'], ['5', '17', '33', '57', '64']]},
-    {"id": 60, "cells": [['14', '25', '41', '48', '75'], ['9', '17', '34', '51', '62'], ['1', '30', 'F', '60', '65'], ['13', '28', '38', '49', '73'], ['6', '22', '40', '54', '61']]},
-    {"id": 61, "cells": [['11', '26', '38', '60', '71'], ['5', '25', '37', '52', '65'], ['14', '16', 'F', '59', '62'], ['7', '18', '43', '54', '64'], ['9', '28', '41', '46', '74']]},
-    {"id": 62, "cells": [['13', '26', '31', '56', '68'], ['8', '27', '43', '59', '70'], ['11', '18', 'F', '53', '73'], ['6', '21', '36', '48', '72'], ['2', '20', '42', '55', '69']]},
-    {"id": 63, "cells": [['12', '21', '35', '49', '62'], ['1', '29', '38', '55', '74'], ['15', '22', 'F', '51', '64'], ['5', '28', '33', '50', '65'], ['4', '17', '37', '60', '72']]},
-    {"id": 64, "cells": [['15', '24', '38', '58', '64'], ['1', '22', '44', '60', '73'], ['14', '21', 'F', '48', '67'], ['2', '29', '31', '47', '68'], ['4', '23', '41', '56', '61']]},
-    {"id": 65, "cells": [['6', '18', '35', '57', '64'], ['10', '28', '32', '52', '62'], ['7', '19', 'F', '48', '63'], ['9', '20', '39', '49', '68'], ['2', '30', '33', '59', '65']]},
-    {"id": 66, "cells": [['1', '20', '34', '54', '67'], ['2', '27', '33', '51', '63'], ['14', '21', 'F', '58', '73'], ['3', '28', '42', '46', '70'], ['4', '24', '37', '55', '64']]},
-    {"id": 67, "cells": [['13', '28', '38', '58', '71'], ['14', '22', '44', '51', '73'], ['5', '26', 'F', '56', '61'], ['12', '24', '34', '53', '72'], ['8', '17', '40', '52', '62']]},
-    {"id": 68, "cells": [['14', '25', '41', '55', '66'], ['7', '28', '38', '59', '65'], ['9', '19', 'F', '53', '61'], ['13', '22', '33', '56', '68'], ['15', '18', '44', '57', '63']]},
-    {"id": 69, "cells": [['10', '16', '35', '55', '65'], ['6', '28', '40', '46', '70'], ['2', '17', 'F', '59', '73'], ['15', '29', '36', '47', '75'], ['8', '27', '39', '51', '62']]},
-    {"id": 70, "cells": [['15', '30', '36', '50', '70'], ['9', '18', '32', '59', '65'], ['12', '17', 'F', '58', '75'], ['6', '21', '43', '46', '62'], ['4', '23', '38', '48', '69']]},
-    {"id": 71, "cells": [['6', '25', '31', '49', '72'], ['4', '22', '43', '53', '61'], ['2', '28', 'F', '57', '69'], ['7', '17', '41', '54', '63'], ['12', '19', '45', '46', '65']]},
-    {"id": 72, "cells": [['8', '18', '40', '46', '64'], ['5', '20', '35', '47', '71'], ['6', '27', 'F', '49', '73'], ['10', '19', '42', '55', '65'], ['2', '17', '45', '58', '75']]},
-    {"id": 73, "cells": [['6', '28', '37', '48', '72'], ['2', '23', '43', '57', '61'], ['15', '30', 'F', '54', '66'], ['13', '21', '34', '60', '65'], ['7', '27', '35', '46', '63']]},
-    {"id": 74, "cells": [['10', '24', '45', '51', '72'], ['14', '21', '36', '53', '67'], ['3', '17', 'F', '49', '62'], ['7', '18', '41', '48', '66'], ['9', '26', '44', '54', '63']]},
-    {"id": 75, "cells": [['6', '17', '44', '59', '75'], ['7', '20', '37', '46', '69'], ['4', '29', 'F', '50', '63'], ['3', '23', '41', '49', '71'], ['14', '24', '40', '52', '72']]},
-    {"id": 76, "cells": [['4', '19', '39', '48', '62'], ['10', '24', '31', '60', '70'], ['6', '23', 'F', '51', '66'], ['8', '18', '35', '50', '73'], ['2', '27', '41', '47', '61']]},
-    {"id": 77, "cells": [['1', '18', '34', '60', '74'], ['7', '27', '35', '56', '61'], ['15', '25', 'F', '55', '68'], ['14', '21', '38', '53', '64'], ['13', '17', '40', '58', '75']]},
-    {"id": 78, "cells": [['15', '27', '37', '47', '67'], ['11', '17', '34', '58', '70'], ['1', '30', 'F', '46', '68'], ['8', '24', '39', '50', '62'], ['13', '22', '38', '57', '66']]},
-    {"id": 79, "cells": [['4', '26', '39', '57', '72'], ['13', '17', '40', '58', '61'], ['11', '29', 'F', '54', '69'], ['3', '16', '44', '53', '65'], ['8', '18', '45', '46', '62']]},
-    {"id": 80, "cells": [['8', '23', '39', '57', '73'], ['4', '27', '37', '56', '66'], ['1', '19', 'F', '51', '65'], ['5', '30', '31', '47', '63'], ['2', '17', '32', '48', '67']]},
-    {"id": 81, "cells": [['3', '23', '45', '49', '66'], ['5', '16', '41', '50', '62'], ['14', '19', 'F', '47', '72'], ['9', '20', '44', '51', '73'], ['2', '25', '38', '52', '64']]},
-    {"id": 82, "cells": [['14', '16', '36', '54', '63'], ['8', '17', '31', '59', '64'], ['1', '25', 'F', '55', '72'], ['7', '20', '33', '47', '66'], ['2', '18', '41', '58', '61']]},
-    {"id": 83, "cells": [['1', '16', '31', '53', '67'], ['3', '20', '34', '57', '73'], ['9', '28', 'F', '49', '63'], ['10', '26', '38', '54', '70'], ['2', '25', '36', '47', '61']]},
-    {"id": 84, "cells": [['11', '29', '32', '59', '64'], ['12', '19', '41', '60', '67'], ['13', '28', 'F', '56', '62'], ['10', '24', '39', '46', '75'], ['5', '22', '38', '58', '74']]},
-    {"id": 85, "cells": [['13', '28', '31', '51', '62'], ['1', '30', '34', '59', '66'], ['14', '17', 'F', '50', '64'], ['3', '16', '36', '56', '71'], ['4', '29', '40', '47', '61']]},
-    {"id": 86, "cells": [['4', '21', '37', '54', '67'], ['13', '27', '44', '57', '61'], ['15', '26', 'F', '46', '71'], ['2', '25', '33', '58', '70'], ['9', '28', '42', '48', '68']]},
-    {"id": 87, "cells": [['2', '25', '35', '46', '66'], ['1', '17', '43', '49', '63'], ['15', '29', 'F', '59', '72'], ['14', '20', '33', '58', '62'], ['8', '22', '34', '48', '73']]},
-    {"id": 88, "cells": [['13', '19', '43', '55', '64'], ['14', '18', '42', '48', '63'], ['12', '23', 'F', '58', '75'], ['15', '29', '44', '52', '65'], ['7', '27', '40', '57', '73']]},
-    {"id": 89, "cells": [['2', '16', '44', '58', '75'], ['5', '26', '40', '56', '65'], ['14', '17', 'F', '54', '61'], ['10', '24', '33', '57', '72'], ['7', '22', '38', '60', '69']]},
-    {"id": 90, "cells": [['13', '26', '44', '48', '69'], ['3', '20', '38', '58', '70'], ['5', '17', 'F', '46', '72'], ['12', '22', '32', '56', '62'], ['1', '24', '36', '54', '63']]},
-    {"id": 91, "cells": [['5', '29', '41', '59', '72'], ['1', '25', '31', '46', '63'], ['10', '30', 'F', '57', '71'], ['8', '17', '34', '55', '75'], ['6', '28', '32', '47', '74']]},
-    {"id": 92, "cells": [['5', '18', '37', '59', '63'], ['9', '27', '38', '57', '70'], ['14', '24', 'F', '52', '66'], ['13', '28', '41', '56', '71'], ['1', '30', '45', '46', '72']]},
-    {"id": 93, "cells": [['14', '21', '33', '46', '65'], ['15', '18', '40', '53', '71'], ['13', '16', 'F', '51', '63'], ['7', '23', '34', '48', '75'], ['8', '20', '31', '47', '74']]},
-    {"id": 94, "cells": [['1', '19', '39', '58', '67'], ['8', '22', '40', '53', '62'], ['7', '30', 'F', '50', '65'], ['5', '25', '41', '46', '72'], ['2', '17', '38', '56', '64']]},
-    {"id": 95, "cells": [['4', '19', '37', '52', '70'], ['6', '24', '43', '60', '65'], ['5', '16', 'F', '56', '75'], ['12', '29', '41', '51', '67'], ['9', '30', '39', '58', '61']]},
-    {"id": 96, "cells": [['2', '18', '34', '54', '74'], ['14', '27', '45', '57', '64'], ['11', '21', 'F', '56', '62'], ['13', '19', '33', '48', '61'], ['4', '16', '41', '53', '72']]},
-    {"id": 97, "cells": [['2', '29', '45', '47', '66'], ['12', '30', '42', '60', '74'], ['9', '21', 'F', '58', '61'], ['6', '27', '40', '48', '62'], ['15', '23', '34', '57', '65']]},
-    {"id": 98, "cells": [['13', '24', '40', '57', '68'], ['15', '20', '45', '50', '64'], ['9', '19', 'F', '60', '67'], ['8', '28', '43', '56', '70'], ['2', '27', '38', '47', '65']]},
-    {"id": 99, "cells": [['7', '30', '45', '49', '66'], ['12', '19', '35', '55', '62'], ['3', '23', 'F', '53', '67'], ['10', '25', '36', '50', '65'], ['11', '29', '32', '51', '74']]},
-    {"id": 100, "cells": [['15', '27', '31', '54', '73'], ['10', '29', '37', '50', '69'], ['8', '23', 'F', '57', '75'], ['11', '25', '43', '58', '68'], ['4', '24', '38', '46', '74']]},
-    {"id": 101, "cells": [['15', '17', '35', '59', '75'], ['9', '22', '43', '54', '74'], ['1', '29', 'F', '51', '64'], ['7', '16', '37', '48', '66'], ['10', '23', '41', '52', '65']]},
-    {"id": 102, "cells": [['7', '16', '32', '50', '64'], ['10', '29', '38', '48', '63'], ['13', '22', 'F', '53', '74'], ['12', '18', '44', '56', '70'], ['4', '27', '39', '57', '71']]},
-    {"id": 103, "cells": [['3', '23', '41', '58', '62'], ['4', '22', '35', '50', '61'], ['12', '17', 'F', '59', '73'], ['2', '20', '43', '52', '75'], ['8', '27', '44', '51', '67']]},
-    {"id": 104, "cells": [['13', '25', '39', '58', '68'], ['9', '19', '42', '46', '67'], ['4', '22', 'F', '52', '75'], ['5', '18', '32', '49', '72'], ['6', '23', '38', '51', '70']]},
-    {"id": 105, "cells": [['12', '17', '36', '49', '67'], ['6', '16', '41', '56', '63'], ['4', '22', 'F', '57', '74'], ['5', '20', '39', '60', '62'], ['1', '29', '35', '51', '65']]},
-    {"id": 106, "cells": [['15', '16', '43', '54', '61'], ['9', '24', '42', '60', '70'], ['13', '27', 'F', '56', '63'], ['14', '20', '45', '57', '62'], ['10', '18', '35', '53', '72']]},
-    {"id": 107, "cells": [['3', '28', '34', '57', '62'], ['14', '30', '40', '52', '68'], ['4', '27', 'F', '49', '65'], ['9', '22', '33', '58', '70'], ['2', '29', '36', '47', '63']]},
-    {"id": 108, "cells": [['1', '23', '41', '47', '75'], ['7', '22', '40', '52', '62'], ['3', '16', 'F', '58', '68'], ['2', '18', '43', '50', '67'], ['6', '30', '44', '57', '61']]},
-    {"id": 109, "cells": [['15', '27', '36', '47', '70'], ['13', '17', '42', '59', '61'], ['5', '23', 'F', '57', '62'], ['7', '25', '38', '50', '69'], ['6', '26', '35', '52', '72']]},
-    {"id": 110, "cells": [['11', '27', '41', '51', '64'], ['13', '30', '34', '55', '74'], ['3', '28', 'F', '54', '66'], ['6', '18', '37', '46', '62'], ['7', '26', '32', '57', '70']]},
-    {"id": 111, "cells": [['3', '30', '41', '51', '66'], ['12', '25', '32', '53', '72'], ['8', '20', 'F', '47', '71'], ['13', '24', '39', '60', '74'], ['1', '28', '38', '50', '63']]},
-    {"id": 112, "cells": [['12', '24', '41', '50', '68'], ['14', '21', '35', '52', '65'], ['7', '17', 'F', '46', '70'], ['3', '20', '43', '57', '74'], ['1', '29', '33', '48', '62']]},
-    {"id": 113, "cells": [['11', '21', '34', '56', '63'], ['12', '23', '32', '53', '69'], ['3', '24', 'F', '54', '71'], ['2', '26', '37', '49', '72'], ['4', '22', '36', '48', '75']]},
-    {"id": 114, "cells": [['12', '30', '37', '51', '74'], ['14', '19', '43', '57', '63'], ['7', '28', 'F', '48', '67'], ['13', '22', '31', '46', '62'], ['3', '20', '38', '54', '70']]},
-    {"id": 115, "cells": [['2', '19', '39', '50', '70'], ['9', '23', '34', '49', '64'], ['13', '27', 'F', '59', '61'], ['11', '26', '38', '53', '67'], ['14', '28', '44', '54', '63']]},
-    {"id": 116, "cells": [['7', '21', '38', '56', '65'], ['15', '26', '34', '52', '75'], ['1', '30', 'F', '50', '71'], ['4', '27', '43', '54', '66'], ['12', '28', '44', '59', '70']]},
-    {"id": 117, "cells": [['1', '21', '33', '57', '65'], ['2', '29', '32', '50', '61'], ['9', '25', 'F', '53', '74'], ['6', '28', '34', '55', '75'], ['14', '18', '37', '47', '67']]},
-    {"id": 118, "cells": [['1', '22', '31', '47', '67'], ['6', '26', '37', '54', '64'], ['10', '27', 'F', '49', '62'], ['14', '24', '42', '55', '72'], ['5', '18', '34', '59', '71']]},
-    {"id": 119, "cells": [['14', '26', '45', '56', '72'], ['12', '29', '42', '55', '62'], ['15', '23', 'F', '48', '73'], ['3', '28', '41', '49', '61'], ['13', '16', '31', '54', '65']]},
-    {"id": 120, "cells": [['7', '25', '37', '60', '70'], ['13', '20', '43', '50', '69'], ['4', '18', 'F', '55', '74'], ['5', '26', '40', '48', '67'], ['8', '17', '39', '46', '73']]},
-    {"id": 121, "cells": [['11', '27', '38', '51', '63'], ['7', '20', '41', '59', '64'], ['5', '28', 'F', '54', '71'], ['12', '29', '33', '56', '73'], ['8', '25', '40', '55', '69']]},
-    {"id": 122, "cells": [['11', '21', '32', '51', '70'], ['6', '28', '44', '60', '74'], ['5', '18', 'F', '57', '63'], ['1', '16', '38', '46', '62'], ['9', '17', '31', '53', '73']]},
-    {"id": 123, "cells": [['14', '20', '43', '54', '70'], ['10', '28', '40', '51', '69'], ['6', '21', 'F', '53', '67'], ['8', '18', '35', '50', '74'], ['3', '29', '34', '48', '64']]},
-    {"id": 124, "cells": [['6', '20', '38', '50', '66'], ['5', '21', '33', '49', '61'], ['4', '30', 'F', '48', '75'], ['13', '26', '41', '60', '65'], ['15', '19', '36', '56', '63']]},
-    {"id": 125, "cells": [['12', '28', '33', '58', '75'], ['1', '25', '39', '60', '66'], ['13', '20', 'F', '48', '61'], ['14', '21', '44', '46', '65'], ['5', '22', '38', '54', '67']]},
-    {"id": 126, "cells": [['13', '22', '41', '57', '65'], ['12', '30', '32', '60', '62'], ['6', '24', 'F', '58', '61'], ['1', '16', '44', '50', '63'], ['2', '17', '45', '53', '69']]},
-    {"id": 127, "cells": [['13', '26', '43', '60', '65'], ['4', '16', '38', '52', '62'], ['2', '25', 'F', '58', '63'], ['9', '17', '34', '47', '74'], ['5', '27', '41', '46', '68']]},
-    {"id": 128, "cells": [['7', '25', '43', '47', '63'], ['11', '16', '32', '58', '61'], ['2', '23', 'F', '55', '71'], ['3', '22', '38', '46', '68'], ['1', '30', '36', '57', '72']]},
-    {"id": 129, "cells": [['3', '25', '43', '57', '63'], ['2', '20', '35', '59', '71'], ['13', '23', 'F', '60', '74'], ['10', '29', '38', '49', '73'], ['11', '21', '42', '53', '70']]},
-    {"id": 130, "cells": [['5', '18', '31', '56', '75'], ['15', '27', '42', '59', '66'], ['4', '16', 'F', '57', '71'], ['1', '30', '45', '51', '64'], ['2', '28', '43', '53', '67']]},
-    {"id": 131, "cells": [['2', '19', '36', '51', '64'], ['14', '29', '37', '46', '70'], ['3', '28', 'F', '55', '68'], ['12', '23', '32', '56', '67'], ['1', '20', '40', '48', '71']]},
-    {"id": 132, "cells": [['1', '30', '32', '48', '67'], ['5', '22', '42', '57', '64'], ['6', '17', 'F', '58', '65'], ['7', '24', '43', '46', '73'], ['2', '18', '37', '55', '74']]},
-    {"id": 133, "cells": [['14', '28', '37', '55', '73'], ['6', '16', '39', '54', '72'], ['7', '22', 'F', '58', '63'], ['4', '25', '32', '51', '74'], ['10', '23', '40', '52', '61']]},
-    {"id": 134, "cells": [['10', '25', '38', '58', '74'], ['9', '24', '41', '49', '69'], ['1', '26', 'F', '48', '66'], ['4', '28', '39', '57', '75'], ['14', '17', '42', '52', '61']]},
-    {"id": 135, "cells": [['13', '24', '45', '52', '61'], ['8', '22', '35', '60', '73'], ['7', '17', 'F', '54', '68'], ['9', '27', '42', '59', '63'], ['5', '26', '40', '49', '71']]},
-    {"id": 136, "cells": [['15', '30', '40', '47', '72'], ['4', '22', '32', '55', '70'], ['13', '24', 'F', '53', '66'], ['5', '29', '35', '58', '61'], ['2', '17', '31', '51', '71']]},
-    {"id": 137, "cells": [['1', '27', '38', '56', '61'], ['7', '19', '43', '53', '70'], ['3', '24', 'F', '52', '65'], ['11', '22', '31', '51', '74'], ['12', '16', '45', '57', '71']]},
-    {"id": 138, "cells": [['4', '30', '35', '58', '65'], ['6', '24', '42', '56', '61'], ['1', '27', 'F', '54', '71'], ['10', '16', '39', '55', '64'], ['13', '21', '36', '53', '67']]},
-    {"id": 139, "cells": [['11', '29', '45', '47', '75'], ['4', '21', '41', '46', '67'], ['12', '17', 'F', '53', '69'], ['6', '22', '40', '51', '74'], ['14', '19', '44', '60', '62']]},
-    {"id": 140, "cells": [['6', '18', '32', '51', '62'], ['8', '21', '43', '57', '65'], ['2', '16', 'F', '49', '71'], ['13', '30', '41', '59', '75'], ['7', '29', '35', '48', '64']]},
-    {"id": 141, "cells": [['11', '20', '42', '49', '70'], ['5', '26', '41', '47', '72'], ['6', '18', 'F', '60', '66'], ['4', '21', '45', '57', '63'], ['14', '19', '36', '52', '69']]},
-    {"id": 142, "cells": [['13', '23', '44', '60', '69'], ['10', '27', '42', '47', '71'], ['2', '24', 'F', '58', '68'], ['4', '29', '31', '59', '63'], ['12', '25', '45', '55', '65']]},
-    {"id": 143, "cells": [['6', '30', '41', '48', '63'], ['13', '20', '37', '53', '66'], ['10', '16', 'F', '57', '73'], ['14', '28', '35', '54', '67'], ['8', '29', '39', '51', '72']]},
-    {"id": 144, "cells": [['14', '20', '42', '60', '65'], ['12', '27', '43', '49', '66'], ['15', '21', 'F', '50', '64'], ['4', '17', '41', '55', '67'], ['6', '25', '39', '51', '72']]},
-    {"id": 145, "cells": [['15', '30', '33', '56', '69'], ['9', '29', '32', '57', '65'], ['4', '22', 'F', '46', '66'], ['3', '28', '43', '48', '72'], ['14', '16', '39', '52', '67']]},
-    {"id": 146, "cells": [['10', '20', '36', '55', '64'], ['2', '19', '39', '58', '67'], ['7', '28', 'F', '54', '63'], ['14', '30', '35', '60', '66'], ['4', '23', '45', '56', '62']]},
-    {"id": 147, "cells": [['11', '29', '34', '50', '68'], ['8', '26', '35', '58', '74'], ['12', '27', 'F', '46', '64'], ['2', '30', '42', '49', '73'], ['15', '23', '41', '57', '69']]},
-    {"id": 148, "cells": [['14', '20', '38', '53', '74'], ['15', '22', '45', '56', '64'], ['10', '17', 'F', '50', '63'], ['3', '25', '37', '51', '69'], ['6', '29', '35', '59', '61']]},
-    {"id": 149, "cells": [['14', '23', '37', '52', '72'], ['15', '27', '40', '54', '63'], ['7', '18', 'F', '47', '75'], ['6', '16', '42', '57', '61'], ['12', '20', '32', '60', '62']]},
-    {"id": 150, "cells": [['6', '24', '33', '48', '75'], ['10', '19', '37', '50', '64'], ['7', '28', 'F', '57', '68'], ['13', '17', '43', '58', '72'], ['11', '21', '35', '53', '74']]},
-    {"id": 151, "cells": [['3', '19', '42', '56', '71'], ['8', '22', '37', '46', '62'], ['15', '29', 'F', '57', '72'], ['9', '17', '39', '60', '69'], ['1', '18', '40', '59', '64']]},
-    {"id": 152, "cells": [['6', '21', '38', '52', '63'], ['11', '24', '37', '55', '72'], ['14', '27', 'F', '49', '61'], ['2', '23', '44', '58', '68'], ['10', '29', '33', '47', '74']]},
-    {"id": 153, "cells": [['14', '16', '44', '51', '69'], ['1', '17', '34', '56', '67'], ['7', '29', 'F', '47', '75'], ['4', '30', '41', '54', '65'], ['10', '18', '43', '49', '61']]},
-    {"id": 154, "cells": [['10', '30', '35', '53', '67'], ['14', '18', '38', '47', '64'], ['5', '26', 'F', '60', '69'], ['6', '20', '32', '56', '61'], ['15', '27', '39', '48', '65']]},
-    {"id": 155, "cells": [['12', '16', '31', '54', '62'], ['9', '23', '41', '56', '73'], ['13', '20', 'F', '60', '61'], ['2', '28', '42', '57', '67'], ['7', '24', '35', '50', '63']]},
-    {"id": 156, "cells": [['14', '26', '42', '56', '66'], ['11', '30', '31', '57', '69'], ['1', '18', 'F', '54', '70'], ['8', '29', '34', '52', '71'], ['15', '16', '40', '50', '62']]},
-    {"id": 157, "cells": [['6', '24', '40', '58', '62'], ['10', '26', '31', '47', '74'], ['13', '25', 'F', '57', '64'], ['1', '28', '41', '48', '65'], ['14', '29', '35', '53', '73']]},
-    {"id": 158, "cells": [['1', '18', '40', '56', '75'], ['15', '17', '42', '54', '64'], ['11', '24', 'F', '60', '70'], ['7', '20', '38', '51', '72'], ['14', '21', '43', '48', '65']]},
-    {"id": 159, "cells": [['12', '17', '36', '53', '72'], ['9', '21', '38', '56', '65'], ['4', '26', 'F', '50', '70'], ['10', '18', '40', '59', '67'], ['8', '22', '35', '55', '69']]},
-    {"id": 160, "cells": [['3', '25', '33', '56', '69'], ['5', '24', '36', '54', '70'], ['9', '23', 'F', '60', '66'], ['12', '27', '32', '49', '68'], ['10', '18', '43', '46', '73']]},
-    {"id": 161, "cells": [['2', '25', '36', '51', '65'], ['9', '16', '42', '59', '61'], ['6', '27', 'F', '50', '62'], ['11', '17', '39', '52', '75'], ['10', '22', '37', '60', '72']]},
-    {"id": 162, "cells": [['8', '20', '43', '56', '69'], ['13', '30', '40', '47', '70'], ['14', '29', 'F', '57', '75'], ['2', '25', '34', '60', '61'], ['3', '19', '31', '54', '71']]},
-    {"id": 163, "cells": [['12', '19', '37', '53', '61'], ['1', '23', '35', '46', '74'], ['13', '21', 'F', '55', '72'], ['3', '30', '39', '54', '64'], ['15', '20', '31', '58', '75']]},
-    {"id": 164, "cells": [['13', '22', '42', '55', '65'], ['15', '30', '32', '52', '72'], ['5', '18', 'F', '54', '75'], ['11', '25', '39', '58', '61'], ['14', '24', '41', '46', '68']]},
-    {"id": 165, "cells": [['13', '30', '36', '57', '70'], ['14', '26', '40', '52', '64'], ['12', '22', 'F', '51', '68'], ['10', '18', '37', '47', '66'], ['7', '16', '39', '56', '67']]},
-    {"id": 166, "cells": [['1', '19', '41', '47', '74'], ['9', '26', '42', '53', '68'], ['4', '29', 'F', '54', '67'], ['12', '21', '32', '56', '65'], ['8', '18', '45', '49', '70']]},
-    {"id": 167, "cells": [['8', '18', '33', '49', '67'], ['5', '24', '31', '55', '66'], ['6', '20', 'F', '59', '72'], ['15', '19', '37', '47', '73'], ['12', '26', '42', '46', '71']]},
-    {"id": 168, "cells": [['12', '27', '33', '48', '69'], ['9', '24', '38', '49', '71'], ['11', '16', 'F', '57', '75'], ['7', '18', '31', '46', '61'], ['2', '20', '32', '60', '73']]},
-    {"id": 169, "cells": [['13', '18', '34', '52', '75'], ['10', '19', '32', '54', '61'], ['3', '26', 'F', '51', '62'], ['15', '16', '38', '50', '70'], ['12', '21', '37', '48', '66']]},
-    {"id": 170, "cells": [['9', '23', '34', '48', '73'], ['5', '22', '35', '55', '72'], ['4', '19', 'F', '50', '67'], ['15', '24', '40', '49', '63'], ['10', '29', '42', '51', '64']]},
-    {"id": 171, "cells": [['5', '25', '36', '57', '70'], ['11', '24', '31', '51', '69'], ['9', '29', 'F', '60', '66'], ['12', '30', '39', '48', '72'], ['6', '27', '38', '52', '68']]},
-    {"id": 172, "cells": [['11', '20', '43', '59', '70'], ['3', '29', '41', '50', '69'], ['5', '18', 'F', '46', '65'], ['14', '30', '39', '52', '74'], ['15', '24', '40', '47', '64']]},
-    {"id": 173, "cells": [['14', '16', '38', '53', '66'], ['15', '30', '31', '60', '61'], ['4', '18', 'F', '56', '68'], ['3', '19', '43', '58', '69'], ['7', '23', '39', '48', '71']]},
-    {"id": 174, "cells": [['11', '21', '33', '49', '68'], ['5', '18', '44', '48', '74'], ['13', '17', 'F', '55', '75'], ['3', '26', '38', '57', '71'], ['9', '25', '43', '56', '66']]},
-    {"id": 175, "cells": [['10', '17', '43', '52', '62'], ['2', '27', '42', '51', '74'], ['12', '29', 'F', '55', '61'], ['1', '22', '31', '57', '75'], ['8', '21', '45', '46', '70']]},
-    {"id": 176, "cells": [['8', '27', '44', '49', '65'], ['6', '20', '40', '51', '63'], ['15', '24', 'F', '60', '68'], ['9', '26', '33', '52', '70'], ['14', '22', '42', '53', '67']]},
-    {"id": 177, "cells": [['3', '28', '39', '55', '62'], ['1', '19', '44', '50', '61'], ['15', '18', 'F', '57', '71'], ['9', '16', '40', '52', '75'], ['13', '21', '35', '54', '64']]},
-    {"id": 178, "cells": [['6', '28', '37', '60', '61'], ['2', '24', '39', '56', '66'], ['7', '20', 'F', '46', '63'], ['15', '26', '43', '47', '74'], ['4', '19', '34', '48', '65']]},
-    {"id": 179, "cells": [['4', '22', '45', '46', '75'], ['5', '27', '33', '49', '65'], ['14', '26', 'F', '58', '63'], ['11', '24', '43', '48', '70'], ['15', '30', '36', '53', '73']]},
-    {"id": 180, "cells": [['12', '23', '31', '54', '65'], ['9', '29', '43', '55', '70'], ['2', '18', 'F', '57', '68'], ['15', '21', '39', '56', '64'], ['5', '19', '38', '52', '75']]},
-    {"id": 181, "cells": [['9', '24', '44', '53', '68'], ['4', '19', '38', '57', '63'], ['5', '25', 'F', '55', '66'], ['8', '28', '42', '49', '70'], ['13', '21', '35', '59', '62']]},
-    {"id": 182, "cells": [['10', '16', '32', '55', '74'], ['4', '29', '42', '46', '67'], ['11', '20', 'F', '50', '70'], ['15', '19', '38', '49', '75'], ['12', '27', '31', '58', '71']]},
-    {"id": 183, "cells": [['1', '23', '45', '57', '61'], ['13', '18', '38', '49', '63'], ['15', '26', 'F', '48', '62'], ['2', '19', '39', '58', '70'], ['6', '28', '32', '55', '72']]},
-    {"id": 184, "cells": [['10', '22', '32', '54', '68'], ['2', '17', '42', '59', '66'], ['8', '18', 'F', '55', '63'], ['1', '27', '40', '56', '69'], ['15', '30', '43', '49', '71']]},
-    {"id": 185, "cells": [['10', '24', '44', '58', '66'], ['5', '22', '43', '46', '69'], ['13', '21', 'F', '54', '75'], ['2', '20', '31', '55', '61'], ['3', '28', '33', '50', '74']]},
-    {"id": 186, "cells": [['1', '29', '43', '54', '61'], ['14', '28', '45', '51', '69'], ['9', '25', 'F', '59', '67'], ['5', '23', '33', '58', '63'], ['7', '16', '31', '48', '74']]},
-    {"id": 187, "cells": [['12', '26', '36', '48', '71'], ['1', '29', '38', '49', '74'], ['3', '30', 'F', '59', '70'], ['9', '21', '33', '60', '64'], ['11', '18', '40', '52', '67']]},
-    {"id": 188, "cells": [['8', '29', '44', '49', '65'], ['13', '21', '41', '58', '71'], ['10', '16', 'F', '53', '69'], ['4', '24', '43', '48', '74'], ['11', '25', '40', '47', '63']]},
-    {"id": 189, "cells": [['14', '17', '36', '52', '63'], ['3', '23', '45', '59', '70'], ['13', '28', 'F', '53', '74'], ['15', '24', '41', '56', '67'], ['9', '26', '42', '55', '66']]},
-    {"id": 190, "cells": [['7', '26', '40', '47', '65'], ['15', '18', '45', '57', '63'], ['14', '16', 'F', '58', '71'], ['2', '20', '38', '46', '72'], ['8', '28', '32', '56', '64']]},
-    {"id": 191, "cells": [['1', '30', '39', '55', '66'], ['7', '27', '45', '60', '74'], ['5', '20', 'F', '58', '69'], ['13', '17', '44', '57', '62'], ['9', '24', '36', '51', '65']]},
-    {"id": 192, "cells": [['8', '29', '35', '60', '71'], ['9', '25', '41', '53', '67'], ['14', '20', 'F', '55', '65'], ['2', '19', '42', '51', '68'], ['13', '28', '43', '57', '61']]},
-    {"id": 193, "cells": [['14', '29', '44', '53', '65'], ['8', '25', '43', '52', '72'], ['13', '19', 'F', '59', '71'], ['7', '18', '39', '57', '75'], ['3', '23', '36', '50', '69']]},
-    {"id": 194, "cells": [['4', '29', '44', '50', '67'], ['15', '26', '35', '49', '75'], ['1', '17', 'F', '57', '63'], ['6', '21', '37', '48', '66'], ['5', '18', '36', '47', '72']]},
-    {"id": 195, "cells": [['8', '22', '31', '53', '73'], ['1', '19', '32', '58', '61'], ['11', '27', 'F', '56', '71'], ['10', '24', '40', '47', '68'], ['2', '20', '45', '60', '65']]},
-    {"id": 196, "cells": [['4', '16', '38', '49', '74'], ['2', '30', '42', '60', '73'], ['5', '19', 'F', '56', '64'], ['6', '22', '44', '51', '62'], ['8', '25', '39', '54', '70']]},
-    {"id": 197, "cells": [['4', '25', '41', '49', '65'], ['5', '24', '39', '51', '61'], ['8', '22', 'F', '54', '73'], ['2', '30', '43', '47', '62'], ['9', '28', '35', '57', '67']]},
-    {"id": 198, "cells": [['6', '17', '42', '54', '73'], ['4', '25', '43', '59', '66'], ['5', '30', 'F', '57', '64'], ['13', '29', '45', '58', '67'], ['12', '28', '33', '55', '71']]},
-    {"id": 199, "cells": [['10', '29', '40', '57', '61'], ['5', '17', '33', '50', '73'], ['12', '25', 'F', '54', '63'], ['9', '16', '36', '60', '68'], ['2', '21', '31', '59', '71']]},
-    {"id": 200, "cells": [['6', '27', '43', '48', '62'], ['2', '26', '45', '54', '70'], ['5', '24', 'F', '47', '74'], ['10', '19', '40', '46', '65'], ['14', '30', '35', '52', '61']]},
-    {"id": 201, "cells": [['5', '20', '38', '58', '61'], ['10', '22', '41', '52', '64'], ['2', '19', 'F', '57', '62'], ['12', '23', '36', '51', '63'], ['3', '26', '31', '53', '74']]},
-    {"id": 202, "cells": [['9', '22', '36', '60', '69'], ['12', '21', '32', '56', '74'], ['15', '24', 'F', '47', '73'], ['7', '30', '43', '59', '63'], ['1', '16', '33', '52', '67']]},
-    {"id": 203, "cells": [['8', '16', '41', '59', '67'], ['6', '26', '34', '58', '65'], ['14', '23', 'F', '57', '62'], ['4', '18', '31', '55', '72'], ['5', '25', '44', '52', '68']]},
-    {"id": 204, "cells": [['12', '20', '39', '55', '64'], ['5', '26', '33', '58', '67'], ['6', '17', 'F', '54', '74'], ['3', '29', '40', '57', '71'], ['1', '19', '31', '49', '69']]},
+    {"id": 1, "cells": [['15','16','39','59','66'],['11','28','40','51','68'],['12','20','F','56','67'],['3','30','35','60','72'],['10','24','37','53','64']]},
+    {"id": 2, "cells": [['5','21','35','46','69'],['15','20','42','51','70'],['10','28','F','47','67'],['2','26','31','49','64'],['6','27','33','52','65']]},
+    {"id": 3, "cells": [['14','23','40','58','62'],['13','25','32','46','65'],['3','28','F','50','63'],['6','30','44','54','66'],['10','16','37','53','74']]},
+    {"id": 4, "cells": [['1','19','41','49','72'],['5','26','36','50','69'],['6','29','F','60','61'],['14','25','42','47','71'],['2','24','45','54','65']]},
+    {"id": 5, "cells": [['2','16','43','47','70'],['4','23','32','58','73'],['9','17','F','51','74'],['1','26','34','59','75'],['14','20','31','57','72']]},
+    {"id": 6, "cells": [['3','28','42','46','70'],['15','18','36','53','64'],['14','20','F','55','67'],['6','21','45','57','73'],['11','30','41','60','62']]},
+    {"id": 7, "cells": [['15','28','39','58','65'],['10','19','34','54','68'],['3','17','F','59','71'],['9','16','45','51','66'],['14','24','36','49','64']]},
+    {"id": 8, "cells": [['7','20','32','47','61'],['13','19','36','53','67'],['9','21','F','57','66'],['4','18','38','59','68'],['2','27','45','51','69']]},
+    {"id": 9, "cells": [['5','26','33','56','75'],['2','18','39','54','62'],['1','29','F','58','72'],['9','22','44','57','68'],['13','17','42','55','67']]},
+    {"id": 10, "cells": [['1','20','34','58','75'],['13','18','40','59','69'],['6','27','F','52','67'],['7','23','37','48','70'],['2','29','44','57','73']]},
+    {"id": 11, "cells": [['11','21','44','49','64'],['4','28','34','55','62'],['2','26','F','47','71'],['14','29','41','48','73'],['5','24','31','51','63']]},
+    {"id": 12, "cells": [['9','20','35','59','66'],['1','26','43','56','72'],['6','16','F','58','64'],['12','22','41','49','61'],['2','18','38','51','69']]},
+    {"id": 13, "cells": [['11','16','45','60','73'],['1','26','44','55','69'],['4','29','F','47','72'],['9','28','31','51','64'],['14','23','40','59','68']]},
+    {"id": 14, "cells": [['5','18','45','58','67'],['1','27','42','50','65'],['7','28','F','54','64'],['2','21','43','60','74'],['10','24','32','51','71']]},
+    {"id": 15, "cells": [['5','30','38','48','71'],['1','22','42','60','62'],['2','18','F','50','65'],['3','29','33','46','75'],['12','17','32','55','66']]},
+    {"id": 16, "cells": [['7','23','45','55','62'],['3','27','42','60','71'],['12','21','F','57','66'],['4','24','41','49','68'],['13','17','44','50','75']]},
+    {"id": 17, "cells": [['10','28','32','59','72'],['3','27','40','47','63'],['13','24','F','57','71'],['2','21','41','60','68'],['7','25','42','58','65']]},
+    {"id": 18, "cells": [['13','27','33','51','63'],['7','22','42','48','61'],['10','25','F','54','65'],['8','16','43','52','72'],['14','23','38','60','74']]},
+    {"id": 19, "cells": [['1','22','39','51','62'],['15','25','35','47','75'],['3','23','F','50','66'],['8','26','44','49','70'],['4','28','38','53','67']]},
+    {"id": 20, "cells": [['9','19','35','54','73'],['8','23','43','57','61'],['4','24','F','58','68'],['11','17','32','50','62'],['1','26','38','49','75']]},
+    {"id": 21, "cells": [['8','18','39','54','63'],['2','30','37','57','75'],['13','29','F','56','68'],['15','27','31','49','67'],['6','17','45','52','61']]},
+    {"id": 22, "cells": [['6','26','44','55','62'],['13','19','32','60','61'],['9','25','F','49','75'],['3','20','40','46','65'],['8','27','31','56','71']]},
+    {"id": 23, "cells": [['1','27','40','54','73'],['4','17','33','46','68'],['7','16','F','48','63'],['9','23','36','56','66'],['11','21','34','50','74']]},
+    {"id": 24, "cells": [['9','19','40','46','75'],['8','26','31','48','67'],['1','24','F','59','65'],['7','20','39','49','70'],['12','27','43','57','73']]},
+    {"id": 25, "cells": [['3','23','40','53','75'],['1','27','45','51','68'],['4','28','F','46','73'],['14','29','35','56','61'],['9','30','41','52','74']]},
+    {"id": 26, "cells": [['10','25','37','53','65'],['14','29','38','58','69'],['2','28','F','56','68'],['6','22','35','57','70'],['3','18','45','60','67']]},
+    {"id": 27, "cells": [['11','26','39','51','75'],['3','28','33','56','67'],['10','24','F','58','74'],['7','18','45','53','69'],['13','30','44','47','64']]},
+    {"id": 28, "cells": [['8','17','42','52','74'],['2','24','39','56','63'],['14','16','F','60','62'],['9','21','31','47','72'],['15','18','35','54','70']]},
+    {"id": 29, "cells": [['14','16','32','53','74'],['15','21','34','59','65'],['10','26','F','55','66'],['2','19','45','56','61'],['1','25','40','51','64']]},
+    {"id": 30, "cells": [['8','27','44','54','70'],['11','26','31','55','64'],['9','19','F','57','67'],['6','23','41','49','62'],['13','22','40','56','72']]},
+    {"id": 31, "cells": [['3','27','31','46','71'],['9','24','40','48','67'],['5','17','F','55','62'],['12','18','38','58','68'],['4','25','36','54','73']]},
+    {"id": 32, "cells": [['10','20','32','58','73'],['15','28','34','56','61'],['9','24','F','50','75'],['5','25','37','46','67'],['14','23','31','51','65']]},
+    {"id": 33, "cells": [['7','29','42','56','69'],['15','27','40','60','64'],['1','18','F','51','74'],['4','16','38','57','67'],['8','21','39','59','68']]},
+    {"id": 34, "cells": [['4','17','31','46','70'],['8','29','37','57','65'],['9','24','F','59','75'],['11','27','34','55','63'],['3','22','36','48','73']]},
+    {"id": 35, "cells": [['9','17','35','55','72'],['14','24','45','52','68'],['11','18','F','48','66'],['8','21','36','47','71'],['4','27','37','57','70']]},
+    {"id": 36, "cells": [['2','22','41','54','62'],['13','21','45','51','70'],['15','30','F','47','63'],['4','26','39','50','75'],['10','29','34','58','64']]},
+    {"id": 37, "cells": [['1','21','32','54','65'],['5','28','42','51','63'],['2','26','F','60','61'],['12','24','34','59','62'],['15','17','43','57','72']]},
+    {"id": 38, "cells": [['1','30','45','49','66'],['9','24','42','56','69'],['7','20','F','52','74'],['12','17','36','60','62'],['11','18','35','54','63']]},
+    {"id": 39, "cells": [['10','27','35','51','61'],['14','16','37','53','72'],['1','25','F','48','69'],['11','26','41','58','70'],['13','28','42','47','68']]},
+    {"id": 40, "cells": [['14','17','34','54','63'],['10','28','43','55','70'],['7','16','F','58','71'],['15','24','41','59','69'],['6','29','36','57','64']]},
+    {"id": 41, "cells": [['5','18','31','52','62'],['10','21','43','56','66'],['9','28','F','59','69'],['14','25','40','48','67'],['6','20','35','47','71']]},
+    {"id": 42, "cells": [['11','20','43','49','75'],['10','25','33','58','74'],['15','17','F','50','67'],['13','21','42','52','71'],['2','23','35','51','64']]},
+    {"id": 43, "cells": [['15','18','44','54','69'],['6','19','31','56','64'],['13','16','F','60','70'],['8','27','35','55','66'],['7','29','38','57','72']]},
+    {"id": 44, "cells": [['11','28','35','47','72'],['4','26','45','48','73'],['14','16','F','54','71'],['8','25','33','52','61'],['7','22','44','57','68']]},
+    {"id": 45, "cells": [['9','27','39','48','70'],['6','20','38','51','63'],['7','19','F','55','68'],['11','22','35','46','74'],['8','17','45','47','69']]},
+    {"id": 46, "cells": [['5','17','43','47','74'],['15','18','42','48','63'],['11','21','F','56','64'],['4','23','39','54','66'],['2','25','33','49','65']]},
+    {"id": 47, "cells": [['5','17','38','46','70'],['6','20','43','51','75'],['12','25','F','56','61'],['1','16','45','60','68'],['4','26','35','53','74']]},
+    {"id": 48, "cells": [['4','28','37','53','61'],['2','19','31','49','62'],['7','16','F','56','64'],['14','26','39','52','74'],['6','18','32','57','67']]},
+    {"id": 49, "cells": [['1','21','34','52','67'],['3','29','41','54','69'],['10','24','F','57','70'],['8','26','35','53','72'],['6','19','31','58','64']]},
+    {"id": 50, "cells": [['3','17','36','49','69'],['10','30','40','52','62'],['14','27','F','58','66'],['2','19','41','59','68'],['15','18','42','47','64']]},
+    {"id": 51, "cells": [['2','21','31','49','68'],['12','20','45','54','69'],['10','27','F','48','75'],['9','16','40','46','61'],['14','19','39','57','62']]},
+    {"id": 52, "cells": [['10','22','36','59','74'],['2','21','44','55','70'],['11','26','F','48','72'],['15','23','40','57','75'],['14','18','31','58','66']]},
+    {"id": 53, "cells": [['15','30','35','59','69'],['5','21','45','51','71'],['8','25','F','46','67'],['7','23','40','58','74'],['11','29','42','54','72']]},
+    {"id": 54, "cells": [['1','26','34','60','61'],['6','18','35','52','66'],['4','24','F','50','69'],['15','29','32','48','63'],['7','25','45','53','72']]},
+    {"id": 55, "cells": [['12','24','45','51','65'],['8','16','42','53','62'],['15','19','F','59','64'],['7','25','39','56','70'],['14','20','32','48','74']]},
+    {"id": 56, "cells": [['13','17','44','53','68'],['3','30','45','56','66'],['15','28','F','55','73'],['12','20','33','50','70'],['4','24','43','52','67']]},
+    {"id": 57, "cells": [['5','28','40','56','63'],['12','21','36','53','73'],['14','16','F','60','68'],['15','25','44','58','66'],['11','17','45','54','64']]},
+    {"id": 58, "cells": [['1','16','32','58','74'],['3','28','44','60','67'],['9','24','F','49','64'],['10','20','37','47','71'],['13','19','39','46','61']]},
+    {"id": 59, "cells": [['7','20','34','47','70'],['2','24','43','55','73'],['3','29','F','46','62'],['12','18','45','49','69'],['5','17','33','57','64']]},
+    {"id": 60, "cells": [['14','25','41','48','75'],['9','17','34','51','62'],['1','30','F','60','65'],['13','28','38','49','73'],['6','22','40','54','61']]},
+    {"id": 61, "cells": [['11','26','38','60','71'],['5','25','37','52','65'],['14','16','F','59','62'],['7','18','43','54','64'],['9','28','41','46','74']]},
+    {"id": 62, "cells": [['13','26','31','56','68'],['8','27','43','59','70'],['11','18','F','53','73'],['6','21','36','48','72'],['2','20','42','55','69']]},
+    {"id": 63, "cells": [['12','21','35','49','62'],['1','29','38','55','74'],['15','22','F','51','64'],['5','28','33','50','65'],['4','17','37','60','72']]},
+    {"id": 64, "cells": [['15','24','38','58','64'],['1','22','44','60','73'],['14','21','F','48','67'],['2','29','31','47','68'],['4','23','41','56','61']]},
+    {"id": 65, "cells": [['6','18','35','57','64'],['10','28','32','52','62'],['7','19','F','48','63'],['9','20','39','49','68'],['2','30','33','59','65']]},
+    {"id": 66, "cells": [['1','20','34','54','67'],['2','27','33','51','63'],['14','21','F','58','73'],['3','28','42','46','70'],['4','24','37','55','64']]},
+    {"id": 67, "cells": [['13','28','38','58','71'],['14','22','44','51','73'],['5','26','F','56','61'],['12','24','34','53','72'],['8','17','40','52','62']]},
+    {"id": 68, "cells": [['14','25','41','55','66'],['7','28','38','59','65'],['9','19','F','53','61'],['13','22','33','56','68'],['15','18','44','57','63']]},
+    {"id": 69, "cells": [['10','16','35','55','65'],['6','28','40','46','70'],['2','17','F','59','73'],['15','29','36','47','75'],['8','27','39','51','62']]},
+    {"id": 70, "cells": [['15','30','36','50','70'],['9','18','32','59','65'],['12','17','F','58','75'],['6','21','43','46','62'],['4','23','38','48','69']]},
+    {"id": 71, "cells": [['6','25','31','49','72'],['4','22','43','53','61'],['2','28','F','57','69'],['7','17','41','54','63'],['12','19','45','46','65']]},
+    {"id": 72, "cells": [['8','18','40','46','64'],['5','20','35','47','71'],['6','27','F','49','73'],['10','19','42','55','65'],['2','17','45','58','75']]},
+    {"id": 73, "cells": [['6','28','37','48','72'],['2','23','43','57','61'],['15','30','F','54','66'],['13','21','34','60','65'],['7','27','35','46','63']]},
+    {"id": 74, "cells": [['10','24','45','51','72'],['14','21','36','53','67'],['3','17','F','49','62'],['7','18','41','48','66'],['9','26','44','54','63']]},
+    {"id": 75, "cells": [['6','17','44','59','75'],['7','20','37','46','69'],['4','29','F','50','63'],['3','23','41','49','71'],['14','24','40','52','72']]},
+    {"id": 76, "cells": [['4','19','39','48','62'],['10','24','31','60','70'],['6','23','F','51','66'],['8','18','35','50','73'],['2','27','41','47','61']]},
+    {"id": 77, "cells": [['1','18','34','60','74'],['7','27','35','56','61'],['15','25','F','55','68'],['14','21','38','53','64'],['13','17','40','58','75']]},
+    {"id": 78, "cells": [['15','27','37','47','67'],['11','17','34','58','70'],['1','30','F','46','68'],['8','24','39','50','62'],['13','22','38','57','66']]},
+    {"id": 79, "cells": [['4','26','39','57','72'],['13','17','40','58','61'],['11','29','F','54','69'],['3','16','44','53','65'],['8','18','45','46','62']]},
+    {"id": 80, "cells": [['8','23','39','57','73'],['4','27','37','56','66'],['1','19','F','51','65'],['5','30','31','47','63'],['2','17','32','48','67']]},
+    {"id": 81, "cells": [['3','23','45','49','66'],['5','16','41','50','62'],['14','19','F','47','72'],['9','20','44','51','73'],['2','25','38','52','64']]},
+    {"id": 82, "cells": [['14','16','36','54','63'],['8','17','31','59','64'],['1','25','F','55','72'],['7','20','33','47','66'],['2','18','41','58','61']]},
+    {"id": 83, "cells": [['1','16','31','53','67'],['3','20','34','57','73'],['9','28','F','49','63'],['10','26','38','54','70'],['2','25','36','47','61']]},
+    {"id": 84, "cells": [['11','29','32','59','64'],['12','19','41','60','67'],['13','28','F','56','62'],['10','24','39','46','75'],['5','22','38','58','74']]},
+    {"id": 85, "cells": [['13','28','31','51','62'],['1','30','34','59','66'],['14','17','F','50','64'],['3','16','36','56','71'],['4','29','40','47','61']]},
+    {"id": 86, "cells": [['4','21','37','54','67'],['13','27','44','57','61'],['15','26','F','46','71'],['2','25','33','58','70'],['9','28','42','48','68']]},
+    {"id": 87, "cells": [['2','25','35','46','66'],['1','17','43','49','63'],['15','29','F','59','72'],['14','20','33','58','62'],['8','22','34','48','73']]},
+    {"id": 88, "cells": [['13','19','43','55','64'],['14','18','42','48','63'],['12','23','F','58','75'],['15','29','44','52','65'],['7','27','40','57','73']]},
+    {"id": 89, "cells": [['2','16','44','58','75'],['5','26','40','56','65'],['14','17','F','54','61'],['10','24','33','57','72'],['7','22','38','60','69']]},
+    {"id": 90, "cells": [['13','26','44','48','69'],['3','20','38','58','70'],['5','17','F','46','72'],['12','22','32','56','62'],['1','24','36','54','63']]},
+    {"id": 91, "cells": [['5','29','41','59','72'],['1','25','31','46','63'],['10','30','F','57','71'],['8','17','34','55','75'],['6','28','32','47','74']]},
+    {"id": 92, "cells": [['5','18','37','59','63'],['9','27','38','57','70'],['14','24','F','52','66'],['13','28','41','56','71'],['1','30','45','46','72']]},
+    {"id": 93, "cells": [['14','21','33','46','65'],['15','18','40','53','71'],['13','16','F','51','63'],['7','23','34','48','75'],['8','20','31','47','74']]},
+    {"id": 94, "cells": [['1','19','39','58','67'],['8','22','40','53','62'],['7','30','F','50','65'],['5','25','41','46','72'],['2','17','38','56','64']]},
+    {"id": 95, "cells": [['4','19','37','52','70'],['6','24','43','60','65'],['5','16','F','56','75'],['12','29','41','51','67'],['9','30','39','58','61']]},
+    {"id": 96, "cells": [['2','18','34','54','74'],['14','27','45','57','64'],['11','21','F','56','62'],['13','19','33','48','61'],['4','16','41','53','72']]},
+    {"id": 97, "cells": [['2','29','45','47','66'],['12','30','42','60','74'],['9','21','F','58','61'],['6','27','40','48','62'],['15','23','34','57','65']]},
+    {"id": 98, "cells": [['13','24','40','57','68'],['15','20','45','50','64'],['9','19','F','60','67'],['8','28','43','56','70'],['2','27','38','47','65']]},
+    {"id": 99, "cells": [['7','30','45','49','66'],['12','19','35','55','62'],['3','23','F','53','67'],['10','25','36','50','65'],['11','29','32','51','74']]},
+    {"id": 100, "cells": [['15','27','31','54','73'],['10','29','37','50','69'],['8','23','F','57','75'],['11','25','43','58','68'],['4','24','38','46','74']]},
+    {"id": 101, "cells": [['15','17','35','59','75'],['9','22','43','54','74'],['1','29','F','51','64'],['7','16','37','48','66'],['10','23','41','52','65']]},
+    {"id": 102, "cells": [['7','16','32','50','64'],['10','29','38','48','63'],['13','22','F','53','74'],['12','18','44','56','70'],['4','27','39','57','71']]},
+    {"id": 103, "cells": [['3','23','41','58','62'],['4','22','35','50','61'],['12','17','F','59','73'],['2','20','43','52','75'],['8','27','44','51','67']]},
+    {"id": 104, "cells": [['13','25','39','58','68'],['9','19','42','46','67'],['4','22','F','52','75'],['5','18','32','49','72'],['6','23','38','51','70']]},
+    {"id": 105, "cells": [['12','17','36','49','67'],['6','16','41','56','63'],['4','22','F','57','74'],['5','20','39','60','62'],['1','29','35','51','65']]},
+    {"id": 106, "cells": [['15','16','43','54','61'],['9','24','42','60','70'],['13','27','F','56','63'],['14','20','45','57','62'],['10','18','35','53','72']]},
+    {"id": 107, "cells": [['3','28','34','57','62'],['14','30','40','52','68'],['4','27','F','49','65'],['9','22','33','58','70'],['2','29','36','47','63']]},
+    {"id": 108, "cells": [['1','23','41','47','75'],['7','22','40','52','62'],['3','16','F','58','68'],['2','18','43','50','67'],['6','30','44','57','61']]},
+    {"id": 109, "cells": [['15','27','36','47','70'],['13','17','42','59','61'],['5','23','F','57','62'],['7','25','38','50','69'],['6','26','35','52','72']]},
+    {"id": 110, "cells": [['11','27','41','51','64'],['13','30','34','55','74'],['3','28','F','54','66'],['6','18','37','46','62'],['7','26','32','57','70']]},
+    {"id": 111, "cells": [['3','30','41','51','66'],['12','25','32','53','72'],['8','20','F','47','71'],['13','24','39','60','74'],['1','28','38','50','63']]},
+    {"id": 112, "cells": [['12','24','41','50','68'],['14','21','35','52','65'],['7','17','F','46','70'],['3','20','43','57','74'],['1','29','33','48','62']]},
+    {"id": 113, "cells": [['11','21','34','56','63'],['12','23','32','53','69'],['3','24','F','54','71'],['2','26','37','49','72'],['4','22','36','48','75']]},
+    {"id": 114, "cells": [['12','30','37','51','74'],['14','19','43','57','63'],['7','28','F','48','67'],['13','22','31','46','62'],['3','20','38','54','70']]},
+    {"id": 115, "cells": [['2','19','39','50','70'],['9','23','34','49','64'],['13','27','F','59','61'],['11','26','38','53','67'],['14','28','44','54','63']]},
+    {"id": 116, "cells": [['7','21','38','56','65'],['15','26','34','52','75'],['1','30','F','50','71'],['4','27','43','54','66'],['12','28','44','59','70']]},
+    {"id": 117, "cells": [['1','21','33','57','65'],['2','29','32','50','61'],['9','25','F','53','74'],['6','28','34','55','75'],['14','18','37','47','67']]},
+    {"id": 118, "cells": [['1','22','31','47','67'],['6','26','37','54','64'],['10','27','F','49','62'],['14','24','42','55','72'],['5','18','34','59','71']]},
+    {"id": 119, "cells": [['14','26','45','56','72'],['12','29','42','55','62'],['15','23','F','48','73'],['3','28','41','49','61'],['13','16','31','54','65']]},
+    {"id": 120, "cells": [['7','25','37','60','70'],['13','20','43','50','69'],['4','18','F','55','74'],['5','26','40','48','67'],['8','17','39','46','73']]},
+    {"id": 121, "cells": [['11','27','38','51','63'],['7','20','41','59','64'],['5','28','F','54','71'],['12','29','33','56','73'],['8','25','40','55','69']]},
+    {"id": 122, "cells": [['11','21','32','51','70'],['6','28','44','60','74'],['5','18','F','57','63'],['1','16','38','46','62'],['9','17','31','53','73']]},
+    {"id": 123, "cells": [['14','20','43','54','70'],['10','28','40','51','69'],['6','21','F','53','67'],['8','18','35','50','74'],['3','29','34','48','64']]},
+    {"id": 124, "cells": [['6','20','38','50','66'],['5','21','33','49','61'],['4','30','F','48','75'],['13','26','41','60','65'],['15','19','36','56','63']]},
+    {"id": 125, "cells": [['12','28','33','58','75'],['1','25','39','60','66'],['13','20','F','48','61'],['14','21','44','46','65'],['5','22','38','54','67']]},
+    {"id": 126, "cells": [['13','22','41','57','65'],['12','30','32','60','62'],['6','24','F','58','61'],['1','16','44','50','63'],['2','17','45','53','69']]},
+    {"id": 127, "cells": [['13','26','43','60','65'],['4','16','38','52','62'],['2','25','F','58','63'],['9','17','34','47','74'],['5','27','41','46','68']]},
+    {"id": 128, "cells": [['7','25','43','47','63'],['11','16','32','58','61'],['2','23','F','55','71'],['3','22','38','46','68'],['1','30','36','57','72']]},
+    {"id": 129, "cells": [['3','25','43','57','63'],['2','20','35','59','71'],['13','23','F','60','74'],['10','29','38','49','73'],['11','21','42','53','70']]},
+    {"id": 130, "cells": [['5','18','31','56','75'],['15','27','42','59','66'],['4','16','F','57','71'],['1','30','45','51','64'],['2','28','43','53','67']]},
+    {"id": 131, "cells": [['2','19','36','51','64'],['14','29','37','46','70'],['3','28','F','55','68'],['12','23','32','56','67'],['1','20','40','48','71']]},
+    {"id": 132, "cells": [['1','30','32','48','67'],['5','22','42','57','64'],['6','17','F','58','65'],['7','24','43','46','73'],['2','18','37','55','74']]},
+    {"id": 133, "cells": [['14','28','37','55','73'],['6','16','39','54','72'],['7','22','F','58','63'],['4','25','32','51','74'],['10','23','40','52','61']]},
+    {"id": 134, "cells": [['10','25','38','58','74'],['9','24','41','49','69'],['1','26','F','48','66'],['4','28','39','57','75'],['14','17','42','52','61']]},
+    {"id": 135, "cells": [['13','24','45','52','61'],['8','22','35','60','73'],['7','17','F','54','68'],['9','27','42','59','63'],['5','26','40','49','71']]},
+    {"id": 136, "cells": [['15','30','40','47','72'],['4','22','32','55','70'],['13','24','F','53','66'],['5','29','35','58','61'],['2','17','31','51','71']]},
+    {"id": 137, "cells": [['1','27','38','56','61'],['7','19','43','53','70'],['3','24','F','52','65'],['11','22','31','51','74'],['12','16','45','57','71']]},
+    {"id": 138, "cells": [['4','30','35','58','65'],['6','24','42','56','61'],['1','27','F','54','71'],['10','16','39','55','64'],['13','21','36','53','67']]},
+    {"id": 139, "cells": [['11','29','45','47','75'],['4','21','41','46','67'],['12','17','F','53','69'],['6','22','40','51','74'],['14','19','44','60','62']]},
+    {"id": 140, "cells": [['6','18','32','51','62'],['8','21','43','57','65'],['2','16','F','49','71'],['13','30','41','59','75'],['7','29','35','48','64']]},
+    {"id": 141, "cells": [['11','20','42','49','70'],['5','26','41','47','72'],['6','18','F','60','66'],['4','21','45','57','63'],['14','19','36','52','69']]},
+    {"id": 142, "cells": [['13','23','44','60','69'],['10','27','42','47','71'],['2','24','F','58','68'],['4','29','31','59','63'],['12','25','45','55','65']]},
+    {"id": 143, "cells": [['6','30','41','48','63'],['13','20','37','53','66'],['10','16','F','57','73'],['14','28','35','54','67'],['8','29','39','51','72']]},
+    {"id": 144, "cells": [['14','20','42','60','65'],['12','27','43','49','66'],['15','21','F','50','64'],['4','17','41','55','67'],['6','25','39','51','72']]},
+    {"id": 145, "cells": [['15','30','33','56','69'],['9','29','32','57','65'],['4','22','F','46','66'],['3','28','43','48','72'],['14','16','39','52','67']]},
+    {"id": 146, "cells": [['10','20','36','55','64'],['2','19','39','58','67'],['7','28','F','54','63'],['14','30','35','60','66'],['4','23','45','56','62']]},
+    {"id": 147, "cells": [['11','29','34','50','68'],['8','26','35','58','74'],['12','27','F','46','64'],['2','30','42','49','73'],['15','23','41','57','69']]},
+    {"id": 148, "cells": [['14','20','38','53','74'],['15','22','45','56','64'],['10','17','F','50','63'],['3','25','37','51','69'],['6','29','35','59','61']]},
+    {"id": 149, "cells": [['14','23','37','52','72'],['15','27','40','54','63'],['7','18','F','47','75'],['6','16','42','57','61'],['12','20','32','60','62']]},
+    {"id": 150, "cells": [['6','24','33','48','75'],['10','19','37','50','64'],['7','28','F','57','68'],['13','17','43','58','72'],['11','21','35','53','74']]},
+    {"id": 151, "cells": [['3','19','42','56','71'],['8','22','37','46','62'],['15','29','F','57','72'],['9','17','39','60','69'],['1','18','40','59','64']]},
+    {"id": 152, "cells": [['6','21','38','52','63'],['11','24','37','55','72'],['14','27','F','49','61'],['2','23','44','58','68'],['10','29','33','47','74']]},
+    {"id": 153, "cells": [['14','16','44','51','69'],['1','17','34','56','67'],['7','29','F','47','75'],['4','30','41','54','65'],['10','18','43','49','61']]},
+    {"id": 154, "cells": [['10','30','35','53','67'],['14','18','38','47','64'],['5','26','F','60','69'],['6','20','32','56','61'],['15','27','39','48','65']]},
+    {"id": 155, "cells": [['12','16','31','54','62'],['9','23','41','56','73'],['13','20','F','60','61'],['2','28','42','57','67'],['7','24','35','50','63']]},
+    {"id": 156, "cells": [['14','26','42','56','66'],['11','30','31','57','69'],['1','18','F','54','70'],['8','29','34','52','71'],['15','16','40','50','62']]},
+    {"id": 157, "cells": [['6','24','40','58','62'],['10','26','31','47','74'],['13','25','F','57','64'],['1','28','41','48','65'],['14','29','35','53','73']]},
+    {"id": 158, "cells": [['1','18','40','56','75'],['15','17','42','54','64'],['11','24','F','60','70'],['7','20','38','51','72'],['14','21','43','48','65']]},
+    {"id": 159, "cells": [['12','17','36','53','72'],['9','21','38','56','65'],['4','26','F','50','70'],['10','18','40','59','67'],['8','22','35','55','69']]},
+    {"id": 160, "cells": [['3','25','33','56','69'],['5','24','36','54','70'],['9','23','F','60','66'],['12','27','32','49','68'],['10','18','43','46','73']]},
+    {"id": 161, "cells": [['2','25','36','51','65'],['9','16','42','59','61'],['6','27','F','50','62'],['11','17','39','52','75'],['10','22','37','60','72']]},
+    {"id": 162, "cells": [['8','20','43','56','69'],['13','30','40','47','70'],['14','29','F','57','75'],['2','25','34','60','61'],['3','19','31','54','71']]},
+    {"id": 163, "cells": [['12','19','37','53','61'],['1','23','35','46','74'],['13','21','F','55','72'],['3','30','39','54','64'],['15','20','31','58','75']]},
+    {"id": 164, "cells": [['13','22','42','55','65'],['15','30','32','52','72'],['5','18','F','54','75'],['11','25','39','58','61'],['14','24','41','46','68']]},
+    {"id": 165, "cells": [['13','30','36','57','70'],['14','26','40','52','64'],['12','22','F','51','68'],['10','18','37','47','66'],['7','16','39','56','67']]},
+    {"id": 166, "cells": [['1','19','41','47','74'],['9','26','42','53','68'],['4','29','F','54','67'],['12','21','32','56','65'],['8','18','45','49','70']]},
+    {"id": 167, "cells": [['8','18','33','49','67'],['5','24','31','55','66'],['6','20','F','59','72'],['15','19','37','47','73'],['12','26','42','46','71']]},
+    {"id": 168, "cells": [['12','27','33','48','69'],['9','24','38','49','71'],['11','16','F','57','75'],['7','18','31','46','61'],['2','20','32','60','73']]},
+    {"id": 169, "cells": [['13','18','34','52','75'],['10','19','32','54','61'],['3','26','F','51','62'],['15','16','38','50','70'],['12','21','37','48','66']]},
+    {"id": 170, "cells": [['9','23','34','48','73'],['5','22','35','55','72'],['4','19','F','50','67'],['15','24','40','49','63'],['10','29','42','51','64']]},
+    {"id": 171, "cells": [['5','25','36','57','70'],['11','24','31','51','69'],['9','29','F','60','66'],['12','30','39','48','72'],['6','27','38','52','68']]},
+    {"id": 172, "cells": [['11','20','43','59','70'],['3','29','41','50','69'],['5','18','F','46','65'],['14','30','39','52','74'],['15','24','40','47','64']]},
+    {"id": 173, "cells": [['14','16','38','53','66'],['15','30','31','60','61'],['4','18','F','56','68'],['3','19','43','58','69'],['7','23','39','48','71']]},
+    {"id": 174, "cells": [['11','21','33','49','68'],['5','18','44','48','74'],['13','17','F','55','75'],['3','26','38','57','71'],['9','25','43','56','66']]},
+    {"id": 175, "cells": [['10','17','43','52','62'],['2','27','42','51','74'],['12','29','F','55','61'],['1','22','31','57','75'],['8','21','45','46','70']]},
+    {"id": 176, "cells": [['8','27','44','49','65'],['6','20','40','51','63'],['15','24','F','60','68'],['9','26','33','52','70'],['14','22','42','53','67']]},
+    {"id": 177, "cells": [['3','28','39','55','62'],['1','19','44','50','61'],['15','18','F','57','71'],['9','16','40','52','75'],['13','21','35','54','64']]},
+    {"id": 178, "cells": [['6','28','37','60','61'],['2','24','39','56','66'],['7','20','F','46','63'],['15','26','43','47','74'],['4','19','34','48','65']]},
+    {"id": 179, "cells": [['4','22','45','46','75'],['5','27','33','49','65'],['14','26','F','58','63'],['11','24','43','48','70'],['15','30','36','53','73']]},
+    {"id": 180, "cells": [['12','23','31','54','65'],['9','29','43','55','70'],['2','18','F','57','68'],['15','21','39','56','64'],['5','19','38','52','75']]},
+    {"id": 181, "cells": [['9','24','44','53','68'],['4','19','38','57','63'],['5','25','F','55','66'],['8','28','42','49','70'],['13','21','35','59','62']]},
+    {"id": 182, "cells": [['10','16','32','55','74'],['4','29','42','46','67'],['11','20','F','50','70'],['15','19','38','49','75'],['12','27','31','58','71']]},
+    {"id": 183, "cells": [['1','23','45','57','61'],['13','18','38','49','63'],['15','26','F','48','62'],['2','19','39','58','70'],['6','28','32','55','72']]},
+    {"id": 184, "cells": [['10','22','32','54','68'],['2','17','42','59','66'],['8','18','F','55','63'],['1','27','40','56','69'],['15','30','43','49','71']]},
+    {"id": 185, "cells": [['10','24','44','58','66'],['5','22','43','46','69'],['13','21','F','54','75'],['2','20','31','55','61'],['3','28','33','50','74']]},
+    {"id": 186, "cells": [['1','29','43','54','61'],['14','28','45','51','69'],['9','25','F','59','67'],['5','23','33','58','63'],['7','16','31','48','74']]},
+    {"id": 187, "cells": [['12','26','36','48','71'],['1','29','38','49','74'],['3','30','F','59','70'],['9','21','33','60','64'],['11','18','40','52','67']]},
+    {"id": 188, "cells": [['8','29','44','49','65'],['13','21','41','58','71'],['10','16','F','53','69'],['4','24','43','48','74'],['11','25','40','47','63']]},
+    {"id": 189, "cells": [['14','17','36','52','63'],['3','23','45','59','70'],['13','28','F','53','74'],['15','24','41','56','67'],['9','26','42','55','66']]},
+    {"id": 190, "cells": [['7','26','40','47','65'],['15','18','45','57','63'],['14','16','F','58','71'],['2','20','38','46','72'],['8','28','32','56','64']]},
+    {"id": 191, "cells": [['1','30','39','55','66'],['7','27','45','60','74'],['5','20','F','58','69'],['13','17','44','57','62'],['9','24','36','51','65']]},
+    {"id": 192, "cells": [['8','29','35','60','71'],['9','25','41','53','67'],['14','20','F','55','65'],['2','19','42','51','68'],['13','28','43','57','61']]},
+    {"id": 193, "cells": [['14','29','44','53','65'],['8','25','43','52','72'],['13','19','F','59','71'],['7','18','39','57','75'],['3','23','36','50','69']]},
+    {"id": 194, "cells": [['4','29','44','50','67'],['15','26','35','49','75'],['1','17','F','57','63'],['6','21','37','48','66'],['5','18','36','47','72']]},
+    {"id": 195, "cells": [['8','22','31','53','73'],['1','19','32','58','61'],['11','27','F','56','71'],['10','24','40','47','68'],['2','20','45','60','65']]},
+    {"id": 196, "cells": [['4','16','38','49','74'],['2','30','42','60','73'],['5','19','F','56','64'],['6','22','44','51','62'],['8','25','39','54','70']]},
+    {"id": 197, "cells": [['4','25','41','49','65'],['5','24','39','51','61'],['8','22','F','54','73'],['2','30','43','47','62'],['9','28','35','57','67']]},
+    {"id": 198, "cells": [['6','17','42','54','73'],['4','25','43','59','66'],['5','30','F','57','64'],['13','29','45','58','67'],['12','28','33','55','71']]},
+    {"id": 199, "cells": [['10','29','40','57','61'],['5','17','33','50','73'],['12','25','F','54','63'],['9','16','36','60','68'],['2','21','31','59','71']]},
+    {"id": 200, "cells": [['6','27','43','48','62'],['2','26','45','54','70'],['5','24','F','47','74'],['10','19','40','46','65'],['14','30','35','52','61']]},
+    {"id": 201, "cells": [['5','20','38','58','61'],['10','22','41','52','64'],['2','19','F','57','62'],['12','23','36','51','63'],['3','26','31','53','74']]},
+    {"id": 202, "cells": [['9','22','36','60','69'],['12','21','32','56','74'],['15','24','F','47','73'],['7','30','43','59','63'],['1','16','33','52','67']]},
+    {"id": 203, "cells": [['8','16','41','59','67'],['6','26','34','58','65'],['14','23','F','57','62'],['4','18','31','55','72'],['5','25','44','52','68']]},
+    {"id": 204, "cells": [['12','20','39','55','64'],['5','26','33','58','67'],['6','17','F','54','74'],['3','29','40','57','71'],['1','19','31','49','69']]},
 ]
-
-# ===================================================================
-# WINNER DETECTION
-# ===================================================================
-def get_card(card_id):
-    for card in BINGO_CARDS:
-        if card["id"] == card_id:
-            return card
-    return None
-
-def get_card_data(card_id):
-    card = get_card(card_id)
-    return card["cells"] if card else None
-
-def check_winning_pattern(card_data, called_numbers):
-    if not called_numbers or not card_data:
-        return None
-    called_set = set(called_numbers)
-    def is_marked(value):
-        if value == 'F': return True
-        return int(value) in called_set
-    for row in range(5):
-        if all(is_marked(card_data[row][col]) for col in range(5)):
-            return {'type': f"Row {row + 1}", 'cells': [card_data[row][col] for col in range(5)]}
-    for col in range(5):
-        if all(is_marked(card_data[row][col]) for row in range(5)):
-            letters = ['B','I','N','G','O']
-            return {'type': f"Column {letters[col]}", 'cells': [card_data[row][col] for row in range(5)]}
-    if all(is_marked(card_data[i][i]) for i in range(5)):
-        return {'type': "Diagonal Main", 'cells': [card_data[i][i] for i in range(5)]}
-    if all(is_marked(card_data[i][4 - i]) for i in range(5)):
-        return {'type': "Diagonal Anti", 'cells': [card_data[i][4 - i] for i in range(5)]}
-    large_corners = [card_data[0][0], card_data[0][4], card_data[4][0], card_data[4][4]]
-    if all(is_marked(c) for c in large_corners):
-        return {'type': "Large Corners", 'cells': large_corners}
-    small_corners = [card_data[1][1], card_data[1][3], card_data[3][1], card_data[3][3]]
-    if all(is_marked(c) for c in small_corners):
-        return {'type': "Small Corners", 'cells': small_corners}
-    return None
 
 # ===================================================================
 # GAME FUNCTIONS
@@ -1893,25 +1432,7 @@ def check_for_winners(force_fresh=False):
         card_owner = dict(st.session_state.card_owner or {})
     if not called_numbers or not taken_cards:
         return
-    winners_found = []
-    for card_id in taken_cards:
-        card_data = get_card_data(card_id)
-        if not card_data:
-            continue
-        pattern = check_winning_pattern(card_data, called_numbers)
-        if pattern:
-            owner = card_owner.get(str(card_id), "Unknown")
-            existing = next((w for w in winners_found if w["username"] == owner), None)
-            if existing:
-                existing["cards"].append(card_id)
-                existing["patterns"].append(pattern['type'])
-            else:
-                winners_found.append({
-                    "username": owner,
-                    "cards": [card_id],
-                    "patterns": [pattern['type']],
-                    "card_data": card_data
-                })
+    winners_found = _detect_winners(called_numbers, taken_cards, card_owner)
     if winners_found:
         st.session_state.called_numbers = set(called_numbers)
         st.session_state.taken_cards = taken_cards
@@ -1923,54 +1444,24 @@ def check_for_winners(force_fresh=False):
         st.session_state.celebration_start_time = time.time()
         st.session_state.celebration_round = 1
         st.session_state.winner_screen_shown_at = None
-        distribute_prizes(winners_found)
+        _distribute_prizes_for_winners(winners_found, taken_cards)
         update_state({
-            "winners_list": winners_found,
-            "winner_declared": True,
-            "game_over": True,
-            "auto_call_started": False,
+            "winners_list": winners_found, "winner_declared": True,
+            "game_over": True, "auto_call_started": False,
             "called_numbers": called_numbers,
             "last_called_number": row.get("last_called_number"),
             "auto_called_count": len(called_numbers),
             "prize_distributed": st.session_state.prize_distributed,
-            "last_called_at": 0,
-            "last_called_by": None,
+            "last_called_at": 0, "last_called_by": None,
         })
         st.session_state["_state_cache"] = None
         st.session_state["_state_cache_at"] = 0.0
 
 def distribute_prizes(winners):
-    _, _, _, _, _, _, global_paid, _ = load_global_winners()
-    if global_paid:
-        st.session_state.prize_distributed = True
-        return
-    if st.session_state.prize_distributed:
-        return
-    total_cards = len(st.session_state.taken_cards)
-    total_prize = total_cards * PRIZE_PER_CARD
-    prize_per_winner = total_prize // len(winners) if len(winners) > 0 else 0
-    load_all_data()
-    for winner in winners:
-        username = winner.get("username")
-        if username in st.session_state.user_db:
-            st.session_state.user_db[username]["balance"] = \
-                float(st.session_state.user_db[username].get("balance", 0)) + prize_per_winner
-            st.session_state.user_db[username]["wins"] = \
-                int(st.session_state.user_db[username].get("wins", 0)) + 1
-            st.session_state.user_db[username]["game_played"] = \
-                int(st.session_state.user_db[username].get("game_played", 0)) + 1
-    save_all_data()
-    st.session_state.prize_distributed = True
-    save_global_winners(
-        winners, True,
-        st.session_state.called_numbers,
-        st.session_state.last_called_number,
-        st.session_state.auto_called_count,
-        True, True
-    )
+    _distribute_prizes_for_winners(winners, st.session_state.taken_cards)
 
 # ===================================================================
-# DISPLAY FUNCTIONS
+# DISPLAY FUNCTIONS — using components.html for proper rendering
 # ===================================================================
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
     if not st.session_state.winner_declared:
@@ -1981,106 +1472,129 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     if not card:
         return
     cells = card["cells"]
-    border_color = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
-    title_color = '#FFD700' if is_winner else '#FFFFFF'
-    card_class = 'winner-card' if is_winner else ''
-    html = f"""
-    <div class="{card_class}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:10px;margin:6px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:280px;border:2px solid {border_color};{'animation:winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''}">
-        <div style="text-align:center;color:{title_color};font-size:0.9rem;font-weight:bold;margin-bottom:6px;">
-            {'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}
-        </div>
-        <table style="width:100%;border-collapse:collapse;">
-            <tr>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">B</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">I</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">N</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">G</td>
-                <td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">O</td>
-            </tr>
-    """
-    for row_idx in range(5):
-        html += '<tr>'
-        for col_idx in range(5):
-            value = cells[row_idx][col_idx]
-            if value == 'F':
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="background:rgba(255,215,0,0.15);color:#FFD700;font-size:0.85rem;border:2px solid #FFD700;">★</div></td>'
+    bc = '#FFD700' if is_winner else 'rgba(255,255,255,0.15)'
+    tc = '#FFD700' if is_winner else '#FFFFFF'
+    total = 0
+    rows_html = ""
+    for r in range(5):
+        rows_html += '<tr>'
+        for c in range(5):
+            v = cells[r][c]
+            if v == 'F':
+                rows_html += '<td><div class="cell star">★</div></td>'
             else:
-                num = int(value)
-                is_called = num in called_numbers
-                style = ''
-                if is_called and is_winner:
-                    style = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;'
-                elif is_called:
-                    style = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;'
+                num = int(v)
+                called = num in called_numbers
+                if called: total += 1
+                if called and is_winner:
+                    cls = 'cell win-called'
+                elif called:
+                    cls = 'cell called'
                 else:
-                    style = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="{style}border-width:2px;border-style:solid;">{value}</div></td>'
-        html += '</tr>'
-    html += '</table>'
-    total_called = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
+                    cls = 'cell'
+                rows_html += f'<td><div class="{cls}">{v}</div></td>'
+        rows_html += '</tr>'
+
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:5px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.65rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        note = f'<div class="win-note">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div><div class="win-sub">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total_called}/24 called</div>'
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+        note = f'<div class="calls-note">✅ {total}/24 called</div>'
+
+    border_anim = 'animation: winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''
+    card_cls = 'winner-card' if is_winner else ''
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; padding:0; background:transparent; font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif; color:#FFF; }}
+    .card {{ background: rgba(0,0,0,0.25); border-radius: 15px; padding: 12px; margin: 6px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 280px; border: 2px solid {bc}; {border_anim} }}
+    .winner-card {{ background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,165,0,0.15)); }}
+    @keyframes winnerPulse {{ 0%{{box-shadow:0 0 20px rgba(255,215,0,0.3)}} 100%{{box-shadow:0 0 60px rgba(255,215,0,0.8)}} }}
+    .title {{ text-align:center; color:{tc}; font-size:0.9rem; font-weight:bold; margin-bottom:6px; }}
+    table {{ width:100%; border-collapse:collapse; }}
+    td {{ border:1px solid rgba(255,255,255,0.08); padding:3px 2px; text-align:center; }}
+    .head {{ background: rgba(46,125,50,0.2); color:#FFD700; font-weight:bold; font-size:0.65rem; padding:3px 2px; }}
+    .cell {{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-weight:bold; font-size:0.58rem; border:2px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.05); color:#FFF; }}
+    .cell.called {{ background: rgba(255,152,0,0.2); color:#FFD700; border-color:#FF9800; }}
+    .cell.win-called {{ background: rgba(255,215,0,0.3); color:#FFD700; border-color:#FFD700; }}
+    .star {{ background: rgba(255,215,0,0.15); color:#FFD700; border-color:#FFD700; font-size:0.85rem; }}
+    .win-note {{ text-align:center; color:#FFD700; font-size:0.8rem; margin-top:6px; font-weight:bold; }}
+    .win-sub {{ text-align:center; color:#FFD700; font-size:0.65rem; margin-top:2px; }}
+    .calls-note {{ text-align:center; color:rgba(255,255,255,0.4); font-size:0.6rem; margin-top:4px; }}
+    </style></head><body>
+    <div class="card {card_cls}">
+        <div class="title">{'🎊🏆 ' if is_winner else '🎯'} Card #{card_id}{' 🏆🎊' if is_winner else ''}</div>
+        <table>
+        <tr><td class="head">B</td><td class="head">I</td><td class="head">N</td><td class="head">G</td><td class="head">O</td></tr>
+        {rows_html}
+        </table>
+        {note}
+    </div>
+    </body></html>"""
+
+    h = 320 if is_winner else 280
+    components.html(html, height=h, scrolling=False)
 
 def display_master_board():
     if not st.session_state.winner_declared:
         sync_global_winners()
-    master_board = {
-        'B': list(range(1, 16)), 'I': list(range(16, 31)),
-        'N': list(range(31, 46)), 'G': list(range(46, 61)),
-        'O': list(range(61, 76))
-    }
-    called_numbers = list(st.session_state.called_numbers)
-    html = (
-        '<style>'
-        '.board-container { max-width: 600px; margin: 0 auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); }'
-        '.board-title { text-align: center; font-size: 1.4rem; font-weight: bold; color: #FFD700; margin-bottom: 10px; }'
-        '.board-table { width: 100%; border-collapse: collapse; }'
-        '.board-table td { border: 1px solid rgba(255,255,255,0.08); padding: 3px 2px; text-align: center; font-size: 0.75rem; font-weight: bold; min-width: 22px; }'
-        '.board-table .header-cell { background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color: #FFD700; font-size: 1.2rem; font-weight: 900; padding: 6px 3px; letter-spacing: 3px; }'
-        '.board-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #FFFFFF; font-weight: bold; font-size: 0.6rem; border: 1px solid rgba(255,255,255,0.06); }'
-        '.board-number.called { background: rgba(255, 152, 0, 0.2); color: #FFD700; border-color: #FF9800; }'
-        '.board-number.last-called { background: rgba(229, 57, 53, 0.2); color: #FF6B6B; border-color: #E53935; }'
-        '.board-stats { text-align: center; margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.5); padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; }'
-        '.board-stats strong { color: #FFD700; }'
-        '</style>'
-        '<div class="board-container">'
-        '<div class="board-title">🎯 BINGO Board</div>'
-    )
-    if st.session_state.last_called_number:
-        letter = get_letter_for_number(st.session_state.last_called_number)
-        amharic = get_amharic_number(st.session_state.last_called_number)
-        html += (
-            '<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">'
-            '🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">'
-            + str(st.session_state.last_called_number) + ' (' + letter + ') - ' + amharic +
-            '</span></div>'
-        )
-    html += '<table class="board-table"><tr>'
-    for letter in ['B', 'I', 'N', 'G', 'O']:
-        html += '<td class="header-cell">' + letter + '</td>'
-    html += '</tr>'
+    master_board = {'B': list(range(1,16)), 'I': list(range(16,31)), 'N': list(range(31,46)), 'G': list(range(46,61)), 'O': list(range(61,76))}
+    called_numbers = set(st.session_state.called_numbers)
+    last = st.session_state.last_called_number
+
+    rows_html = ""
     for row in range(15):
-        html += '<tr>'
+        rows_html += '<tr>'
         for letter in ['B', 'I', 'N', 'G', 'O']:
             num = master_board[letter][row]
-            is_called = num in called_numbers
-            is_last = num == st.session_state.last_called_number
-            if is_last:
-                html += '<td><div class="board-number last-called">' + str(num) + '</div></td>'
-            elif is_called:
-                html += '<td><div class="board-number called">' + str(num) + '</div></td>'
+            if num == last:
+                cls = 'bn last-called'
+            elif num in called_numbers:
+                cls = 'bn called'
             else:
-                html += '<td><div class="board-number">' + str(num) + '</div></td>'
-        html += '</tr>'
-    html += '</table>'
-    html += '<div class="board-stats">📊 Called: <strong>' + str(len(called_numbers)) + '</strong> / 75 numbers</div>'
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+                cls = 'bn'
+            rows_html += f'<td><div class="{cls}">{num}</div></td>'
+        rows_html += '</tr>'
+
+    last_html = ""
+    if last:
+        letter = get_letter_for_number(last)
+        amharic = get_amharic_number(last)
+        last_html = f'<div class="last">🎯 Last Called: <span class="last-badge">{last} ({letter}) - {amharic}</span></div>'
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; padding:0; background:transparent; font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif; color:#FFF; }}
+    .board {{ max-width:600px; margin:0 auto; padding:12px; background:rgba(0,0,0,0.25); border-radius:15px; border:1px solid rgba(255,255,255,0.08); }}
+    .title {{ text-align:center; font-size:1.4rem; font-weight:bold; color:#FFD700; margin-bottom:10px; }}
+    .last {{ text-align:center; font-size:0.95rem; font-weight:bold; color:#FF6B6B; margin-bottom:8px; }}
+    .last-badge {{ background: rgba(229,57,53,0.15); color:#FF6B6B; padding:2px 12px; border-radius:15px; border:1px solid rgba(229,57,53,0.2); }}
+    table {{ width:100%; border-collapse:collapse; }}
+    td {{ border:1px solid rgba(255,255,255,0.08); padding:3px 2px; text-align:center; font-size:0.75rem; font-weight:bold; }}
+    .head {{ background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color:#FFD700; font-size:1.2rem; font-weight:900; padding:6px 3px; letter-spacing:3px; }}
+    .bn {{ display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background: rgba(255,255,255,0.05); color:#FFF; font-weight:bold; font-size:0.6rem; border:1px solid rgba(255,255,255,0.06); }}
+    .bn.called {{ background: rgba(255,152,0,0.2); color:#FFD700; border-color:#FF9800; }}
+    .bn.last-called {{ background: rgba(229,57,53,0.2); color:#FF6B6B; border-color:#E53935; }}
+    .stats {{ text-align:center; margin-top:10px; font-size:0.8rem; color:rgba(255,255,255,0.5); padding:6px; background:rgba(0,0,0,0.15); border-radius:8px; }}
+    .stats strong {{ color:#FFD700; }}
+    @media (max-width:768px) {{
+        .board {{ padding:8px; }}
+        .title {{ font-size:1.1rem; }}
+        td {{ font-size:0.6rem; padding:1px 0.5px; }}
+        .bn {{ width:18px; height:18px; font-size:0.5rem; }}
+    }}
+    </style></head><body>
+    <div class="board">
+        <div class="title">🎯 BINGO Board</div>
+        {last_html}
+        <table>
+            <tr><td class="head">B</td><td class="head">I</td><td class="head">N</td><td class="head">G</td><td class="head">O</td></tr>
+            {rows_html}
+        </table>
+        <div class="stats">📊 Called: <strong>{len(called_numbers)}</strong> / 75 numbers</div>
+    </div>
+    </body></html>"""
+
+    components.html(html, height=650, scrolling=False)
 
 # ===================================================================
 # CARD SELECTION
@@ -2143,7 +1657,7 @@ def render_card_selection():
     )
     if selected_cols != st.session_state.columns_per_row:
         st.session_state.columns_per_row = selected_cols
-        safe_rerun(0.3)
+        st.rerun()
 
     cols_per_row = st.session_state.columns_per_row
     clicked = st.session_state.clicked_numbers
@@ -2176,17 +1690,17 @@ def render_card_selection():
                             st.session_state.rejected_card_num = None
                             st.session_state.insufficient_balance_card_num = None
                             st.session_state.flash_msg = f"✅ Card #{card_num} refunded. +10 ETB"
-                        safe_rerun(0.3)
+                        st.rerun()
                 elif is_taken:
                     st.button(f"🔴{card_num}", key=f"card_{card_num}", use_container_width=True, disabled=True)
                 elif is_rejected:
                     if st.button("🚫 2+ አይቻልም 🚫", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.rejected_card_num = None
-                        safe_rerun(0.3)
+                        st.rerun()
                 elif is_insufficient:
                     if st.button("⚠️💰ሂሳብዎን ይሙሉ💰⚠️", key=f"card_{card_num}", use_container_width=True):
                         st.session_state.insufficient_balance_card_num = None
-                        safe_rerun(0.3)
+                        st.rerun()
                 else:
                     if st.button(f"🟡{card_num}", key=f"card_{card_num}", use_container_width=True):
                         user_balance = st.session_state.user_db.get(st.session_state.current_user, {}).get("balance", 0)
@@ -2204,7 +1718,7 @@ def render_card_selection():
                                 st.session_state.rejected_card_num = None
                             else:
                                 st.session_state.flash_msg = f"⚠️ Card #{card_num} already taken!"
-                        safe_rerun(0.3)
+                        st.rerun()
     st.progress(1 - (remaining / CARD_SELECTION_DURATION) if remaining > 0 else 0)
 
 # ===================================================================
@@ -2383,7 +1897,6 @@ if (not _db_gs) and (not _db_wd):
             st.session_state.clicked_numbers = _mine
         else:
             st.session_state.clicked_numbers = set()
-
 elif _db_gs and not _db_wd:
     st.session_state.game_started = True
     st.session_state.winner_declared = False
@@ -2404,7 +1917,6 @@ elif _db_gs and not _db_wd:
                 except (ValueError, TypeError):
                     pass
         st.session_state.clicked_numbers = _mine
-
 elif _db_wd:
     if not st.session_state.get("winner_declared"):
         st.session_state.winner_declared = True
@@ -2559,11 +2071,10 @@ if st.session_state.winner_declared and st.session_state.game_started:
                 st.session_state.winner_screen_shown_at = None
                 st.session_state.celebration_round = 1
                 reset_for_next_round()
-                safe_rerun(0.4)
+                st.rerun()
 
-    time.sleep(0.8)
-    safe_rerun(0.9)
-    st.stop()
+    time.sleep(0.5)
+    st.rerun()
 
 # ===================================================================
 # PLAYER DISPLAY
@@ -2633,7 +2144,7 @@ if st.session_state.game_started and _show_game:
 """, unsafe_allow_html=True)
                 if st.button("🔄 ወደ ካርቴላ ምርጫ ተመለስ (Resume)", use_container_width=True, type="primary", key="non_player_resume_btn"):
                     reset_for_next_round()
-                    safe_rerun(0.4)
+                    st.rerun()
 
     st.info(f"🎯 Auto-calling every {CALL_INTERVAL:.0f} seconds... ({len(st.session_state.called_numbers)}/75)")
 
@@ -2648,7 +2159,7 @@ else:
 
     if _final_gs or _final_wd or st.session_state.game_started:
         st.session_state.game_started = True
-        safe_rerun(0.4)
+        safe_rerun(0.3)
 
     if (not _final_gs
             and not _final_wd
@@ -2656,12 +2167,12 @@ else:
             and _final_remaining <= 0):
         mark_game_started_globally()
         st.session_state.game_started = True
-        safe_rerun(0.4)
+        safe_rerun(0.3)
 
     st.markdown("## 📋 ካርድዎን ይምረጡ 🔥🚀")
     render_card_selection()
-    time.sleep(0.25)
-    safe_rerun(0.5)
+    time.sleep(0.15)
+    st.rerun()
 
 # ===================================================================
 # FOOTER
@@ -2674,28 +2185,32 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ===================================================================
-# AUTO-CALL — runs whenever game_started and no winner yet.
+# AUTO-CALL — winner detected inline in try_global_call
 # ===================================================================
 if st.session_state.game_started and not st.session_state.winner_declared:
     _wl, _wd, _cn, _lcn, _acc, _go, _pd, _ts = load_global_winners()
     if _wd:
         sync_global_winners()
-        safe_rerun(0.3)
+        st.rerun()
 
     sync_global_cards()
-    check_for_winners(force_fresh=True)
 
-    if st.session_state.winner_declared:
-        safe_rerun(0.3)
+    just_called, made = try_global_call()
 
-    just_called = try_global_call()
+    if made and just_called is not None:
+        if st.session_state.get("_last_sound_played_for") != just_called:
+            st.session_state["_last_sound_played_for"] = just_called
+            st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+        if st.session_state.winner_declared:
+            st.rerun()
+
     load_game_state()
 
-    if just_called is not None:
-        st.markdown(get_number_sound_js(just_called), unsafe_allow_html=True)
+    if st.session_state.winner_declared:
+        st.rerun()
 
-    time.sleep(CALL_INTERVAL)
-    safe_rerun(0.3)
+    time.sleep(0.15)
+    st.rerun()
 
 # ===================================================================
 # MARK FIRST RENDER COMPLETE
@@ -2708,5 +2223,5 @@ st.session_state["_first_render_done"] = True
 if st.session_state.game_started and st.session_state.winner_declared:
     pass
 elif not st.session_state.game_started:
-    time.sleep(0.5)
-    safe_rerun(0.5)
+    time.sleep(0.3)
+    st.rerun()
