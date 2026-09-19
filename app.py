@@ -175,7 +175,6 @@ def _sanitize_row(row):
     return row
 
 def load_state_row(force=False):
-    """Cached read. TTL 0.5s warm, 1.0s cold — reduces WebSocket pressure."""
     now = time.time()
     cached = st.session_state.get("_state_cache")
     cached_at = st.session_state.get("_state_cache_at", 0.0)
@@ -194,8 +193,7 @@ def load_state_row(force=False):
         st.session_state["_state_err_count"] = 0
         return row
     except Exception:
-        err = st.session_state.get("_state_err_count", 0) + 1
-        st.session_state["_state_err_count"] = err
+        st.session_state["_state_err_count"] = st.session_state.get("_state_err_count", 0) + 1
         if cached is not None:
             return cached
         return _default_state()
@@ -491,7 +489,7 @@ def logout_user():
     st.session_state.current_role = None
 
 # ===================================================================
-# BOTS — FAST VERSION
+# BOTS
 # ===================================================================
 BOT_NAMES = ["Bekele","Alemu","Aster","Yednekachew","Tigist","Getachew","Meseret","Dawit","Hana","Solomon","Marta","Kebede","Selam","Tesfaye","Meron","Abebe","Hiwot","Girma","Bethlehem","Yohannes","Rahel","Mulugeta","Eden","Fikadu","Tsehay","Berhanu","Liya","Assefa","Genet","Wondimu","Sara","Desta","Mahlet","Tewodros","Kidist","Bantayehu","Eyerusalem","Endale","Mekdes","Samuel","Zewditu","Nardos","Bereket","Alemitu","Yonas","Wubit","Henok","Tizita","Melaku","Netsanet","Biniam","Aynalem","Eyob","Sindu","Gedion","Mimi","Natnael","Tsedale","Firaol","Rediet","Bruk","Sifen","Naol","Hermela","Yafet","Lidiya","Ebisa","Ruth","Kaleab","Beza","Yared","Eleni","Abel","Feven","Mikiyas","Saron","Yosef","Meron","Dagmawi","Tinsae","Luel","Tsion","Nahom","Sena","Kaleb","Bethany","Ermias","Ruhama","Andualem","Mieraf","Mulu","Habtamu","Frehiwot","Tadesse","Zerihun","Aregash","Tigabu","Lulit","Bonsa"]
 
@@ -506,7 +504,6 @@ def is_bot_username(username):
     return any(n.endswith(s) for s in BOT_SUFFIXES)
 
 def get_or_create_bot_users(count):
-    """FAST: only upserts NEW bots, reuses existing ones from session cache."""
     if count > len(BOT_NAMES): count = len(BOT_NAMES)
     names = list(BOT_NAMES); random.shuffle(names)
     bot_users = []
@@ -515,10 +512,8 @@ def get_or_create_bot_users(count):
         base = names[i]
         bu = make_bot_username(base, i)
         bot_users.append(bu)
-        # Fast path: already in session
         if bu in st.session_state.get("user_db", {}):
             continue
-        # Slow path: check DB for existing (single fetch)
         existing = load_single_user(bu)
         if existing is None:
             new_bots[bu] = {
@@ -527,7 +522,6 @@ def get_or_create_bot_users(count):
                 "phone": "", "game_played": 0, "wins": 0,
             }
     if new_bots:
-        # Only upsert the NEW bots — much faster than saving all users
         save_local_users(new_bots)
         st.session_state.user_db.update(new_bots)
     return bot_users
@@ -766,7 +760,7 @@ def admin_panel():
                 st.markdown(f"""<div style="background:rgba(0,0,0,0.2);padding:10px 14px;border-radius:10px;border-left:4px solid {tc};margin-bottom:6px;"><p style="margin:0;color:{tc};font-weight:bold;">{icon} {tx['type'].title()} — {float(tx['amount']):.2f} ETB</p><p style="margin:3px 0;color:rgba(255,255,255,0.75);font-size:0.85rem;">👤 {tx['username']} | 📅 {tx.get('processed_at') or tx.get('created_at','')}</p></div>""", unsafe_allow_html=True)
 
 # ===================================================================
-# BINGO CARDS — 204 (compact format)
+# BINGO CARDS — 204
 # ===================================================================
 BINGO_CARDS = [
 {"id":1,"cells":[['15','16','39','59','66'],['11','28','40','51','68'],['12','20','F','56','67'],['3','30','35','60','72'],['10','24','37','53','64']]},
@@ -1175,87 +1169,134 @@ def reset_for_next_round():
     st.session_state.celebration_round = 1
 
 # ===================================================================
-# DISPLAY
+# DISPLAY — using components.html so HTML renders properly
 # ===================================================================
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
     if called_numbers is None: called_numbers = []
     card = get_card(card_id)
     if not card: return
     cells = card["cells"]
-    bc = '#FFD700' if is_winner else 'rgba(255,255,255,0.1)'
+    bc = '#FFD700' if is_winner else 'rgba(255,255,255,0.15)'
     tc = '#FFD700' if is_winner else '#FFFFFF'
-    cc = 'winner-card' if is_winner else ''
-    html = f"""<div class="{cc}" style="background:rgba(0,0,0,0.2);border-radius:15px;padding:10px;margin:6px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:280px;border:2px solid {bc};">
-        <div style="text-align:center;color:{tc};font-size:0.9rem;font-weight:bold;margin-bottom:6px;">{'🎊🏆 ' if is_winner else '🎯'} Card #{card_id} { ' 🏆🎊' if is_winner else ''}</div>
-        <table style="width:100%;border-collapse:collapse;"><tr>"""
-    for l in ['B','I','N','G','O']:
-        html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;background:rgba(46,125,50,0.2);color:#FFD700;font-weight:bold;font-size:0.65rem;">{l}</td>'
-    html += '</tr>'
+    total = 0
+    rows_html = ""
     for r in range(5):
-        html += '<tr>'
+        rows_html += '<tr>'
         for c in range(5):
             v = cells[r][c]
             if v == 'F':
-                html += '<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="background:rgba(255,215,0,0.15);color:#FFD700;font-size:0.85rem;border:2px solid #FFD700;">★</div></td>'
+                rows_html += '<td><div class="cell star">★</div></td>'
             else:
                 num = int(v)
                 called = num in called_numbers
+                if called: total += 1
                 if called and is_winner:
-                    sty = 'background:rgba(255,215,0,0.3);color:#FFD700;border-color:#FFD700;'
+                    cls = 'cell win-called'
                 elif called:
-                    sty = 'background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;'
+                    cls = 'cell called'
                 else:
-                    sty = 'background:rgba(255,255,255,0.05);color:#FFFFFF;border-color:rgba(255,255,255,0.06);'
-                html += f'<td style="border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;"><div class="display-card-circle" style="{sty}border-width:2px;border-style:solid;">{v}</div></td>'
-        html += '</tr>'
-    html += '</table>'
-    total = sum(1 for row in cells for val in row if val != 'F' and int(val) in called_numbers)
+                    cls = 'cell'
+                rows_html += f'<td><div class="{cls}">{v}</div></td>'
+        rows_html += '</tr>'
+
     if is_winner and winning_pattern:
-        html += f'<div style="text-align:center;color:#FFD700;font-size:0.8rem;margin-top:5px;font-weight:bold;">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div>'
-        html += '<div style="text-align:center;color:#FFD700;font-size:0.65rem;margin-top:2px;">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
+        note = f'<div class="win-note">🎉🏆 WINNER! ({winning_pattern}) 🏆🎉</div><div class="win-sub">🎊🍀 እንኳን ደስ አለዎት!!!🍀🎊</div>'
     else:
-        html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total}/24 called</div>'
-    html += '</div>'
-    components.html(html, height=650, scrolling=False)
+        note = f'<div class="calls-note">✅ {total}/24 called</div>'
+
+    border_anim = 'animation: winnerPulse 1s ease-in-out infinite alternate;' if is_winner else ''
+    card_cls = 'winner-card' if is_winner else ''
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; padding:0; background:transparent; font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif; color:#FFF; }}
+    .card {{ background: rgba(0,0,0,0.25); border-radius: 15px; padding: 12px; margin: 6px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 280px; border: 2px solid {bc}; {border_anim} }}
+    .winner-card {{ background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,165,0,0.15)); }}
+    @keyframes winnerPulse {{ 0%{{box-shadow:0 0 20px rgba(255,215,0,0.3)}} 100%{{box-shadow:0 0 60px rgba(255,215,0,0.8)}} }}
+    .title {{ text-align:center; color:{tc}; font-size:0.9rem; font-weight:bold; margin-bottom:6px; }}
+    table {{ width:100%; border-collapse:collapse; }}
+    td {{ border:1px solid rgba(255,255,255,0.08); padding:3px 2px; text-align:center; }}
+    .head {{ background: rgba(46,125,50,0.2); color:#FFD700; font-weight:bold; font-size:0.65rem; padding:3px 2px; }}
+    .cell {{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-weight:bold; font-size:0.58rem; border:2px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.05); color:#FFF; }}
+    .cell.called {{ background: rgba(255,152,0,0.2); color:#FFD700; border-color:#FF9800; }}
+    .cell.win-called {{ background: rgba(255,215,0,0.3); color:#FFD700; border-color:#FFD700; }}
+    .star {{ background: rgba(255,215,0,0.15); color:#FFD700; border-color:#FFD700; font-size:0.85rem; }}
+    .win-note {{ text-align:center; color:#FFD700; font-size:0.8rem; margin-top:6px; font-weight:bold; }}
+    .win-sub {{ text-align:center; color:#FFD700; font-size:0.65rem; margin-top:2px; }}
+    .calls-note {{ text-align:center; color:rgba(255,255,255,0.4); font-size:0.6rem; margin-top:4px; }}
+    </style></head><body>
+    <div class="card {card_cls}">
+        <div class="title">{'🎊🏆 ' if is_winner else '🎯'} Card #{card_id}{' 🏆🎊' if is_winner else ''}</div>
+        <table>
+        <tr><td class="head">B</td><td class="head">I</td><td class="head">N</td><td class="head">G</td><td class="head">O</td></tr>
+        {rows_html}
+        </table>
+        {note}
+    </div>
+    </body></html>"""
+
+    h = 320 if is_winner else 280
+    components.html(html, height=h, scrolling=False)
 
 def display_master_board():
     mb = {'B': list(range(1,16)), 'I': list(range(16,31)), 'N': list(range(31,46)), 'G': list(range(46,61)), 'O': list(range(61,76))}
-    called = list(st.session_state.called_numbers)
-    html = """<style>.board-container{max-width:600px;margin:0 auto;padding:12px;background:rgba(0,0,0,0.2);border-radius:15px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.08);}
-    .board-title{text-align:center;font-size:1.4rem;font-weight:bold;color:#FFD700;margin-bottom:10px;}
-    .board-table{width:100%;border-collapse:collapse;}
-    .board-table td{border:1px solid rgba(255,255,255,0.08);padding:3px 2px;text-align:center;font-size:0.75rem;font-weight:bold;min-width:22px;}
-    .board-table .header-cell{background:linear-gradient(135deg,rgba(46,125,50,0.2),rgba(27,94,32,0.1));color:#FFD700;font-size:1.2rem;font-weight:900;padding:6px 3px;letter-spacing:3px;}
-    .board-number{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.05);color:#FFF;font-weight:bold;font-size:0.6rem;border:1px solid rgba(255,255,255,0.06);}
-    .board-number.called{background:rgba(255,152,0,0.2);color:#FFD700;border-color:#FF9800;}
-    .board-number.last-called{background:rgba(229,57,53,0.2);color:#FF6B6B;border-color:#E53935;}
-    .board-stats{text-align:center;margin-top:10px;font-size:0.8rem;color:rgba(255,255,255,0.5);padding:6px;background:rgba(0,0,0,0.15);border-radius:8px;}
-    .board-stats strong{color:#FFD700;}</style>
-    <div class="board-container"><div class="board-title">🎯 BINGO Board</div>"""
-    if st.session_state.last_called_number:
-        letter = get_letter_for_number(st.session_state.last_called_number)
-        amh = get_amharic_number(st.session_state.last_called_number)
-        html += f'<div style="text-align:center;font-size:0.95rem;font-weight:bold;color:#FF6B6B;margin-bottom:8px;">🎯 Last Called: <span style="background:rgba(229,57,53,0.15);color:#FF6B6B;padding:2px 12px;border-radius:15px;border:1px solid rgba(229,57,53,0.2);">{st.session_state.last_called_number} ({letter}) - {amh}</span></div>'
-    html += '<table class="board-table"><tr>'
-    for l in ['B','I','N','G','O']:
-        html += f'<td class="header-cell">{l}</td>'
-    html += '</tr>'
+    called = set(st.session_state.called_numbers)
+    last = st.session_state.last_called_number
+
+    rows_html = ""
     for row in range(15):
-        html += '<tr>'
+        rows_html += '<tr>'
         for l in ['B','I','N','G','O']:
             num = mb[l][row]
-            is_called = num in called
-            is_last = num == st.session_state.last_called_number
-            if is_last:
-                html += f'<td><div class="board-number last-called">{num}</div></td>'
-            elif is_called:
-                html += f'<td><div class="board-number called">{num}</div></td>'
+            if num == last:
+                cls = 'bn last-called'
+            elif num in called:
+                cls = 'bn called'
             else:
-                html += f'<td><div class="board-number">{num}</div></td>'
-        html += '</tr>'
-    html += '</table>'
-    html += f'<div class="board-stats">📊 Called: <strong>{len(called)}</strong> / 75 numbers</div></div>'
-    st.markdown(html, unsafe_allow_html=True)
+                cls = 'bn'
+            rows_html += f'<td><div class="{cls}">{num}</div></td>'
+        rows_html += '</tr>'
+
+    last_html = ""
+    if last:
+        letter = get_letter_for_number(last)
+        amh = get_amharic_number(last)
+        last_html = f'<div class="last">🎯 Last Called: <span class="last-badge">{last} ({letter}) - {amh}</span></div>'
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; padding:0; background:transparent; font-family: 'Noto Sans Ethiopic', 'Segoe UI', Arial, sans-serif; color:#FFF; }}
+    .board {{ max-width:600px; margin:0 auto; padding:12px; background:rgba(0,0,0,0.25); border-radius:15px; border:1px solid rgba(255,255,255,0.08); }}
+    .title {{ text-align:center; font-size:1.4rem; font-weight:bold; color:#FFD700; margin-bottom:10px; }}
+    .last {{ text-align:center; font-size:0.95rem; font-weight:bold; color:#FF6B6B; margin-bottom:8px; }}
+    .last-badge {{ background: rgba(229,57,53,0.15); color:#FF6B6B; padding:2px 12px; border-radius:15px; border:1px solid rgba(229,57,53,0.2); }}
+    table {{ width:100%; border-collapse:collapse; }}
+    td {{ border:1px solid rgba(255,255,255,0.08); padding:3px 2px; text-align:center; font-size:0.75rem; font-weight:bold; }}
+    .head {{ background: linear-gradient(135deg, rgba(46,125,50,0.2), rgba(27,94,32,0.1)); color:#FFD700; font-size:1.2rem; font-weight:900; padding:6px 3px; letter-spacing:3px; }}
+    .bn {{ display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background: rgba(255,255,255,0.05); color:#FFF; font-weight:bold; font-size:0.6rem; border:1px solid rgba(255,255,255,0.06); }}
+    .bn.called {{ background: rgba(255,152,0,0.2); color:#FFD700; border-color:#FF9800; }}
+    .bn.last-called {{ background: rgba(229,57,53,0.2); color:#FF6B6B; border-color:#E53935; }}
+    .stats {{ text-align:center; margin-top:10px; font-size:0.8rem; color:rgba(255,255,255,0.5); padding:6px; background:rgba(0,0,0,0.15); border-radius:8px; }}
+    .stats strong {{ color:#FFD700; }}
+    @media (max-width:768px) {{
+        .board {{ padding:8px; }}
+        .title {{ font-size:1.1rem; }}
+        td {{ font-size:0.6rem; padding:1px 0.5px; }}
+        .bn {{ width:18px; height:18px; font-size:0.5rem; }}
+    }}
+    </style></head><body>
+    <div class="board">
+        <div class="title">🎯 BINGO Board</div>
+        {last_html}
+        <table>
+            <tr><td class="head">B</td><td class="head">I</td><td class="head">N</td><td class="head">G</td><td class="head">O</td></tr>
+            {rows_html}
+        </table>
+        <div class="stats">📊 Called: <strong>{len(called)}</strong> / 75 numbers</div>
+    </div>
+    </body></html>"""
+
+    components.html(html, height=700, scrolling=False)
 
 # ===================================================================
 # CARD SELECTION
@@ -1649,7 +1690,7 @@ st.markdown(f"""<div style="text-align:center;color:rgba(255,255,255,0.3);font-s
 st.session_state["_first_render_done"] = True
 
 # ===================================================================
-# AUTO-CALL — reuse _db_now, fast 0.15s poll
+# AUTO-CALL
 # ===================================================================
 if not st.session_state.get("winner_declared") and st.session_state.game_started:
     _row = _db_now
@@ -1685,9 +1726,8 @@ if not st.session_state.get("winner_declared") and st.session_state.game_started
                     st.session_state["_last_sound_played_for"] = _forced
                     st.markdown(get_number_sound_js(_forced), unsafe_allow_html=True)
                 if st.session_state.get("winner_declared"):
-                    st.rerun() 
+                    st.rerun()
 
-    # Fast 0.15s poll — buttons stay responsive, winner appears within ~0.5s
     time.sleep(0.15)
     st.rerun()
 
