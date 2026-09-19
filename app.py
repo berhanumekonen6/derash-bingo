@@ -1216,7 +1216,7 @@ def display_selected_card(card_id, called_numbers=None, is_winner=False, winning
     else:
         html += f'<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:0.6rem;margin-top:3px;">✅ {total}/24 called</div>'
     html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+    components.html(html, height=650, scrolling=False)
 
 def display_master_board():
     mb = {'B': list(range(1,16)), 'I': list(range(16,31)), 'N': list(range(31,46)), 'G': list(range(46,61)), 'O': list(range(61,76))}
