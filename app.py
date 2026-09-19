@@ -1685,7 +1685,7 @@ if not st.session_state.get("winner_declared") and st.session_state.game_started
                     st.session_state["_last_sound_played_for"] = _forced
                     st.markdown(get_number_sound_js(_forced), unsafe_allow_html=True)
                 if st.session_state.get("winner_declared"):
-                    st.rerun()
+                    st.rerun() 
 
     # Fast 0.15s poll — buttons stay responsive, winner appears within ~0.5s
     time.sleep(0.15)
