@@ -184,7 +184,6 @@ if "_first_render_done" not in st.session_state:
 # RERUN HELPERS
 # ===================================================================
 def safe_rerun(min_interval=0.35):
-    """Throttled rerun for background loops (auto-call, polling)."""
     now = time.time()
     last = st.session_state.get("_last_rerun_at", 0.0)
     wait = min_interval - (now - last)
@@ -194,7 +193,6 @@ def safe_rerun(min_interval=0.35):
     st.rerun()
 
 def user_rerun():
-    """Immediate rerun for user clicks — no delay so buttons feel instant."""
     st.session_state["_last_rerun_at"] = time.time()
     st.rerun()
 
@@ -892,53 +890,113 @@ def get_bot_display_name(username):
     return "🤖 " + name
 
 # ===================================================================
-# BOT CARDS — ADMIN FEATURE
+# BOT CARDS — ADMIN FEATURE (ULTRA FAST)
 # ===================================================================
 def get_or_create_bot_users(count):
-    load_all_data()
-    if count > len(BOT_NAMES): count = len(BOT_NAMES)
-    available_names = list(BOT_NAMES); random.shuffle(available_names)
+    """FAST: one bulk SELECT + one bulk UPSERT."""
+    if count > len(BOT_NAMES):
+        count = len(BOT_NAMES)
+    available_names = list(BOT_NAMES)
+    random.shuffle(available_names)
+
     bot_users = []
-    new_bots = {}
     for i in range(count):
-        base_name = available_names[i]
-        bot_username = make_bot_username(base_name, i)
-        bot_users.append(bot_username)
-        if bot_username in st.session_state.user_db:
+        bot_users.append(make_bot_username(available_names[i], i))
+
+    # Identify bots we already have in session cache (zero-cost)
+    session_db = st.session_state.get("user_db", {})
+    missing = [u for u in bot_users if u not in session_db]
+
+    # One bulk SELECT to see which of the missing already exist in DB
+    existing_in_db = set()
+    if missing:
+        try:
+            res = supabase.table("users").select("username").in_("username", missing).execute()
+            existing_in_db = {r["username"] for r in (res.data or [])}
+        except Exception:
+            existing_in_db = set()
+
+    # Build new bot rows for those that don't exist anywhere
+    new_bots = {}
+    for i, bu in enumerate(bot_users):
+        if bu in session_db:
             continue
-        existing = load_single_user(bot_username)
-        if existing is None:
-            new_bots[bot_username] = {
-                "password": hash_password(bot_username + "_secret_" + str(i)),
-                "balance": 10000.0, "role": "player", "name": "🤖 " + base_name,
-                "phone": "", "game_played": 0, "wins": 0,
-            }
+        if bu in existing_in_db:
+            continue
+        base_name = bu
+        for sfx in BOT_SUFFIXES:
+            if bu.endswith(sfx):
+                base_name = bu[: -len(sfx)]
+                break
+        new_bots[bu] = {
+            "password": hash_password(bu + "_secret_" + str(i)),
+            "balance": 10000.0,
+            "role": "player",
+            "name": "🤖 " + base_name,
+            "phone": "",
+            "game_played": 0,
+            "wins": 0,
+        }
+
+    # One bulk UPSERT for all new bots
     if new_bots:
-        save_local_users(new_bots)
+        try:
+            rows = []
+            for u, d in new_bots.items():
+                rows.append({
+                    "username": u,
+                    "password": d.get("password", ""),
+                    "balance": float(d.get("balance", 0)),
+                    "role": d.get("role", "player"),
+                    "name": d.get("name", ""),
+                    "phone": d.get("phone", ""),
+                    "game_played": int(d.get("game_played", 0)),
+                    "wins": int(d.get("wins", 0)),
+                })
+            supabase.table("users").upsert(rows).execute()
+        except Exception:
+            pass
         st.session_state.user_db.update(new_bots)
+
     return bot_users
 
 def assign_bot_cards(bot_count):
-    if bot_count <= 0: return 0, "No bot count selected"
+    """FAST: single DB read, single DB write, no per-bot loops."""
+    if bot_count <= 0:
+        return 0, "No bot count selected"
+
     row = load_state_row(force=True)
     taken = list(row.get("taken_cards") or [])
     owner = dict(row.get("card_owner") or {})
-    for k in [k for k, v in owner.items() if is_bot_username(v)]:
+
+    # Remove existing bots in-memory (no DB loop)
+    bot_owned = [k for k, v in owner.items() if is_bot_username(v)]
+    for k in bot_owned:
         try:
             cid = int(k)
-            if cid in taken: taken.remove(cid)
-        except (ValueError, TypeError): pass
+            if cid in taken:
+                taken.remove(cid)
+        except (ValueError, TypeError):
+            pass
         owner.pop(k, None)
+
     bot_users = get_or_create_bot_users(bot_count)
-    available_cards = [i for i in range(1, 205) if i not in taken]
+
+    # Fast available-cards calculation using a set
+    taken_set = set(taken)
+    available_cards = [i for i in range(1, 205) if i not in taken_set]
     random.shuffle(available_cards)
+
     assigned = 0
     for bot_name in bot_users:
-        if not available_cards: break
+        if not available_cards:
+            break
         card_num = available_cards.pop()
         taken.append(card_num)
         owner[str(card_num)] = bot_name
         assigned += 1
+
+    # Single atomic DB write
     update_state({"taken_cards": list(taken), "card_owner": dict(owner)})
     st.session_state.taken_cards = taken
     st.session_state.card_owner = owner
@@ -1110,6 +1168,7 @@ def admin_panel():
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("✅ Apply Bot Cards", use_container_width=True, type="primary", key="admin_apply_bots"):
+                st.toast("⏳ Applying bot cards...", icon="🤖")
                 selected_bot_count = st.session_state.get("admin_bot_card_count", 0)
                 if selected_bot_count == 0:
                     removed = remove_bot_cards()
@@ -1120,6 +1179,7 @@ def admin_panel():
                 st.rerun()
         with col_b2:
             if st.button("🗑️ Remove All Bot Cards", use_container_width=True, key="admin_clear_bots"):
+                st.toast("⏳ Removing bot cards...", icon="🗑️")
                 removed = remove_bot_cards()
                 st.session_state["bot_apply_flash"] = {"msg": f"🗑️ Removed {removed} bot card(s)."}
                 st.rerun()
@@ -1461,7 +1521,7 @@ def distribute_prizes(winners):
     _distribute_prizes_for_winners(winners, st.session_state.taken_cards)
 
 # ===================================================================
-# DISPLAY FUNCTIONS — using components.html for proper rendering
+# DISPLAY FUNCTIONS — using components.html
 # ===================================================================
 def display_selected_card(card_id, called_numbers=None, is_winner=False, winning_pattern=None):
     if not st.session_state.winner_declared:
